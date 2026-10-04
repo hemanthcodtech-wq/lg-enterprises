@@ -6,7 +6,8 @@ import { ALL_PRODUCTS, CATEGORY_DATA } from '../utils/data';
 import { IMAGES } from '../utils/images';
 import {
   FiTruck, FiRefreshCcw, FiShield, FiCheckCircle,
-  FiBox, FiMapPin, FiHeadphones, FiLayout, FiChevronRight
+  FiBox, FiMapPin, FiHeadphones, FiLayout, FiChevronRight,
+  FiUsers, FiUserPlus, FiShare2, FiDollarSign
 } from 'react-icons/fi';
 
 const catTiles = [
@@ -134,19 +135,24 @@ const Home = () => {
 
 
 
+
+
           {/* ─── Category Image Tiles ─── */}
-          <div className="section-pad">
-            <div className="section-title-row">
-              <h2 className="section-title">Shop by Category <span className="section-title-badge">NEW</span></h2>
-              <button className="view-all-btn">View All <FiChevronRight /></button>
-            </div>
-            <div className="cat-img-tiles">
-              {catTiles.map((c, i) => (
-                <div key={i} className="cat-img-tile" onClick={() => navigate(`/?category=${c.slug}`)}>
-                  <img src={c.img} alt={c.name} />
-                  <div className="cat-img-label">{c.name}</div>
-                </div>
-              ))}
+          <div className="section-pad" style={{ paddingTop: '3rem' }}>
+            <h2 style={{ textAlign: 'center', fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '2.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Top Category
+            </h2>
+            <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+              <div className="cat-img-tiles">
+                {catTiles.map((c, i) => (
+                  <div key={i} className="cat-img-tile" onClick={() => navigate(`/?category=${c.slug}`)}>
+                    <div className="cat-img-bg" style={{ backgroundImage: `url(${c.img})` }}>
+                      <div className="cat-img-overlay"></div>
+                    </div>
+                    <div className="cat-img-label">{c.name}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -238,6 +244,64 @@ const Home = () => {
           </div>
         )}
       </div>
+
+      {/* ─── Top Brands ─── */}
+      <div className="brands-section">
+        <div className="brands-header">
+          <h2>Top Brands</h2>
+          <button className="view-all-btn">Explore All <FiChevronRight /></button>
+        </div>
+        <div className="brands-marquee-wrapper">
+          <div className="brands-marquee">
+            {['AASHIRVAAD', 'ARIEL', 'B-MAX', 'BALTRA', 'HAWAMAHAL', 'NIRLON', 'NUTRAJ', 'PUMA', 'LuvLap', 'M.O.M'].map((brand, i) => (
+              <div key={i} className="brand-card">
+                {brand}
+              </div>
+            ))}
+            {/* Duplicate for seamless scrolling */}
+            {['AASHIRVAAD', 'ARIEL', 'B-MAX', 'BALTRA', 'HAWAMAHAL', 'NIRLON', 'NUTRAJ', 'PUMA', 'LuvLap', 'M.O.M'].map((brand, i) => (
+              <div key={`dup-${i}`} className="brand-card">
+                {brand}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Partner Section ─── */}
+      <div className="partner-section">
+        <div className="partner-content">
+          <h2>Become a partner in <span>3 easy steps</span></h2>
+          <div className="partner-stats">
+            <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+              <FiUsers size={24} color="#64748b" /> 20,954 +
+            </div>
+            <span>Ours Team</span>
+          </div>
+
+          <div className="partner-steps">
+            <div className="step-connector">
+              <div className="step-connector-fill"></div>
+            </div>
+            <div className="partner-step">
+              <div className="step-number">1</div>
+              <div className="step-title"><FiUserPlus /> Sign up</div>
+              <p className="step-desc">Create your Agent account instantly with zero upfront investment.</p>
+            </div>
+            <div className="partner-step">
+              <div className="step-number">2</div>
+              <div className="step-title"><FiShare2 /> Share Links</div>
+              <p className="step-desc">Get unique referral links and share them with your network easily.</p>
+            </div>
+            <div className="partner-step">
+              <div className="step-number">3</div>
+              <div className="step-title"><FiDollarSign /> Earn</div>
+              <p className="step-desc">Get paid commissions directly to your account for every successful purchase.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 };

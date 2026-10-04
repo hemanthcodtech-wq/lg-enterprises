@@ -108,7 +108,7 @@ const AdminLogin = () => {
         }
         .admin-login-left {
           flex: 1;
-          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+          background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
           color: white;
           padding: 4rem;
           display: flex;
@@ -134,7 +134,7 @@ const AdminLogin = () => {
           line-height: 1.2;
         }
         .admin-brand p {
-          color: #94a3b8;
+          color: rgba(255, 255, 255, 0.85);
           font-size: 1.05rem;
           line-height: 1.6;
         }
@@ -149,7 +149,7 @@ const AdminLogin = () => {
           box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .admin-left-footer p {
-          color: #64748b;
+          color: rgba(255, 255, 255, 0.7);
           font-size: 0.85rem;
         }
         .admin-login-right {
@@ -205,10 +205,11 @@ const AdminLogin = () => {
           outline: none;
         }
         .input-icon-wrapper input:focus {
-          border-color: #0f172a;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px var(--primary-alpha);
         }
         .btn-admin-login {
-          background: #0f172a;
+          background: var(--primary);
           color: white;
           padding: 1rem;
           border: none;
@@ -220,9 +221,9 @@ const AdminLogin = () => {
           transition: all 0.2s;
         }
         .btn-admin-login:hover {
-          background: #1e293b;
+          background: var(--primary-dark);
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+          box-shadow: 0 4px 12px var(--primary-alpha);
         }
 
         /* Responsive Design */

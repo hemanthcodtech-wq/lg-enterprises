@@ -94,7 +94,7 @@ const Navbar = () => {
           {user ? (
             <div className="nav-user-menu" ref={dropdownRef} style={{ position: 'relative' }}>
               <button className="nav-action" onClick={() => setDropdownOpen(!dropdownOpen)} style={{ background: 'none', border: 'none', padding: '0.4rem 0.7rem' }}>
-                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#cc2222', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold' }}>
+                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold' }}>
                   {user.name?.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginTop: '3px' }}>
@@ -117,7 +117,7 @@ const Navbar = () => {
                   <Link to="/wishlist" onClick={() => setDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem', color: '#334155', textDecoration: 'none', fontSize: '0.9rem', borderRadius: '6px', transition: '0.2s' }}>
                     <FiHeart /> Wishlist
                   </Link>
-                  <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.8rem 0.6rem', width: '100%', background: 'none', border: 'none', color: '#cc2222', cursor: 'pointer', textAlign: 'left', marginTop: '0.3rem', borderTop: '1px solid #f1f5f9', fontSize: '0.9rem', fontWeight: '600' }}>
+                  <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.8rem 0.6rem', width: '100%', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', textAlign: 'left', marginTop: '0.3rem', borderTop: '1px solid #f1f5f9', fontSize: '0.9rem', fontWeight: '600' }}>
                     <FiLogOut /> Sign Out
                   </button>
                 </div>

@@ -263,7 +263,7 @@ const AdminDashboard = () => {
         }
         .sidebar-profile .profile-avatar {
           width: 40px; height: 40px; min-width: 40px;
-          background: #fef2f2; color: #cc2222;
+          background: var(--primary-light); color: var(--primary);
           border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700;
         }
         .profile-info h4 { margin: 0; font-size: 0.95rem; font-weight: 700; color: #1e293b; }
@@ -304,8 +304,8 @@ const AdminDashboard = () => {
           padding: 0.8rem 0;
           justify-content: center;
         }
-        .nav-item:hover { background: #fef2f2; color: #cc2222; }
-        .nav-item.active { background: #cc2222; color: white; box-shadow: 0 4px 12px rgba(204, 34, 34, 0.25); }
+        .nav-item:hover { background: var(--primary-light); color: var(--primary); }
+        .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 12px var(--primary-alpha); }
         .nav-icon { font-size: 1.1rem; min-width: 1.1rem; }
         
         .logout-btn {
@@ -349,24 +349,24 @@ const AdminDashboard = () => {
         .header-title { flex: 1; margin: 0 1rem; }
         .header-title h1 { font-size: 1.25rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .header-profile { display: flex; align-items: center; gap: 0.8rem; }
-        .profile-avatar { width: 36px; height: 36px; border-radius: 50%; background: #cc2222; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .profile-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; }
         .profile-name { font-weight: 600; color: #334155; font-size: 0.9rem; }
         
         .mobile-bottom-nav { display: none; }
 
-        .admin-content-pad { padding: 2rem; }
+        .admin-content-pad { padding: 2.5rem; }
 
         /* Stats Grid */
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 2rem;
+          gap: 2rem;
+          margin-bottom: 2.5rem;
         }
         .stat-card {
           background: white;
-          padding: 1.5rem;
-          border-radius: 16px;
+          padding: 2rem;
+          border-radius: 20px;
           display: flex;
           align-items: center;
           gap: 1.5rem;
@@ -388,11 +388,10 @@ const AdminDashboard = () => {
         .stat-info h3 { font-size: 0.9rem; color: #64748b; font-weight: 600; margin-bottom: 0.2rem; }
         .stat-info p { font-size: 1.8rem; font-weight: 800; color: #0f172a; margin: 0; }
 
-        /* Recent Orders Section */
         .recent-orders-section {
           background: white;
-          border-radius: 16px;
-          padding: 1.5rem;
+          border-radius: 20px;
+          padding: 2rem;
           box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
           border: 1px solid #f1f5f9;
         }
@@ -400,8 +399,8 @@ const AdminDashboard = () => {
           display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;
         }
         .section-header h2 { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin: 0; }
-        .btn-view-all { background: #f8fafc; color: #3b82f6; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-view-all:hover { background: #e2e8f0; }
+        .btn-view-all { background: var(--primary-light); color: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-view-all:hover { background: var(--primary); color: white; }
 
         .table-responsive { overflow-x: auto; }
         .admin-table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -417,18 +416,18 @@ const AdminDashboard = () => {
         .admin-tab-content { animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .form-card { background: white; padding: 1.5rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; }
+        .form-card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; }
         .form-card h3 { margin-top: 0; color: #0f172a; font-size: 1.1rem; margin-bottom: 1.5rem; }
-        .table-card { background: white; padding: 1.5rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow-x: auto; }
+        .table-card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow-x: auto; }
         
-        .admin-form .form-group { margin-bottom: 1.2rem; }
-        .admin-form label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem; }
-        .admin-form input, .admin-form select, .admin-form textarea { width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.95rem; font-family: inherit; transition: border-color 0.2s; }
-        .admin-form input:focus, .admin-form select:focus, .admin-form textarea:focus { border-color: #cc2222; box-shadow: 0 0 0 3px rgba(204, 34, 34, 0.1); }
+        .admin-form .form-group { margin-bottom: 1.5rem; }
+        .admin-form label { display: block; font-size: 0.9rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem; }
+        .admin-form input, .admin-form select, .admin-form textarea { width: 100%; padding: 0.8rem 1.2rem; border-radius: 10px; border: 1.5px solid #cbd5e1; outline: none; font-size: 0.95rem; font-family: inherit; transition: border-color 0.2s; }
+        .admin-form input:focus, .admin-form select:focus, .admin-form textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-alpha); }
         
-        .btn-primary { background: #cc2222; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.95rem; }
-        .btn-primary:hover { background: #a81b1b; }
-        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: white; border: none; padding: 0.8rem 1.8rem; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.95rem; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 4px 10px var(--primary-alpha); }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
         
         .btn-delete { background: #fee2e2; color: #ef4444; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: 0.2s; }
         .btn-delete:hover { background: #fca5a5; color: #b91c1c; }

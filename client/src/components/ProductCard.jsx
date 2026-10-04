@@ -4,10 +4,26 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, isLoading }) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="product-card loading">
+        <div className="pcard-img skeleton">
+          <div className="skeleton-img"></div>
+        </div>
+        <div className="pcard-info">
+          <div className="skeleton skeleton-text"></div>
+          <div className="skeleton skeleton-text short"></div>
+          <div className="skeleton skeleton-text short" style={{ marginTop: '12px' }}></div>
+          <div className="skeleton skeleton-btn"></div>
+        </div>
+      </div>
+    );
+  }
 
   const handleAdd = (e) => {
     e.stopPropagation();
