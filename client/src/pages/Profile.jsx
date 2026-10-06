@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FiUser, FiMail, FiPhone, FiMapPin, FiSettings, FiHeart, FiPackage, FiLogOut, FiEdit2, FiShield, FiCreditCard } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiMapPin, FiSettings, FiHeart, FiPackage, FiLogOut, FiEdit2, FiShield, FiCreditCard, FiTag, FiCopy, FiShare2 } from 'react-icons/fi';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const Profile = () => {
@@ -21,6 +21,20 @@ const Profile = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const handleShare = (textToShare) => {
+    if (!user.referralCode) return;
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join LG Enterprises!',
+        text: 'Use my referral code/link!',
+        url: textToShare
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(textToShare);
+      alert('Copied to clipboard!');
+    }
   };
 
   const NavItem = ({ to, icon: Icon, label }) => {
@@ -44,10 +58,10 @@ const Profile = () => {
   };
 
   return (
-    <div className="section-pad" style={{ maxWidth: '1200px', margin: '0 auto', minHeight: '80vh', display: 'flex', gap: '2rem' }}>
+    <div className="section-pad profile-layout" style={{ maxWidth: '1200px', margin: '0 auto', minHeight: '80vh', paddingTop: '3rem' }}>
       
       {/* Sidebar Navigation */}
-      <div style={{ width: '280px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className="profile-sidebar">
         <div style={{ background: 'white', borderRadius: '24px', padding: '2rem 1rem', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9', flexGrow: 1 }}>
           
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -71,14 +85,14 @@ const Profile = () => {
       </div>
 
       {/* Main Content Area */}
-      <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div className="profile-main">
         
         {/* Stats Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+        <div className="profile-stats-grid">
           {[
-            { icon: FiPackage, label: 'Total Orders', value: '12', color: '#3b82f6', bg: '#eff6ff' },
-            { icon: FiHeart, label: 'Wishlist Items', value: '5', color: '#ec4899', bg: '#fdf2f8' },
-            { icon: FiCreditCard, label: 'Reward Points', value: '450', color: '#f59e0b', bg: '#fffbeb' },
+            { icon: FiPackage, label: 'Total Orders', value: user.orders?.length || 0, color: '#3b82f6', bg: '#eff6ff' },
+            { icon: FiHeart, label: 'Wishlist Items', value: user.wishlist?.length || 0, color: '#ec4899', bg: '#fdf2f8' },
+            { icon: FiCreditCard, label: 'Wallet Balance', value: `₹${user.walletBalance?.toFixed(2) || '0.00'}`, color: '#10b981', bg: '#dcfce7' },
           ].map((stat, i) => (
             <div key={i} style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
               <div style={{ width: '50px', height: '50px', borderRadius: '14px', background: stat.bg, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
@@ -104,20 +118,32 @@ const Profile = () => {
             </button>
           </div>
           
-          <div style={{ padding: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+          <div className="profile-details-grid" style={{ padding: '2rem' }}>
             {[
               { label: 'Full Name', value: user.name, icon: FiUser },
               { label: 'Email Address', value: user.email, icon: FiMail },
               { label: 'Phone Number', value: user.phone || 'Not provided', icon: FiPhone },
               { label: 'Shipping Address', value: user.address || 'Not provided', icon: FiMapPin },
+              { label: 'My Referral Code', value: user.referralCode || 'N/A', icon: FiTag, isReferralItem: true },
+              { label: 'My Referral Link', value: user.referralCode ? `${window.location.origin}/register?ref=${user.referralCode}` : 'N/A', icon: FiTag, isReferralItem: true },
             ].map((field, i) => (
               <div key={i} style={{ display: 'flex', gap: '1.2rem', alignItems: 'flex-start' }}>
                 <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: '#f8fafc', color: '#cc2222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
                   <field.icon />
                 </div>
-                <div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
                   <p style={{ margin: '0 0 0.3rem 0', color: '#64748b', fontSize: '0.85rem', fontWeight: '500' }}>{field.label}</p>
-                  <p style={{ margin: 0, color: '#1e293b', fontSize: '1rem', fontWeight: '600' }}>{field.value}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <p style={{ margin: 0, color: '#1e293b', fontSize: '1rem', fontWeight: '600', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {field.value}
+                    </p>
+                    {field.isReferralItem && user.referralCode && (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={() => { navigator.clipboard.writeText(field.value); alert('Copied!'); }} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer' }} title="Copy"><FiCopy /></button>
+                        <button onClick={() => handleShare(field.value)} style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer' }} title="Share"><FiShare2 /></button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

@@ -91,6 +91,8 @@ const Home = () => {
   });
 
   const dealProducts = ALL_PRODUCTS.filter(p => p.discount >= 25);
+  const trendingProducts = [...ALL_PRODUCTS].sort((a, b) => b.discount - a.discount).slice(0, 4);
+  const topSellingProducts = [...ALL_PRODUCTS].sort((a, b) => parseInt(b.reviews.replace(',', '')) - parseInt(a.reviews.replace(',', ''))).slice(0, 4);
   const slide = activeCarousel[slideIdx % activeCarousel.length];
 
   return (
@@ -111,7 +113,11 @@ const Home = () => {
       {!categoryFilter && !searchFilter && (
         <>
           <div className="hero-layout">
-            <div className="hero-main" style={{ backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 40%, rgba(255, 255, 255, 0) 100%), url(${slide.bg})` }}>
+            <div className="hero-main" style={{ 
+              backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 50%, rgba(255, 255, 255, 0.4) 100%), url(${slide.bg})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}>
               <div className="hero-content">
                 <div className="hero-tag">{slide.tag}</div>
                 <h1>{slide.heading}</h1>
@@ -166,6 +172,32 @@ const Home = () => {
             </div>
             <div className="products-row">
               {dealProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          </div>
+
+          {/* ─── Trending Now ─── */}
+          <div className="deals-section" style={{ marginTop: '3rem' }}>
+            <div className="deals-header">
+              <h2 className="section-title">
+                🔥 Trending Now
+              </h2>
+              <button className="view-all-btn">View All <FiChevronRight /></button>
+            </div>
+            <div className="products-row">
+              {trendingProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          </div>
+
+          {/* ─── Top Selling ─── */}
+          <div className="deals-section" style={{ marginTop: '3rem' }}>
+            <div className="deals-header">
+              <h2 className="section-title">
+                🏆 Top Selling
+              </h2>
+              <button className="view-all-btn">View All <FiChevronRight /></button>
+            </div>
+            <div className="products-row">
+              {topSellingProducts.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           </div>
 

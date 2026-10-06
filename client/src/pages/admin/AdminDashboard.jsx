@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag } from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag, FiSettings } from 'react-icons/fi';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -20,20 +20,30 @@ const AdminDashboard = () => {
       return;
     }
     setToken(storedToken);
+  }, [navigate]);
 
-    const fetchStats = async () => {
-      try {
-        const res = await axios.get('http://localhost:5000/api/admin/dashboard-stats', {
-          headers: { 'x-auth-token': storedToken }
-        });
-        setStats(res.data);
-      } catch (err) {
+  const fetchStats = async () => {
+    const storedToken = localStorage.getItem('adminToken');
+    if (!storedToken) return;
+    try {
+      const res = await axios.get('http://localhost:5000/api/admin/dashboard-stats', {
+        headers: { 'x-auth-token': storedToken }
+      });
+      setStats(res.data);
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      if (err.response?.status === 401) {
         localStorage.removeItem('adminToken');
         navigate('/admin/login');
       }
-    };
-    fetchStats();
-  }, [navigate]);
+    }
+  };
+
+  useEffect(() => {
+    if (localStorage.getItem('adminToken')) {
+      fetchStats();
+    }
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -105,9 +115,9 @@ const AdminDashboard = () => {
           </NavLink>
 
           {!isCollapsed && <div className="nav-section-title" style={{ marginTop: '1rem' }}>Settings</div>}
-          <a href="#" className="nav-item">
-            <FiUsers className="nav-icon" /> {!isCollapsed && <span>Settings</span>}
-          </a>
+          <NavLink to="/admin/dashboard/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
+            <FiSettings className="nav-icon" /> {!isCollapsed && <span>Settings</span>}
+          </NavLink>
           <button onClick={handleLogout} className="nav-item logout-btn">
             <FiLogOut className="nav-icon" /> {!isCollapsed && <span>Logout</span>}
           </button>
@@ -129,6 +139,7 @@ const AdminDashboard = () => {
               {location.pathname.includes('orders') && 'Order History'}
               {location.pathname.includes('promos') && 'Manage Promo Codes'}
               {location.pathname.includes('carousel') && 'Manage Carousel'}
+              {location.pathname.includes('settings') && 'System Settings'}
               {location.pathname === '/admin/dashboard' && 'Dashboard Overview'}
               {location.pathname === '/admin/dashboard/' && 'Dashboard Overview'}
             </h1>
@@ -142,7 +153,7 @@ const AdminDashboard = () => {
         {/* Dashboard Content */}
         <div className="admin-content-pad">
           
-          <Outlet context={{ token, stats }} />
+          <Outlet context={{ token, stats, setStats, fetchStats }} />
 
         </div>
 
@@ -163,9 +174,9 @@ const AdminDashboard = () => {
           <NavLink to="/admin/dashboard/carousel" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
             <FiShoppingBag className="popup-icon" /> Carousel
           </NavLink>
-          <a href="#" className="popup-item" onClick={(e) => { e.preventDefault(); setIsBottomMenuOpen(false); }}>
-            <FiUsers className="popup-icon" /> Settings
-          </a>
+          <NavLink to="/admin/dashboard/settings" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
+            <FiSettings className="popup-icon" /> Settings
+          </NavLink>
           <button onClick={() => { setIsBottomMenuOpen(false); handleLogout(); }} className="popup-item" style={{ color: '#ef4444' }}>
             <FiLogOut className="popup-icon" /> Logout
           </button>

@@ -2,11 +2,17 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const { authAdmin } = require('../middleware/auth');
+const { upload } = require('../config/cloudinary');
 
 // Create a Product (Admin Only)
-router.post('/', authAdmin, async (req, res) => {
+router.post('/', authAdmin, upload.array('images', 5), async (req, res) => {
   try {
-    const { name, slug, description, price, originalPrice, stock, category, images, isFeatured } = req.body;
+    const { name, slug, description, price, originalPrice, stock, category, isFeatured } = req.body;
+    let images = [];
+    if (req.files && req.files.length > 0) {
+      images = req.files.map(file => file.path);
+    }
+    
     let product = await Product.findOne({ slug });
     if (product) {
       return res.status(400).json({ error: 'Product with this slug already exists' });

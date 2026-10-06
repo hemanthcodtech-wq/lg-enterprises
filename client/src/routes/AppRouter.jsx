@@ -25,9 +25,12 @@ import AdminUsers from '../pages/admin/AdminUsers';
 import AdminOrders from '../pages/admin/AdminOrders';
 import AdminPromos from '../pages/admin/AdminPromos';
 import AdminCarousel from '../pages/admin/AdminCarousel';
+import AdminSettings from '../pages/admin/AdminSettings';
+import ScrollToTop from '../components/ScrollToTop';
 
 const AppRouter = () => (
   <Router>
+    <ScrollToTop />
     <Routes>
       {/* Admin Dashboard (Isolated) */}
       <Route path="/admin/dashboard" element={<AdminDashboard />}>
@@ -38,6 +41,7 @@ const AppRouter = () => (
         <Route path="orders" element={<AdminOrders />} />
         <Route path="promos" element={<AdminPromos />} />
         <Route path="carousel" element={<AdminCarousel />} />
+        <Route path="settings" element={<AdminSettings />} />
       </Route>
 
       {/* Main Store Routes (includes Navbar/Footer) */}

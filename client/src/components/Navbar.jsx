@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   FiSearch, FiShoppingCart, FiUser, FiHeart,
-  FiMenu, FiX, FiLogOut, FiPackage, FiChevronDown
+  FiMenu, FiX, FiLogOut, FiPackage, FiChevronDown,
+  FiHome, FiInfo, FiPhone
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -175,11 +176,11 @@ const Navbar = () => {
               </div>
             )}
             <nav className="mobile-nav-links">
-              <Link to="/" onClick={() => setMenuOpen(false)}>🏠 Home</Link>
-              <Link to="/about" onClick={() => setMenuOpen(false)}>ℹ️ About Us</Link>
-              <Link to="/contact" onClick={() => setMenuOpen(false)}>📞 Contact</Link>
-              <Link to="/cart" onClick={() => setMenuOpen(false)}>🛒 Cart ({cartCount})</Link>
-              {user && <button onClick={handleLogout}>🚪 Sign Out</button>}
+              <Link to="/" onClick={() => setMenuOpen(false)}><FiHome /> Home</Link>
+              <Link to="/about" onClick={() => setMenuOpen(false)}><FiInfo /> About Us</Link>
+              <Link to="/contact" onClick={() => setMenuOpen(false)}><FiPhone /> Contact</Link>
+              <Link to="/cart" onClick={() => setMenuOpen(false)}><FiShoppingCart /> Cart ({cartCount})</Link>
+              {user && <button onClick={handleLogout}><FiLogOut /> Sign Out</button>}
             </nav>
           </div>
         </div>

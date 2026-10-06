@@ -11,7 +11,11 @@ const Register = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
+  const location = window.location;
+  const urlParams = new URLSearchParams(location.search);
+  const refCode = urlParams.get('ref') || '';
+
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '', usedReferralCode: refCode });
 
   const inp = (field) => ({
     value: form[field],
@@ -26,7 +30,7 @@ const Register = () => {
     if (form.password !== form.confirmPassword) return setError('Passwords do not match');
     setLoading(true);
     try {
-      await register(form.name, form.email, form.phone, form.password);
+      await register(form.name, form.email, form.phone, form.password, form.usedReferralCode);
       setSuccess(true);
       setTimeout(() => navigate('/'), 1500);
     } catch (err) {
@@ -82,6 +86,11 @@ const Register = () => {
             <div className="form-group">
               <label className="form-label">Email Address *</label>
               <input type="email" className="form-input" placeholder="you@example.com" {...inp('email')} required autoComplete="email" />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Referral Code (Optional)</label>
+              <input type="text" className="form-input" placeholder="e.g. A1B2C3D4" {...inp('usedReferralCode')} />
             </div>
 
             <div className="form-row">

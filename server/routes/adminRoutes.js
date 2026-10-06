@@ -43,21 +43,66 @@ router.post('/login', async (req, res) => {
 
 const { authAdmin } = require('../middleware/auth');
 
-// Example Protected Route
-router.get('/dashboard-stats', authAdmin, (req, res) => {
-  res.json({
-    usersCount: 154,
-    ordersCount: 23,
-    revenue: 45000,
-    recentOrders: []
-  });
+const Product = require('../models/Product');
+const Category = require('../models/Category');
+
+// Dashboard Real Stats Route (Admin Only)
+router.get('/dashboard-stats', authAdmin, async (req, res) => {
+  try {
+    const usersCount = await User.countDocuments({ role: { $ne: 'admin' } });
+    const ordersCount = await Order.countDocuments();
+    const productsCount = await Product.countDocuments();
+    const categoriesCount = await Category.countDocuments();
+
+    const revenueAgg = await Order.aggregate([
+      { $match: { paymentStatus: { $ne: 'Failed' } } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    ]);
+    const revenue = revenueAgg.length > 0 ? revenueAgg[0].total : 0;
+
+    const recentOrders = await Order.find()
+      .populate('user', 'name email')
+      .populate('items.product', 'name price images')
+      .sort({ createdAt: -1 })
+      .limit(6);
+
+    res.json({
+      usersCount,
+      ordersCount,
+      productsCount,
+      categoriesCount,
+      revenue,
+      recentOrders
+    });
+  } catch (err) {
+    console.error('Dashboard stats error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // Get all Users (Admin Only)
 router.get('/users', authAdmin, async (req, res) => {
   try {
-    const users = await User.find({ role: { $ne: 'admin' } }).select('-password').sort({ createdAt: -1 });
+    const users = await User.find({ role: { $ne: 'admin' } })
+      .populate('referredBy', 'name referralCode')
+      .select('-password')
+      .sort({ createdAt: -1 });
     res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get specific User details (orders & referred users)
+router.get('/users/:id/details', authAdmin, async (req, res) => {
+  try {
+    const userOrders = await Order.find({ user: req.params.id }).sort({ createdAt: -1 });
+    const referredUsers = await User.find({ referredBy: req.params.id }).select('name email createdAt walletBalance');
+    res.json({
+      orders: userOrders,
+      referredUsers: referredUsers
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

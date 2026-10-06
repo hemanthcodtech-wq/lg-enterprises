@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 const Promo = require('../models/Promo');
+const User = require('../models/User');
 const { authUser } = require('../middleware/auth');
 const Razorpay = require('razorpay');
 
@@ -46,12 +47,37 @@ router.post('/', authUser, async (req, res) => {
       }
     }
 
+    const userObj = await User.findById(req.user.id);
+    if (!userObj) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (paymentMethod === 'Wallet') {
+      if (userObj.walletBalance < totalAmount) {
+        return res.status(400).json({ error: 'Insufficient wallet balance' });
+      }
+      userObj.walletBalance -= totalAmount;
+      await userObj.save();
+    }
+
     const order = new Order({
       user: req.user.id,
       items,
       totalAmount,
       paymentMethod: paymentMethod || 'Card'
     });
+
+    await order.save();
+
+    // Give referral commission (e.g. 5%)
+    if (userObj.referredBy) {
+      const referrer = await User.findById(userObj.referredBy);
+      if (referrer) {
+        const commission = totalAmount * 0.05; // 5% commission
+        referrer.walletBalance += commission;
+        await referrer.save();
+      }
+    }
 
     await order.save();
     res.status(201).json(order);

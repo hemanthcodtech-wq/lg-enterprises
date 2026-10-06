@@ -115,7 +115,35 @@ const Cart = () => {
     }
   };
 
-
+  const handleWalletCheckout = async () => {
+    if ((user?.walletBalance || 0) < finalTotal) {
+      alert('Insufficient wallet balance!');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('lg_token');
+      const items = cart.map(item => ({
+        product: item.id,
+        quantity: item.qty,
+        price: item.price
+      }));
+      
+      await axios.post('http://localhost:5000/api/orders', {
+        items,
+        totalAmount: finalTotal,
+        paymentMethod: 'Wallet',
+        promoId: appliedPromo ? appliedPromo.promoId : undefined
+      }, {
+        headers: { 'x-auth-token': token }
+      });
+      
+      alert('Payment Successful using Wallet!');
+      if (clearCart) clearCart();
+      window.location.href = '/profile';
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to process wallet payment');
+    }
+  };
 
   if (!user) {
     return (
@@ -213,8 +241,12 @@ const Cart = () => {
             <span style={{ color: 'var(--primary)' }}>₹{finalTotal}</span>
           </div>
           
-          <button onClick={handleCheckout} className="btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', borderRadius: 'var(--radius-pill)' }}>
-            Proceed to Checkout
+          <button onClick={handleCheckout} className="btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', borderRadius: 'var(--radius-pill)', marginBottom: '0.5rem' }}>
+            Pay with Card (Razorpay)
+          </button>
+          
+          <button onClick={handleWalletCheckout} style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', borderRadius: 'var(--radius-pill)', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+            Pay with Wallet (Bal: ₹{user?.walletBalance?.toFixed(2) || '0.00'})
           </button>
         </div>
       </div>
