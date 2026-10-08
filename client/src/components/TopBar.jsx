@@ -1,5 +1,6 @@
 import React from 'react';
-import { FiTruck, FiRefreshCcw, FiShield, FiCheckCircle, FiMapPin, FiHelpCircle, FiGlobe, FiChevronDown } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
+import { FiTruck, FiRefreshCcw, FiShield, FiCheckCircle, FiMapPin, FiHelpCircle, FiGlobe, FiChevronDown, FiInfo, FiPhone } from 'react-icons/fi';
 
 const TopBar = () => {
   return (
@@ -11,11 +12,10 @@ const TopBar = () => {
         <span><FiCheckCircle /> Genuine Products</span>
       </div>
       <div className="top-bar-right">
+        <Link to="/about" style={{color: 'inherit', textDecoration: 'none'}}><span><FiInfo /> About Us</span></Link>
+        <Link to="/contact" style={{color: 'inherit', textDecoration: 'none'}}><span><FiPhone /> Contact Us</span></Link>
         <span><FiMapPin /> Our Store</span>
         <span><FiTruck /> Track Order</span>
-        <span><FiHelpCircle /> Need Help?</span>
-        <span><span className="hindi-text">हिन्दी</span></span>
-        <span><FiGlobe /> English <FiChevronDown /></span>
       </div>
     </div>
   );

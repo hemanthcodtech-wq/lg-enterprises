@@ -23,6 +23,7 @@
     "multer": "^2.4.0",
     "multer-storage-cloudinary": "^4.0.0",
     "node": "^22.23.3",
+    "nodemailer": "^10.0.16",
     "nodemon": "^3.1.14",
     "razorpay": "^2.9.8"
   }

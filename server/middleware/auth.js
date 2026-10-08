@@ -24,6 +24,9 @@ const authUser = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
     req.user = decoded;
+    if (!req.user.id && req.user.userId) {
+      req.user.id = req.user.userId;
+    }
     next();
   } catch (err) {
     res.status(401).json({ error: 'Token is not valid' });

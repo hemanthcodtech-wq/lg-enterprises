@@ -17,7 +17,7 @@ const AdminCategories = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/categories');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/categories`);
       setCategories(res.data);
     } catch (err) {
       console.error('Failed to fetch categories', err);
@@ -29,7 +29,7 @@ const AdminCategories = () => {
     setLoading(true);
     try {
       await axios.post(
-        'http://localhost:5000/api/categories',
+        `${import.meta.env.VITE_API_URL}/categories`,
         { name, slug, image: '' },
         { headers: { 'x-auth-token': token } }
       );
@@ -45,7 +45,7 @@ const AdminCategories = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this category?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/categories/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/categories/${id}`, {
         headers: { 'x-auth-token': token }
       });
       fetchCategories();

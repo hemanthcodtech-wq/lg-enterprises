@@ -55,6 +55,7 @@ const Home = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [slideIdx, setSlideIdx] = useState(0);
   const [apiSlides, setApiSlides] = useState([]);
+  const [dbProducts, setDbProducts] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -62,9 +63,26 @@ const Home = () => {
   const searchFilter   = params.get('search')   || '';
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/carousel')
+    axios.get(`${import.meta.env.VITE_API_URL}/carousel`)
       .then(res => setApiSlides(res.data))
       .catch(err => console.error('Error fetching carousel:', err));
+
+    axios.get(`${import.meta.env.VITE_API_URL}/products`)
+      .then(res => {
+        const formatted = res.data.map(p => ({
+          id: p._id,
+          title: p.name,
+          price: p.price,
+          originalPrice: p.originalPrice || Math.round(p.price * 1.2),
+          image: p.images?.[0] || 'https://via.placeholder.com/300',
+          category: p.category?.name?.toLowerCase() || 'other',
+          discount: p.originalPrice ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0,
+          rating: 4.5,
+          reviews: Math.floor(Math.random() * 200) + 10
+        }));
+        setDbProducts(formatted);
+      })
+      .catch(err => console.error('Error fetching products:', err));
   }, []);
 
   const activeCarousel = apiSlides.length > 0 ? apiSlides.map(s => ({
@@ -83,16 +101,16 @@ const Home = () => {
   }, [activeCarousel.length]);
 
   // Derive visible products
-  const visibleProducts = ALL_PRODUCTS.filter(p => {
+  const visibleProducts = dbProducts.filter(p => {
     if (categoryFilter && p.category !== categoryFilter) return false;
     if (searchFilter && !p.title.toLowerCase().includes(searchFilter.toLowerCase())) return false;
     if (activeTab !== 'All' && p.category !== activeTab.toLowerCase()) return false;
     return true;
   });
 
-  const dealProducts = ALL_PRODUCTS.filter(p => p.discount >= 25);
-  const trendingProducts = [...ALL_PRODUCTS].sort((a, b) => b.discount - a.discount).slice(0, 4);
-  const topSellingProducts = [...ALL_PRODUCTS].sort((a, b) => parseInt(b.reviews.replace(',', '')) - parseInt(a.reviews.replace(',', ''))).slice(0, 4);
+  const dealProducts = dbProducts.filter(p => p.discount >= 25);
+  const trendingProducts = [...dbProducts].sort((a, b) => b.discount - a.discount).slice(0, 4);
+  const topSellingProducts = [...dbProducts].sort((a, b) => b.reviews - a.reviews).slice(0, 4);
   const slide = activeCarousel[slideIdx % activeCarousel.length];
 
   return (
@@ -114,7 +132,7 @@ const Home = () => {
         <>
           <div className="hero-layout">
             <div className="hero-main" style={{ 
-              backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 50%, rgba(255, 255, 255, 0.4) 100%), url(${slide.bg})`,
+              backgroundImage: `url(${slide.bg})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}>

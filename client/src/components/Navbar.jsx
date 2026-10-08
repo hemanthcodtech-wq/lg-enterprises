@@ -10,7 +10,7 @@ import { useCart } from '../context/CartContext';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const { cartCount } = useCart();
+  const { cartCount, clearCart, clearWishlist } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,6 +36,8 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
+    if (clearCart) clearCart();
+    if (clearWishlist) clearWishlist();
     setDropdownOpen(false);
     navigate('/');
   };
@@ -78,17 +80,29 @@ const Navbar = () => {
 
         {/* Actions */}
         <div className="nav-actions">
+          <Link to="/products" className="nav-action" title="Products">
+            <FiPackage />
+            <span>Products</span>
+          </Link>
+          <Link to="/about" className="nav-action" title="About Us">
+            <FiInfo />
+            <span>About</span>
+          </Link>
+          <Link to="/contact" className="nav-action" title="Contact Us">
+            <FiPhone />
+            <span>Contact</span>
+          </Link>
+          {/* Wishlist */}
+          <Link to="/wishlist" className="nav-action" title="Wishlist">
+            <FiHeart />
+            <span>Wishlist</span>
+          </Link>
+
           {/* Cart */}
           <Link to="/cart" className="cart-btn">
             <FiShoppingCart />
             <span>Cart</span>
             {cartCount > 0 && <span className="nav-badge">{cartCount}</span>}
-          </Link>
-
-          {/* Wishlist */}
-          <Link to="/wishlist" className="nav-action" title="Wishlist">
-            <FiHeart />
-            <span>Wishlist</span>
           </Link>
 
           {/* Account */}
@@ -177,6 +191,7 @@ const Navbar = () => {
             )}
             <nav className="mobile-nav-links">
               <Link to="/" onClick={() => setMenuOpen(false)}><FiHome /> Home</Link>
+              <Link to="/products" onClick={() => setMenuOpen(false)}><FiPackage /> Products</Link>
               <Link to="/about" onClick={() => setMenuOpen(false)}><FiInfo /> About Us</Link>
               <Link to="/contact" onClick={() => setMenuOpen(false)}><FiPhone /> Contact</Link>
               <Link to="/cart" onClick={() => setMenuOpen(false)}><FiShoppingCart /> Cart ({cartCount})</Link>

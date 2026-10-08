@@ -4,13 +4,19 @@ import { FiEye, FiEyeOff, FiAlertCircle, FiCheckCircle, FiShoppingBag, FiTag, Fi
 import { useAuth } from '../context/AuthContext';
 
 const Register = () => {
-  const { register } = useAuth();
+  const { register, verifyOtp } = useAuth();
   const navigate = useNavigate();
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  
+  // OTP States
+  const [requireOtp, setRequireOtp] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [verifying, setVerifying] = useState(false);
+
   const location = window.location;
   const urlParams = new URLSearchParams(location.search);
   const refCode = urlParams.get('ref') || '';
@@ -22,6 +28,7 @@ const Register = () => {
     onChange: e => setForm({ ...form, [field]: e.target.value }),
   });
 
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -30,13 +37,34 @@ const Register = () => {
     if (form.password !== form.confirmPassword) return setError('Passwords do not match');
     setLoading(true);
     try {
-      await register(form.name, form.email, form.phone, form.password, form.usedReferralCode);
-      setSuccess(true);
-      setTimeout(() => navigate('/'), 1500);
+      const data = await register(form.name, form.email, form.phone, form.password, form.usedReferralCode);
+      if (data.requireOtp) {
+        setRequireOtp(true);
+      } else {
+        setSuccess(true);
+        setTimeout(() => navigate('/'), 1500);
+      }
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!otp) return setError('Please enter the OTP');
+    setVerifying(true);
+    try {
+      await verifyOtp(form.email, otp);
+      setRequireOtp(false);
+      setSuccess(true);
+      setTimeout(() => navigate('/'), 1500);
+    } catch (err) {
+      setError(err.message || 'Invalid OTP');
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -71,7 +99,22 @@ const Register = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          {requireOtp ? (
+            <form onSubmit={handleVerifyOtp}>
+              <p style={{ marginBottom: '1rem', color: 'var(--text)' }}>
+                We sent a 6-digit OTP to <b>{form.email}</b>. Please enter it below to verify your account.
+              </p>
+              
+              <div className="form-group">
+                <label className="form-label">Enter OTP</label>
+                <input type="text" className="form-input" placeholder="123456" value={otp} onChange={e => setOtp(e.target.value)} required />
+              </div>
+              <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={verifying}>
+                {verifying ? 'Verifying...' : 'Verify OTP'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit}>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Full Name *</label>
@@ -89,8 +132,24 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Referral Code (Optional)</label>
-              <input type="text" className="form-input" placeholder="e.g. A1B2C3D4" {...inp('usedReferralCode')} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="form-label">Referral Code (Optional)</label>
+                {form.usedReferralCode && (
+                  <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <FiCheckCircle /> Code Applied
+                  </span>
+                )}
+              </div>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="e.g. A1B2C3D4" 
+                value={form.usedReferralCode}
+                onChange={e => setForm({ ...form, usedReferralCode: e.target.value.toUpperCase() })}
+              />
+              <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                Earn 5-tier passive commission on every purchase when your network shops!
+              </span>
             </div>
 
             <div className="form-row">
@@ -128,6 +187,7 @@ const Register = () => {
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
+          )}
 
           <p className="auth-switch">
             Already have an account? <Link to="/login">Sign In Here</Link>

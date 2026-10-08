@@ -13,7 +13,7 @@ const AdminOrders = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/orders', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/orders`, {
         headers: { 'x-auth-token': token }
       });
       setOrders(res.data);
@@ -25,7 +25,7 @@ const AdminOrders = () => {
   const handleStatusChange = async (orderId, newStatus) => {
     setUpdatingId(orderId);
     try {
-      await axios.put(`http://localhost:5000/api/admin/orders/${orderId}/status`, 
+      await axios.put(`${import.meta.env.VITE_API_URL}/admin/orders/${orderId}/status`, 
         { status: newStatus },
         { headers: { 'x-auth-token': token } }
       );

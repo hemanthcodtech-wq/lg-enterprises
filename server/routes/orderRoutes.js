@@ -3,12 +3,14 @@ const router = express.Router();
 const Order = require('../models/Order');
 const Promo = require('../models/Promo');
 const User = require('../models/User');
+const Commission = require('../models/Commission');
 const { authUser } = require('../middleware/auth');
 const Razorpay = require('razorpay');
+const sendEmail = require('../utils/mailer');
 
 const razorpayInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_12345',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'test_secret_12345',
+  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_TfwrOlkqXf2RIf',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'QIJa5lCuJC87EJdLDrgKnLDF',
 });
 
 // Create Razorpay Order
@@ -33,7 +35,7 @@ router.post('/create-razorpay-order', authUser, async (req, res) => {
 // Place an Order (Customer)
 router.post('/', authUser, async (req, res) => {
   try {
-    const { items, totalAmount, paymentMethod, promoId } = req.body;
+    const { items, totalAmount, paymentMethod, promoId, walletUsed } = req.body;
     
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'No order items' });
@@ -52,11 +54,11 @@ router.post('/', authUser, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (paymentMethod === 'Wallet') {
-      if (userObj.walletBalance < totalAmount) {
+    if (walletUsed && walletUsed > 0) {
+      if (userObj.walletBalance < walletUsed) {
         return res.status(400).json({ error: 'Insufficient wallet balance' });
       }
-      userObj.walletBalance -= totalAmount;
+      userObj.walletBalance -= walletUsed;
       await userObj.save();
     }
 
@@ -64,22 +66,85 @@ router.post('/', authUser, async (req, res) => {
       user: req.user.id,
       items,
       totalAmount,
-      paymentMethod: paymentMethod || 'Card'
+      paymentMethod: paymentMethod || 'Card',
+      paymentStatus: 'Completed'
     });
 
-    await order.save();
+    await order.save(); // CRITICAL FIX: Save the order to the database
 
-    // Give referral commission (e.g. 5%)
-    if (userObj.referredBy) {
-      const referrer = await User.findById(userObj.referredBy);
-      if (referrer) {
-        const commission = totalAmount * 0.05; // 5% commission
-        referrer.walletBalance += commission;
-        await referrer.save();
+    // 5-Level Multi-Tier Referral Commission Distribution
+    // Level 1: 5%, Level 2: 2.5%, Level 3: 2%, Level 4: 1.5%, Level 5: 1%
+    const TIER_RATES = [
+      { level: 1, percent: 5.0, factor: 0.05 },
+      { level: 2, percent: 2.5, factor: 0.025 },
+      { level: 3, percent: 2.0, factor: 0.02 },
+      { level: 4, percent: 1.5, factor: 0.015 },
+      { level: 5, percent: 1.0, factor: 0.01 },
+    ];
+
+    let currentUplineId = userObj.referredBy;
+    let currentLevel = 1;
+    const visitedUsers = new Set([userObj._id.toString()]);
+
+    while (currentUplineId && currentLevel <= 5) {
+      const uplineIdStr = currentUplineId.toString();
+      if (visitedUsers.has(uplineIdStr)) break; // Prevent circular reference
+      visitedUsers.add(uplineIdStr);
+
+      const uplineUser = await User.findById(currentUplineId);
+      if (!uplineUser) break;
+
+      const tier = TIER_RATES[currentLevel - 1];
+      const commissionAmount = Math.round((totalAmount * tier.factor) * 100) / 100;
+
+      if (commissionAmount > 0) {
+        uplineUser.walletBalance = Math.round(((uplineUser.walletBalance || 0) + commissionAmount) * 100) / 100;
+        uplineUser.totalReferralEarnings = Math.round(((uplineUser.totalReferralEarnings || 0) + commissionAmount) * 100) / 100;
+        await uplineUser.save();
+
+        await Commission.create({
+          recipient: uplineUser._id,
+          buyer: userObj._id,
+          order: order._id,
+          level: tier.level,
+          commissionPercent: tier.percent,
+          commissionAmount,
+          orderTotal: totalAmount
+        });
       }
+
+      currentUplineId = uplineUser.referredBy;
+      currentLevel++;
     }
 
-    await order.save();
+    // Send Invoice Email
+    const invoiceHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+        <h2 style="color: #2563eb;">LG Enterprises - Order Confirmation</h2>
+        <p>Dear ${userObj.name},</p>
+        <p>Thank you for your purchase! Your order <strong>#${order._id.toString().slice(-8).toUpperCase()}</strong> has been successfully placed.</p>
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3>Invoice Summary</h3>
+          <p><strong>Total Paid:</strong> ₹${totalAmount}</p>
+          <p><strong>Payment Method:</strong> ${paymentMethod || 'Card'}</p>
+          ${walletUsed ? `<p><strong>Wallet Used:</strong> ₹${walletUsed}</p>` : ''}
+        </div>
+        <p>You can track your order or download the full invoice PDF from your dashboard.</p>
+        <br/>
+        <p>Best regards,<br/>LG Enterprises Team</p>
+      </div>
+    `;
+    
+    try {
+      await sendEmail({
+        email: userObj.email,
+        subject: `Order Confirmation #${order._id.toString().slice(-8).toUpperCase()}`,
+        html: invoiceHtml
+      });
+    } catch (emailErr) {
+      console.error('Failed to send invoice email:', emailErr);
+    }
+
     res.status(201).json(order);
   } catch (err) {
     console.error(err);
@@ -128,8 +193,22 @@ router.post('/validate-promo', authUser, async (req, res) => {
 // Get User Orders
 router.get('/myorders', authUser, async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
+    const orders = await Order.find({ user: req.user.id })
+      .populate('items.product', 'name images slug')
+      .sort({ createdAt: -1 });
     res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Get Single Order Details
+router.get('/:id', authUser, async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, user: req.user.id })
+      .populate('items.product', 'name images price description');
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    res.json(order);
   } catch (err) {
     res.status(500).json({ error: 'Server Error' });
   }

@@ -21,7 +21,7 @@ const AdminPromos = () => {
 
   const fetchPromos = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/promos', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/promos`, {
         headers: { 'x-auth-token': token }
       });
       setPromos(res.data);
@@ -35,7 +35,7 @@ const AdminPromos = () => {
     setLoading(true);
     try {
       await axios.post(
-        'http://localhost:5000/api/admin/promos',
+        `${import.meta.env.VITE_API_URL}/admin/promos`,
         { 
           code, 
           discountType, 
@@ -56,7 +56,7 @@ const AdminPromos = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this promo code?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/admin/promos/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/admin/promos/${id}`, {
         headers: { 'x-auth-token': token }
       });
       fetchPromos();

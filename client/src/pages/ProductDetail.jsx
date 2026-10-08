@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ALL_PRODUCTS } from '../utils/data';
+import axios from 'axios';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { FiShoppingCart, FiHeart, FiCheck, FiTruck, FiShield, FiRefreshCcw, FiArrowLeft } from 'react-icons/fi';
@@ -8,11 +8,43 @@ import { FiShoppingCart, FiHeart, FiCheck, FiTruck, FiShield, FiRefreshCcw, FiAr
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, wishlist, toggleWishlist } = useCart();
   const { user } = useAuth();
   
-  const product = ALL_PRODUCTS.find(p => p.id === parseInt(id));
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
+
+  React.useEffect(() => {
+    axios.get(`${import.meta.env.VITE_API_URL}/products/${id}`)
+      .then(res => {
+        const p = res.data;
+        setProduct({
+          id: p._id,
+          title: p.name,
+          description: p.description,
+          price: p.price,
+          oldPrice: p.originalPrice || Math.round(p.price * 1.2),
+          image: p.images?.[0] || 'https://via.placeholder.com/600',
+          category: p.category?.name?.toLowerCase() || 'other',
+          discount: p.originalPrice ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0,
+          reviews: Math.floor(Math.random() * 200) + 10
+        });
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="section-pad" style={{ textAlign: 'center', padding: '10rem 2rem' }}>
+        <h2>Loading Product...</h2>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -41,8 +73,10 @@ const ProductDetail = () => {
       navigate('/login');
       return;
     }
-    // Wishlist logic...
+    toggleWishlist(product);
   };
+
+  const inWishlist = wishlist?.some(item => item.id === product.id);
 
   return (
     <div className="section-pad">
@@ -84,7 +118,7 @@ const ProductDetail = () => {
           </div>
 
           <p style={{ color: 'var(--text-gray)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
-            This premium quality {product.title.toLowerCase()} is exactly what you need. It features top-tier durability, excellent design, and comes with a full guarantee from LG Enterprises. Grab it while stocks last!
+            {product.description || `This premium quality ${product.title.toLowerCase()} is exactly what you need. It features top-tier durability, excellent design, and comes with a full guarantee from LG Enterprises. Grab it while stocks last!`}
           </p>
 
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '3rem' }}>
@@ -97,8 +131,8 @@ const ProductDetail = () => {
             <button onClick={handleAddToCart} className="btn-primary" style={{ flex: 1, padding: '0', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderRadius: 'var(--radius-pill)' }}>
               <FiShoppingCart /> Add to Cart
             </button>
-            <button onClick={handleWishlist} style={{ padding: '0 1.5rem', borderRadius: 'var(--radius-pill)', border: '2px solid var(--border)', background: 'white', color: 'var(--text-gray)', fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}>
-              <FiHeart />
+            <button onClick={handleWishlist} style={{ padding: '0 1.5rem', borderRadius: 'var(--radius-pill)', border: `2px solid ${inWishlist ? '#ef4444' : 'var(--border)'}`, background: inWishlist ? '#fee2e2' : 'white', color: inWishlist ? '#ef4444' : 'var(--text-gray)', fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}>
+              <FiHeart style={{ fill: inWishlist ? '#ef4444' : 'none' }} />
             </button>
           </div>
 

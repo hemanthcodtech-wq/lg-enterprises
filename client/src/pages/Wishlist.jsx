@@ -1,13 +1,14 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
-import { FiHeart } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiHeart, FiShoppingCart, FiTrash2 } from 'react-icons/fi';
+import { useCart } from '../context/CartContext';
 
 const Wishlist = () => {
   const { user } = useAuth();
   
-  // Dummy state for wishlist
-  const wishlistItems = [];
+  const { wishlist, toggleWishlist, addToCart } = useCart();
+  const navigate = useNavigate();
 
   if (!user) {
     return (
@@ -20,10 +21,10 @@ const Wishlist = () => {
   }
 
   return (
-    <div className="section-pad" style={{ maxWidth: '1000px', margin: '0 auto', minHeight: '60vh' }}>
+    <div style={{ width: '100%' }}>
       <h2 className="section-title">My Wishlist</h2>
       
-      {wishlistItems.length === 0 ? (
+      {wishlist.length === 0 ? (
         <div style={{ background: 'white', borderRadius: '16px', padding: '4rem 2rem', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
           <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#fee2e2', color: '#cc2222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', margin: '0 auto 1.5rem' }}>
             <FiHeart />
@@ -36,7 +37,35 @@ const Wishlist = () => {
         </div>
       ) : (
         <div className="products-grid">
-          {/* Wishlist items mapping would go here */}
+          {wishlist.map(product => (
+            <div key={product.id} style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'relative', background: '#f8fafc', padding: '2rem', display: 'flex', justifyContent: 'center' }}>
+                <img src={product.image} alt={product.title} style={{ width: '100%', height: '180px', objectFit: 'contain' }} />
+                <button 
+                  onClick={() => toggleWishlist(product)}
+                  style={{ position: 'absolute', top: '1rem', right: '1rem', width: '36px', height: '36px', borderRadius: '50%', background: '#fee2e2', color: '#cc2222', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '1.2rem' }}
+                >
+                  <FiTrash2 />
+                </button>
+              </div>
+              <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#1e293b' }}>{product.title}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>₹{product.price}</span>
+                  {product.oldPrice && <span style={{ color: '#94a3b8', textDecoration: 'line-through', fontSize: '0.9rem' }}>₹{product.oldPrice}</span>}
+                </div>
+                <div style={{ marginTop: 'auto' }}>
+                  <button 
+                    onClick={() => { addToCart(product); navigate('/cart'); }}
+                    className="btn-primary" 
+                    style={{ width: '100%', padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                  >
+                    <FiShoppingCart /> Move to Cart
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

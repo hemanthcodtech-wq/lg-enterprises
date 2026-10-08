@@ -1,137 +1,148 @@
-const mongoose = require('mongoose');
 require('dotenv').config();
-
+const mongoose = require('mongoose');
 const Category = require('./models/Category');
 const Product = require('./models/Product');
-const Carousel = require('./models/Carousel');
 
-const seedDB = async () => {
+const seedData = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB Connected for Seeding...');
+    console.log('Connected to MongoDB');
 
-    // Clear existing data
-    await Category.deleteMany();
-    await Product.deleteMany();
-    await Carousel.deleteMany();
-    console.log('Cleared existing Categories, Products, and Carousels.');
+    // Clear existing
+    await Category.deleteMany({});
+    await Product.deleteMany({});
+    console.log('Cleared existing data');
 
     // Seed Categories
-    const categoriesData = [
-      { name: 'Electronics', slug: 'electronics' },
-      { name: 'Fashion', slug: 'fashion' },
-      { name: 'Home & Kitchen', slug: 'home-kitchen' },
-      { name: 'Sports', slug: 'sports' }
-    ];
-    const createdCategories = await Category.insertMany(categoriesData);
-    console.log(`Seeded ${createdCategories.length} Categories.`);
+    const catElectronics = await Category.create({ name: 'Electronics', slug: 'electronics', image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=80' });
+    const catFurniture = await Category.create({ name: 'Furniture', slug: 'furniture', image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&q=80' });
+    const catGrocery = await Category.create({ name: 'Grocery', slug: 'grocery', image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80' });
+    const catClothing = await Category.create({ name: 'Clothing', slug: 'clothing', image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=500&q=80' });
+
+    console.log('Categories created');
 
     // Seed Products
-    const productsData = [
+    const products = [
       {
-        name: 'Smartphone X Pro',
-        slug: 'smartphone-x-pro',
-        description: 'Latest high-end smartphone with an amazing camera and battery life.',
-        price: 69999,
-        originalPrice: 79999,
+        name: 'LG OLED 4K Smart TV',
+        slug: 'lg-oled-4k-smart-tv',
+        description: 'Experience pure colors with LG OLED technology. Features a slim design, webOS, and Dolby Vision.',
+        price: 85999,
+        originalPrice: 99999,
         stock: 50,
-        category: createdCategories[0]._id, // Electronics
-        images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'],
+        category: catElectronics._id,
+        images: ['https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=500&q=80'],
         isFeatured: true
       },
       {
-        name: 'Wireless Noise Cancelling Headphones',
-        slug: 'wireless-headphones',
-        description: 'Premium over-ear headphones with active noise cancellation.',
-        price: 12999,
-        originalPrice: 15999,
-        stock: 120,
-        category: createdCategories[0]._id, // Electronics
-        images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800&auto=format&fit=crop'],
+        name: 'LG French Door Refrigerator',
+        slug: 'lg-french-door-refrigerator',
+        description: 'InstaView Door-in-Door refrigerator with Craft Ice. Keep food fresh longer.',
+        price: 65000,
+        originalPrice: 75000,
+        stock: 20,
+        category: catElectronics._id,
+        images: ['https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=500&q=80'],
         isFeatured: true
       },
       {
-        name: 'Men\'s Casual Sneakers',
-        slug: 'mens-casual-sneakers',
-        description: 'Comfortable and stylish sneakers for everyday wear.',
-        price: 2499,
-        originalPrice: 3499,
-        stock: 200,
-        category: createdCategories[1]._id, // Fashion
-        images: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800&auto=format&fit=crop'],
-        isFeatured: false
-      },
-      {
-        name: 'Women\'s Summer Dress',
-        slug: 'womens-summer-dress',
-        description: 'Light and breezy dress perfect for warm days.',
-        price: 1899,
-        originalPrice: 2499,
-        stock: 80,
-        category: createdCategories[1]._id, // Fashion
-        images: ['https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?q=80&w=800&auto=format&fit=crop'],
-        isFeatured: true
-      },
-      {
-        name: 'Non-Stick Cookware Set',
-        slug: 'cookware-set',
-        description: '10-piece non-stick cookware set including pots, pans, and utensils.',
+        name: 'Modern Ergonomic Office Chair',
+        slug: 'modern-ergonomic-office-chair',
+        description: 'Adjustable height, lumbar support, and breathable mesh for all-day comfort.',
         price: 4999,
-        originalPrice: 6599,
+        originalPrice: 6500,
+        stock: 100,
+        category: catFurniture._id,
+        images: ['https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=500&q=80'],
+        isFeatured: false
+      },
+      {
+        name: 'Minimalist Dining Table Set',
+        slug: 'minimalist-dining-table-set',
+        description: 'Solid wood dining table with 4 upholstered chairs.',
+        price: 18500,
+        originalPrice: 22000,
+        stock: 15,
+        category: catFurniture._id,
+        images: ['https://images.unsplash.com/photo-1604578762246-41134e37f9cc?w=500&q=80'],
+        isFeatured: true
+      },
+      {
+        name: 'Premium Organic Coffee Beans',
+        slug: 'premium-organic-coffee-beans',
+        description: '100% Arabica, dark roast coffee beans sourced from Colombia.',
+        price: 450,
+        originalPrice: 600,
+        stock: 200,
+        category: catGrocery._id,
+        images: ['https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=500&q=80'],
+        isFeatured: true
+      },
+      {
+        name: 'Pure Himalayan Pink Salt',
+        slug: 'pure-himalayan-pink-salt',
+        description: 'Unrefined pink salt rich in minerals for healthy cooking.',
+        price: 250,
+        originalPrice: 300,
+        stock: 300,
+        category: catGrocery._id,
+        images: ['https://images.unsplash.com/photo-1627485937980-221c88ce04ea?w=500&q=80'],
+        isFeatured: false
+      },
+      {
+        name: 'Classic White Sneakers',
+        slug: 'classic-white-sneakers',
+        description: 'Comfortable and stylish sneakers for everyday wear.',
+        price: 1299,
+        originalPrice: 1999,
+        stock: 80,
+        category: catClothing._id,
+        images: ['https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=500&q=80'],
+        isFeatured: false
+      },
+      {
+        name: 'Men\'s Winter Jacket',
+        slug: 'mens-winter-jacket',
+        description: 'Warm, waterproof jacket perfect for harsh winters.',
+        price: 3499,
+        originalPrice: 4500,
+        stock: 45,
+        category: catClothing._id,
+        images: ['https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500&q=80'],
+        isFeatured: true
+      },
+      {
+        name: 'LG Front Load Washing Machine',
+        slug: 'lg-front-load-washing-machine',
+        description: 'AI DD technology, Steam+ feature, and ThinQ Wi-Fi connectivity.',
+        price: 34500,
+        originalPrice: 42000,
         stock: 30,
-        category: createdCategories[2]._id, // Home & Kitchen
-        images: ['https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800&auto=format&fit=crop'],
+        category: catElectronics._id,
+        images: ['https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=500&q=80'],
         isFeatured: false
       },
       {
-        name: 'Yoga Mat with Alignment Lines',
-        slug: 'yoga-mat',
-        description: 'Eco-friendly TPE yoga mat with alignment lines for perfect posture.',
-        price: 999,
-        originalPrice: 1499,
-        stock: 150,
-        category: createdCategories[3]._id, // Sports
-        images: ['https://images.unsplash.com/photo-1599447332304-44b41b9d4fdf?q=80&w=800&auto=format&fit=crop'],
-        isFeatured: false
+        name: 'LG UltraGear Gaming Monitor',
+        slug: 'lg-ultragear-gaming-monitor',
+        description: '27 inch 144Hz IPS display with 1ms response time.',
+        price: 22000,
+        originalPrice: 28000,
+        stock: 40,
+        category: catElectronics._id,
+        images: ['https://images.unsplash.com/photo-1527443195645-1133f7f28990?w=500&q=80'],
+        isFeatured: true
       }
     ];
-    const createdProducts = await Product.insertMany(productsData);
-    console.log(`Seeded ${createdProducts.length} Products.`);
 
-    // Seed Carousel
-    const carouselData = [
-      {
-        title: 'Huge Summer Sale',
-        subtitle: 'Up to 50% Off on Fashion',
-        imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1200&auto=format&fit=crop',
-        link: '/products',
-        isActive: true,
-        order: 1
-      },
-      {
-        title: 'New Tech Arrivals',
-        subtitle: 'Upgrade your lifestyle with our latest gadgets',
-        imageUrl: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?q=80&w=1200&auto=format&fit=crop',
-        link: '/products',
-        isActive: true,
-        order: 2
-      }
-    ];
+    await Product.insertMany(products);
+    console.log('Products created successfully');
     
-    // Some models might not have all these fields, let's insert gracefully
-    try {
-      await Carousel.insertMany(carouselData);
-      console.log('Seeded Carousel items.');
-    } catch (err) {
-      console.log('Carousel seed failed (might have different schema):', err.message);
-    }
-
-    console.log('Seeding Complete!');
-    process.exit(0);
+    process.exit();
   } catch (err) {
-    console.error('Seeding Error:', err);
+    console.error('Error seeding data:', err);
     process.exit(1);
   }
 };
 
-seedDB();
+seedData();

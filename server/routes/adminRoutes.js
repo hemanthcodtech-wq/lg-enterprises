@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const Order = require('../models/Order');
+const Withdrawal = require('../models/Withdrawal');
 
 // Admin Login Route
 router.post('/login', async (req, res) => {
@@ -97,11 +98,16 @@ router.get('/users', authAdmin, async (req, res) => {
 // Get specific User details (orders & referred users)
 router.get('/users/:id/details', authAdmin, async (req, res) => {
   try {
-    const userOrders = await Order.find({ user: req.params.id }).sort({ createdAt: -1 });
+    const user = await User.findById(req.params.id).select('-password').populate('referredBy', 'name');
+    const userOrders = await Order.find({ user: req.params.id }).populate('items.product', 'name images price').sort({ createdAt: -1 });
     const referredUsers = await User.find({ referredBy: req.params.id }).select('name email createdAt walletBalance');
+    const commissions = await Commission.find({ recipient: req.params.id }).populate('buyer', 'name email').populate('order', 'totalAmount _id').sort({ createdAt: -1 });
+    
     res.json({
+      user,
       orders: userOrders,
-      referredUsers: referredUsers
+      referredUsers,
+      commissions
     });
   } catch (err) {
     console.error(err);
@@ -135,6 +141,23 @@ router.put('/orders/:id/status', authAdmin, async (req, res) => {
 
     await order.save();
     res.json(order);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+const Commission = require('../models/Commission');
+
+// Get all Commissions & Income History (Admin Only)
+router.get('/commissions', authAdmin, async (req, res) => {
+  try {
+    const commissions = await Commission.find()
+      .populate('recipient', 'name email')
+      .populate('buyer', 'name email')
+      .populate('order', 'totalAmount createdAt')
+      .sort({ createdAt: -1 });
+    res.json(commissions);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -178,6 +201,46 @@ router.delete('/promos/:id', authAdmin, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get All Withdrawals (Admin)
+router.get('/withdrawals', authAdmin, async (req, res) => {
+  try {
+    const withdrawals = await Withdrawal.find().populate('user', 'name email').sort({ createdAt: -1 });
+    res.json(withdrawals);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch withdrawals' });
+  }
+});
+
+// Update Withdrawal Status (Admin)
+router.put('/withdrawals/:id/status', authAdmin, async (req, res) => {
+  try {
+    const { status, adminNote } = req.body;
+    const withdrawal = await Withdrawal.findById(req.params.id);
+    
+    if (!withdrawal) return res.status(404).json({ error: 'Withdrawal not found' });
+    if (withdrawal.status !== 'Pending') return res.status(400).json({ error: 'Withdrawal is already processed' });
+
+    withdrawal.status = status;
+    withdrawal.adminNote = adminNote;
+
+    if (status === 'Completed') {
+      // Deduct the wallet now that it is completed
+      const user = await User.findById(withdrawal.user);
+      if (user) {
+        user.walletBalance = Math.max(0, (user.walletBalance || 0) - withdrawal.amount);
+        await user.save();
+      }
+    }
+
+    await withdrawal.save();
+    res.json(withdrawal);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update withdrawal' });
   }
 });
 

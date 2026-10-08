@@ -27,7 +27,7 @@ const AdminProducts = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/products');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/products`);
       setProducts(res.data);
     } catch (err) {
       console.error('Failed to fetch products', err);
@@ -36,7 +36,7 @@ const AdminProducts = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/categories');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/categories`);
       setCategories(res.data);
     } catch (err) {
       console.error('Failed to fetch categories', err);
@@ -63,7 +63,7 @@ const AdminProducts = () => {
         }
       }
 
-      await axios.post('http://localhost:5000/api/products', formData, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/products`, formData, {
         headers: { 
           'x-auth-token': token,
           'Content-Type': 'multipart/form-data'
@@ -82,7 +82,7 @@ const AdminProducts = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/products/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/products/${id}`, {
         headers: { 'x-auth-token': token }
       });
       fetchProducts();

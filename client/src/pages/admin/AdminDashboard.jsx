@@ -26,7 +26,7 @@ const AdminDashboard = () => {
     const storedToken = localStorage.getItem('adminToken');
     if (!storedToken) return;
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/dashboard-stats', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/dashboard-stats`, {
         headers: { 'x-auth-token': storedToken }
       });
       setStats(res.data);

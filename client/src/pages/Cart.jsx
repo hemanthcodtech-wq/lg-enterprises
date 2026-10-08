@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { FiTrash2, FiMinus, FiPlus, FiArrowLeft, FiShoppingBag, FiLock } from 'react-icons/fi';
 import axios from 'axios';
-
+import toast from 'react-hot-toast';
 const Cart = () => {
   const { cart, addToCart, removeFromCart, clearCart } = useCart();
   const { user } = useAuth();
@@ -23,12 +23,13 @@ const Cart = () => {
   const [promoCode, setPromoCode] = React.useState('');
   const [discount, setDiscount] = React.useState(0);
   const [appliedPromo, setAppliedPromo] = React.useState(null);
+  const [useWallet, setUseWallet] = React.useState(false);
 
   const handleApplyPromo = async () => {
     if (!promoCode) return;
     try {
       const token = localStorage.getItem('lg_token');
-      const res = await axios.post('http://localhost:5000/api/orders/validate-promo', {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/orders/validate-promo`, {
         code: promoCode,
         cartTotal: totalAmount
       }, {
@@ -36,112 +37,92 @@ const Cart = () => {
       });
       setDiscount(res.data.discount);
       setAppliedPromo(res.data);
-      alert(res.data.message);
+      toast.success(res.data.message);
     } catch (err) {
-      alert(err.response?.data?.error || 'Invalid promo code');
+      toast.error(err.response?.data?.error || 'Invalid promo code');
       setDiscount(0);
       setAppliedPromo(null);
     }
   };
 
   const subTotal = totalAmount;
-  const tax = Math.round((subTotal - discount) * 0.18);
-  const finalTotal = subTotal - discount + tax;
+  const finalTotal = subTotal - discount;
+  
+  const walletBalance = user?.walletBalance || 0;
+  const walletUsed = useWallet ? Math.min(finalTotal, walletBalance) : 0;
+  const amountToPay = finalTotal - walletUsed;
 
   const handleCheckout = async () => {
     try {
       const token = localStorage.getItem('lg_token');
       
-      // 1. Create Razorpay Order on Backend
-      const { data: order } = await axios.post('http://localhost:5000/api/orders/create-razorpay-order', {
-        amount: finalTotal
+      const items = cart.map(item => ({
+        product: item.id,
+        quantity: item.qty,
+        price: item.price
+      }));
+
+      const orderData = {
+        items,
+        totalAmount: finalTotal,
+        paymentMethod: amountToPay === 0 ? 'Wallet' : 'Card',
+        promoId: appliedPromo ? appliedPromo.promoId : undefined,
+        walletUsed: walletUsed
+      };
+
+      if (amountToPay === 0) {
+        // Completely paid by wallet
+        await axios.post(`${import.meta.env.VITE_API_URL}/orders`, orderData, {
+          headers: { 'x-auth-token': token }
+        });
+        toast.success('Order placed successfully using wallet balance!');
+        if (clearCart) clearCart();
+        navigate('/');
+        return;
+      }
+      
+      // Partial or full payment with Razorpay
+      const { data: order } = await axios.post(`${import.meta.env.VITE_API_URL}/orders/create-razorpay-order`, {
+        amount: amountToPay
       }, {
         headers: { 'x-auth-token': token }
       });
 
-      // 2. Load Razorpay Script
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onerror = () => {
-        alert('Razorpay SDK failed to load. Are you online?');
-      };
+      script.onerror = () => toast.error('Razorpay SDK failed to load. Are you online?');
       script.onload = async () => {
         const options = {
-          key: 'rzp_test_12345', // Enter the Key ID generated from the Dashboard
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TfwrOlkqXf2RIf',
           amount: order.amount,
           currency: order.currency,
           name: 'LG Enterprises',
-          description: 'Test Transaction',
+          description: 'Order Payment',
           order_id: order.id,
           handler: async function (response) {
-            // 3. On success, save the order to our DB
             try {
-              const items = cart.map(item => ({
-                product: item.id,
-                quantity: item.qty,
-                price: item.price
-              }));
-              
-              await axios.post('http://localhost:5000/api/orders', {
-                items,
-                totalAmount: finalTotal,
-                paymentMethod: 'Razorpay',
-                promoId: appliedPromo ? appliedPromo.promoId : undefined
-              }, {
+              await axios.post(`${import.meta.env.VITE_API_URL}/orders`, orderData, {
                 headers: { 'x-auth-token': token }
               });
-              
-              alert('Payment Successful & Order placed!');
+              toast.success('Payment Successful & Order placed!');
               if (clearCart) clearCart();
               navigate('/');
             } catch (saveErr) {
-              alert('Payment successful but order saving failed. Please contact support.');
+              toast.error('Payment successful but order saving failed. Please contact support.');
             }
           },
           prefill: {
             name: user?.name,
             email: user?.email,
           },
-          theme: {
-            color: '#cc2222'
-          }
+          theme: { color: '#2563eb' }
         };
         const rzp = new window.Razorpay(options);
         rzp.open();
       };
       document.body.appendChild(script);
     } catch (err) {
-      alert('Failed to initiate checkout. Please try again.');
-    }
-  };
-
-  const handleWalletCheckout = async () => {
-    if ((user?.walletBalance || 0) < finalTotal) {
-      alert('Insufficient wallet balance!');
-      return;
-    }
-    try {
-      const token = localStorage.getItem('lg_token');
-      const items = cart.map(item => ({
-        product: item.id,
-        quantity: item.qty,
-        price: item.price
-      }));
-      
-      await axios.post('http://localhost:5000/api/orders', {
-        items,
-        totalAmount: finalTotal,
-        paymentMethod: 'Wallet',
-        promoId: appliedPromo ? appliedPromo.promoId : undefined
-      }, {
-        headers: { 'x-auth-token': token }
-      });
-      
-      alert('Payment Successful using Wallet!');
-      if (clearCart) clearCart();
-      window.location.href = '/profile';
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed to process wallet payment');
+      toast.error('Failed to process checkout. Please try again.');
     }
   };
 
@@ -232,21 +213,36 @@ const Cart = () => {
             <span>Shipping</span>
             <span style={{ color: 'var(--green)', fontWeight: 600 }}>Free</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', color: 'var(--text-gray)' }}>
-            <span>Tax (GST 18%)</span>
-            <span style={{ color: 'var(--text-dark)', fontWeight: 600 }}>₹{tax}</span>
-          </div>
+
+          {walletBalance > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <input 
+                type="checkbox" 
+                id="useWallet" 
+                checked={useWallet} 
+                onChange={(e) => setUseWallet(e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <label htmlFor="useWallet" style={{ cursor: 'pointer', flex: 1, color: '#334155', fontWeight: 500 }}>
+                Use Wallet Balance (Available: ₹{walletBalance.toFixed(2)})
+              </label>
+            </div>
+          )}
+
+          {useWallet && walletUsed > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', color: '#10b981' }}>
+              <span>Paid from Wallet</span>
+              <span style={{ fontWeight: 600 }}>-₹{walletUsed.toFixed(2)}</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '1.5rem', borderTop: '1px solid var(--border)', marginBottom: '1.5rem', fontSize: '1.2rem', fontWeight: 800 }}>
-            <span>Total</span>
-            <span style={{ color: 'var(--primary)' }}>₹{finalTotal}</span>
+            <span>To Pay</span>
+            <span style={{ color: 'var(--primary)' }}>₹{amountToPay.toFixed(2)}</span>
           </div>
           
-          <button onClick={handleCheckout} className="btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', borderRadius: 'var(--radius-pill)', marginBottom: '0.5rem' }}>
-            Pay with Card (Razorpay)
-          </button>
-          
-          <button onClick={handleWalletCheckout} style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', borderRadius: 'var(--radius-pill)', background: '#10b981', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-            Pay with Wallet (Bal: ₹{user?.walletBalance?.toFixed(2) || '0.00'})
+          <button onClick={handleCheckout} className="btn-primary" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', padding: '1rem', fontSize: '1.1rem', borderRadius: 'var(--radius-pill)', marginBottom: '0.5rem' }}>
+            {amountToPay === 0 ? 'Place Order' : 'Pay & Place Order'}
           </button>
         </div>
       </div>

@@ -24,7 +24,7 @@ const AdminOverview = () => {
       const token = localStorage.getItem('adminToken') || context?.token;
       if (!token) return;
 
-      const res = await axios.get('http://localhost:5000/api/admin/dashboard-stats', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/dashboard-stats`, {
         headers: { 'x-auth-token': token }
       });
       setStats(res.data);

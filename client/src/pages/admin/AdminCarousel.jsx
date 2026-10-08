@@ -18,7 +18,7 @@ const AdminCarousel = () => {
 
   const fetchSlides = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/carousel/admin', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/carousel/admin`, {
         headers: { 'x-auth-token': token }
       });
       setSlides(res.data);
@@ -51,7 +51,7 @@ const AdminCarousel = () => {
       data.append('buttonLink', formData.buttonLink);
       data.append('image', formData.image);
 
-      await axios.post('http://localhost:5000/api/carousel', data, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/carousel`, data, {
         headers: { 
           'x-auth-token': token,
           'Content-Type': 'multipart/form-data'
@@ -71,7 +71,7 @@ const AdminCarousel = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this slide?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/carousel/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/carousel/${id}`, {
         headers: { 'x-auth-token': token }
       });
       fetchSlides();

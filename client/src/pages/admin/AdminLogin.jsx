@@ -8,17 +8,73 @@ const AdminLogin = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Forgot Password Flow
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetOtp, setResetOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
     try {
-      const res = await axios.post('http://localhost:5000/api/admin/login', { email, password });
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/admin/login`, { email, password });
       localStorage.setItem('adminToken', res.data.token);
       localStorage.setItem('adminInfo', JSON.stringify(res.data.admin));
       navigate('/admin/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/auth/forgot-password`, { email: forgotEmail });
+      setResetSent(true);
+      setSuccess('Reset OTP sent to your email.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send reset email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/auth/reset-password`, { 
+        email: forgotEmail, 
+        otp: resetOtp, 
+        newPassword 
+      });
+      setSuccess('Password reset successfully! You can now log in.');
+      setTimeout(() => {
+        setShowForgot(false);
+        setResetSent(false);
+        setForgotEmail('');
+        setResetOtp('');
+        setNewPassword('');
+        setSuccess('');
+      }, 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,48 +97,90 @@ const AdminLogin = () => {
         {/* Right Form Side */}
         <div className="admin-login-right">
           <div className="login-form-wrapper">
-            <h2 className="login-heading">Welcome Back</h2>
-            <p className="login-subheading">Please enter your credentials to continue</p>
+            <h2 className="login-heading">{showForgot ? 'Reset Password' : 'Welcome Back'}</h2>
+            <p className="login-subheading">{showForgot ? 'Enter your details below to reset' : 'Please enter your credentials to continue'}</p>
             
             {error && <div className="auth-error-msg">{error}</div>}
+            {success && <div className="auth-success-msg" style={{ padding: '0.8rem', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', border: '1px solid #a7f3d0' }}>{success}</div>}
 
-            <form onSubmit={handleLogin} className="admin-form">
-              <div className="form-group">
-                <label>Admin Email</label>
-                <div className="input-icon-wrapper">
-                  <input 
-                    type="email" 
-                    placeholder="Enter admin email"
-                    value={email} 
-                    onChange={e => setEmail(e.target.value)} 
-                    required 
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Password</label>
-                <div className="input-icon-wrapper" style={{ position: 'relative' }}>
-                  <input 
-                    type={showPassword ? "text" : "password"} 
-                    placeholder="Enter your password"
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
-                    required 
-                    style={{ paddingRight: '2.5rem' }}
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    {showPassword ? <FiEyeOff /> : <FiEye />}
+            {showForgot ? (
+              !resetSent ? (
+                <form onSubmit={handleForgotSubmit} className="admin-form">
+                  <div className="form-group">
+                    <label>Admin Email</label>
+                    <div className="input-icon-wrapper">
+                      <input type="email" placeholder="Enter admin email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required />
+                    </div>
+                  </div>
+                  <button type="submit" className="login-btn" style={{ width: '100%', padding: '0.8rem', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 600, border: 'none', cursor: 'pointer' }} disabled={loading}>
+                    {loading ? 'Sending...' : 'Send OTP'}
                   </button>
+                  <button type="button" onClick={() => setShowForgot(false)} className="login-btn" style={{ width: '100%', padding: '0.8rem', background: '#e2e8f0', color: '#1e293b', marginTop: '1rem', borderRadius: '8px', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+                    Back to Login
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleResetPassword} className="admin-form">
+                  <div className="form-group">
+                    <label>Enter OTP sent to {forgotEmail}</label>
+                    <div className="input-icon-wrapper">
+                      <input type="text" placeholder="123456" value={resetOtp} onChange={e => setResetOtp(e.target.value)} required />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>New Password</label>
+                    <div className="input-icon-wrapper">
+                      <input type="password" placeholder="Enter new password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+                    </div>
+                  </div>
+                  <button type="submit" className="login-btn" style={{ width: '100%', padding: '0.8rem', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 600, border: 'none', cursor: 'pointer' }} disabled={loading}>
+                    {loading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </form>
+              )
+            ) : (
+              <form onSubmit={handleLogin} className="admin-form">
+                <div className="form-group">
+                  <label>Admin Email</label>
+                  <div className="input-icon-wrapper">
+                    <input 
+                      type="email" 
+                      placeholder="Enter admin email"
+                      value={email} 
+                      onChange={e => setEmail(e.target.value)} 
+                      required 
+                    />
+                  </div>
                 </div>
-              </div>
-              <button type="submit" className="btn-admin-login">
-                Sign In to Dashboard
-              </button>
-            </form>
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{ marginBottom: 0 }}>Password</label>
+                    <button type="button" onClick={() => { setShowForgot(true); setError(''); setSuccess(''); }} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 500 }}>Forgot Password?</button>
+                  </div>
+                  <div className="input-icon-wrapper" style={{ position: 'relative' }}>
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="Enter your password"
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      required 
+                      style={{ paddingRight: '2.5rem' }}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      {showPassword ? <FiEyeOff /> : <FiEye />}
+                    </button>
+                  </div>
+                </div>
+                
+                <button type="submit" className="login-btn" style={{ width: '100%', padding: '0.8rem', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: '1rem' }} disabled={loading}>
+                  {loading ? 'Authenticating...' : 'Secure Login'}
+                </button>
+              </form>
+            )}
           </div>
         </div>
 

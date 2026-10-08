@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const ProductCard = ({ product, isLoading }) => {
-  const { addToCart } = useCart();
+  const { addToCart, wishlist, toggleWishlist } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -40,14 +40,18 @@ const ProductCard = ({ product, isLoading }) => {
       navigate('/login');
       return;
     }
-    // Wishlist logic can go here later
+    toggleWishlist(product);
   };
+
+  const inWishlist = wishlist?.some(item => item.id === product.id);
 
   return (
     <div className="product-card" onClick={() => navigate(`/product/${product.id}`)}>
       <div className="pcard-img">
         {product.discount && <span className="pcard-badge">{product.discount}% OFF</span>}
-        <button className="pcard-wish" onClick={handleWishlist}><FiHeart /></button>
+        <button className="pcard-wish" onClick={handleWishlist} style={{ color: inWishlist ? '#ef4444' : 'var(--text-gray)', fill: inWishlist ? '#ef4444' : 'none' }}>
+          <FiHeart style={{ fill: inWishlist ? '#ef4444' : 'none' }} />
+        </button>
         <img
           src={product.image}
           alt={product.title}
