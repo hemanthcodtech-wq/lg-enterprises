@@ -136,6 +136,26 @@ const Profile = () => {
     navigate('/');
   };
 
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [editAddress, setEditAddress] = useState(user?.address || '');
+
+  const handleSaveAddress = async () => {
+    try {
+      const token = localStorage.getItem('lg_token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ address: editAddress })
+      });
+      if (res.ok) {
+        setIsEditingAddress(false);
+        refreshUser();
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
   const referralLink = user.referralCode 
     ? `${window.location.origin}/register?ref=${user.referralCode}` 
     : '';
@@ -415,7 +435,7 @@ const Profile = () => {
                   { label: 'Full Name', value: user.name, icon: FiUser },
                   { label: 'Email Address', value: user.email, icon: FiMail },
                   { label: 'Phone Number', value: user.phone || 'Not provided', icon: FiPhone },
-                  { label: 'Primary Hub', value: 'Bhimavaram & Pan-India', icon: FiMapPin },
+                  { label: 'Saved Address', value: user.address || 'No address saved yet', icon: FiMapPin, isAddress: true },
                   { label: 'My Unique Referral Code', value: user.referralCode || 'N/A', icon: FiTag, isCode: true },
                   { label: 'My Shareable Link', value: referralLink || 'N/A', icon: FiShare2, isLink: true },
                 ].map((field, i) => (
@@ -426,9 +446,33 @@ const Profile = () => {
                     <div style={{ flex: 1, overflow: 'hidden' }}>
                       <p style={{ margin: '0 0 0.3rem 0', color: '#64748b', fontSize: '0.85rem', fontWeight: '500' }}>{field.label}</p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <p style={{ margin: 0, color: '#1e293b', fontSize: '1rem', fontWeight: '600', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                          {field.value}
-                        </p>
+                        {field.isAddress && isEditingAddress ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                            <textarea
+                              value={editAddress}
+                              onChange={e => setEditAddress(e.target.value)}
+                              rows="3"
+                              style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', resize: 'none' }}
+                              placeholder="Street, City, State, ZIP..."
+                            ></textarea>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button onClick={() => setIsEditingAddress(false)} style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', padding: '4px 10px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                              <button onClick={handleSaveAddress} style={{ background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', padding: '4px 10px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>Save</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p style={{ margin: 0, color: '#1e293b', fontSize: '1rem', fontWeight: '600', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {field.value}
+                          </p>
+                        )}
+                        {field.isAddress && !isEditingAddress && (
+                          <button 
+                            onClick={() => setIsEditingAddress(true)} 
+                            style={{ background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '8px', padding: '4px 10px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <FiEdit2 /> Edit
+                          </button>
+                        )}
                         {field.isCode && user.referralCode && (
                           <button 
                             onClick={() => copyToClipboard(user.referralCode, 'code')} 

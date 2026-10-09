@@ -76,52 +76,14 @@ const AdminPromos = () => {
           position: relative;
           min-height: 100%;
         }
-        .ambient-glow-1 {
-          position: absolute;
-          top: 30px;
-          right: 8%;
-          width: 380px;
-          height: 380px;
-          background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, rgba(79, 70, 229, 0) 70%);
-          border-radius: 50%;
-          pointer-events: none;
-          z-index: 0;
-          filter: blur(55px);
-        }
-        .ambient-glow-2 {
-          position: absolute;
-          top: 340px;
-          left: 5%;
-          width: 340px;
-          height: 340px;
-          background: radial-gradient(circle, rgba(236, 72, 153, 0.12) 0%, rgba(236, 72, 153, 0) 70%);
-          border-radius: 50%;
-          pointer-events: none;
-          z-index: 0;
-          filter: blur(55px);
-        }
 
         .glass-card {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.45) 100%);
-          backdrop-filter: blur(24px) saturate(190%);
-          -webkit-backdrop-filter: blur(24px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          border-radius: 20px;
-          box-shadow: 
-            0 10px 30px -5px rgba(15, 23, 42, 0.05),
-            0 2px 6px -1px rgba(15, 23, 42, 0.03),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
           position: relative;
           overflow: hidden;
-          transition: all 0.3s ease;
-        }
-        .glass-card::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 60%);
-          pointer-events: none;
-          z-index: 0;
         }
 
         .promo-split-grid {
@@ -138,22 +100,22 @@ const AdminPromos = () => {
         }
 
         .glass-input {
-          background: rgba(255, 255, 255, 0.85);
-          border: 1.5px solid rgba(226, 232, 240, 0.9);
-          border-radius: 12px;
-          padding: 0.8rem 1.1rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 0.7rem 1rem;
           width: 100%;
           outline: none;
           font-family: inherit;
-          font-size: 0.95rem;
+          font-size: 0.9rem;
           color: #0f172a;
           transition: all 0.25s ease;
           box-sizing: border-box;
         }
         .glass-input:focus {
-          border-color: #4f46e5;
-          background: rgba(255, 255, 255, 0.98);
-          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+          border-color: #6366f1;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
         .btn-indigo-submit {
@@ -161,49 +123,43 @@ const AdminPromos = () => {
           align-items: center;
           justify-content: center;
           gap: 0.5rem;
-          background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+          background: #4f46e5;
           color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          border-radius: 12px;
-          padding: 0.85rem 1.5rem;
-          font-size: 0.95rem;
-          font-weight: 700;
-          letter-spacing: 0.2px;
+          border: none;
+          border-radius: 8px;
+          padding: 0.75rem 1.5rem;
+          font-size: 0.9rem;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.2s ease;
           width: 100%;
-          box-shadow: 0 6px 18px rgba(79, 70, 229, 0.32), inset 0 1px 1px rgba(255, 255, 255, 0.4);
         }
         .btn-indigo-submit:hover:not(:disabled) {
-          background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 10px 24px rgba(79, 70, 229, 0.45);
+          background: #4338ca;
         }
         .btn-indigo-submit:disabled {
           opacity: 0.6;
           cursor: not-allowed;
-          transform: none;
         }
 
         .btn-action-delete {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 0.4rem;
-          background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
-          color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 10px;
-          padding: 0.45rem 0.9rem;
-          font-size: 0.8rem;
-          font-weight: 700;
+          background: #fee2e2;
+          color: #b91c1c;
+          border: none;
+          border-radius: 6px;
+          padding: 0.4rem 0.6rem;
+          font-size: 0.75rem;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+          transition: all 0.2s ease;
         }
         .btn-action-delete:hover {
-          background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 6px 14px rgba(79, 70, 229, 0.4);
+          background: #f87171;
+          color: white;
         }
 
         .promo-table {
@@ -213,25 +169,25 @@ const AdminPromos = () => {
           text-align: left;
         }
         .promo-table th {
-          background: rgba(248, 250, 252, 0.7);
-          color: #475569;
-          font-size: 0.75rem;
-          font-weight: 800;
+          background: #f8fafc;
+          color: #64748b;
+          font-size: 0.7rem;
+          font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 1px;
-          padding: 1rem 1.4rem;
-          border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+          letter-spacing: 0.05em;
+          padding: 0.8rem 1rem;
+          border-bottom: 1px solid #e2e8f0;
+          white-space: nowrap;
         }
         .promo-table td {
-          padding: 1.1rem 1.4rem;
-          border-bottom: 1px solid rgba(241, 245, 249, 0.8);
+          padding: 1rem;
+          border-bottom: 1px solid #f1f5f9;
           color: #1e293b;
-          font-size: 0.92rem;
+          font-size: 0.85rem;
           vertical-align: middle;
-          transition: background 0.2s ease;
         }
         .promo-table tr:hover td {
-          background: rgba(255, 255, 255, 0.6);
+          background: #f8fafc;
         }
         .promo-table tr:last-child td {
           border-bottom: none;
@@ -297,22 +253,18 @@ const AdminPromos = () => {
         }
 
         .cat-icon-chip {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          background: rgba(79, 70, 229, 0.1);
-          color: #4f46e5;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: #f1f5f9;
+          color: #64748b;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.1rem;
-          border: 1px solid rgba(79, 70, 229, 0.2);
+          font-size: 1rem;
+          border: 1px solid #e2e8f0;
         }
       `}</style>
-
-      {/* Ambient background glows */}
-      <div className="ambient-glow-1"></div>
-      <div className="ambient-glow-2"></div>
 
       {/* Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', marginTop: '0.5rem', position: 'relative', zIndex: 1, flexWrap: 'wrap', gap: '1rem' }}>

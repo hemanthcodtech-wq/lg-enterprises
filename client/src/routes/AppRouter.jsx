@@ -26,6 +26,7 @@ import AdminProducts from '../pages/admin/AdminProducts';
 import AdminUsers from '../pages/admin/AdminUsers';
 import AdminUserDetails from '../pages/admin/AdminUserDetails';
 import AdminOrders from '../pages/admin/AdminOrders';
+import AdminOrderDetails from '../pages/admin/AdminOrderDetails';
 import AdminPromos from '../pages/admin/AdminPromos';
 import AdminWithdrawals from '../pages/admin/AdminWithdrawals';
 import AdminCarousel from '../pages/admin/AdminCarousel';
@@ -44,6 +45,7 @@ const AppRouter = () => (
         <Route path="users" element={<AdminUsers />} />
         <Route path="users/:id" element={<AdminUserDetails />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="orders/:id" element={<AdminOrderDetails />} />
         <Route path="promos" element={<AdminPromos />} />
         <Route path="withdrawals" element={<AdminWithdrawals />} />
         <Route path="carousel" element={<AdminCarousel />} />
@@ -82,3 +84,4 @@ const AppRouter = () => (
 );
 
 export default AppRouter;
+

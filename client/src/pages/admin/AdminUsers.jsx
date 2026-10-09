@@ -35,10 +35,8 @@ const AdminUsers = () => {
         .admin-table {
           width: 100%;
           border-collapse: collapse;
-          min-width: 800px; /* Forces table to not squish on mobile */
         }
         .admin-table th, .admin-table td {
-          white-space: nowrap;
           padding: 1rem;
         }
       `}</style>

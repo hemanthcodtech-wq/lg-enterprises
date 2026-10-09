@@ -21,7 +21,7 @@ const AdminUserDetails = () => {
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/users/${id}/details`, {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/users/${id}/details`, {
           headers: { 'x-auth-token': token }
         });
         setData(res.data);
@@ -42,7 +42,7 @@ const AdminUserDetails = () => {
   if (loading) return <div style={{ padding: '4rem', textAlign: 'center', color: '#64748b' }}>Loading user details...</div>;
   if (error) return <div style={{ padding: '4rem', textAlign: 'center', color: 'red' }}>{error}</div>;
 
-  const { user, orders, referredUsers, commissions } = data;
+  const { user, orders, referredUsers, commissions, orderCommissions = [] } = data;
 
   // Pagination Logic
   const paginatedOrders = orders.slice((ordersPage - 1) * itemsPerPage, ordersPage * itemsPerPage);
@@ -310,6 +310,24 @@ const AdminUserDetails = () => {
                               </div>
                             ))}
                           </div>
+
+                          {/* Commission Details for this order */}
+                          {orderCommissions?.filter(c => c.order?._id === o._id).length > 0 && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #cbd5e1' }}>
+                              <h5 style={{ margin: '0 0 1rem 0', color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase' }}>Commissions Distributed</h5>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                {orderCommissions.filter(c => c.order?._id === o._id).map((c, idx) => (
+                                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '0.8rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                    <div>
+                                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{c.recipient?.name || 'Unknown User'}</span>
+                                      <span style={{ fontSize: '0.8rem', color: '#64748b', marginLeft: '8px', background: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', color: '#4f46e5' }}>Level {c.level}</span>
+                                    </div>
+                                    <div style={{ fontWeight: 800, color: '#10b981' }}>+ ₹{c.commissionAmount?.toFixed(2)}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

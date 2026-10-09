@@ -119,6 +119,7 @@ router.post('/login', async (req, res) => {
         phone: user.phone,
         role: user.role,
         referralCode: user.referralCode,
+        address: user.address,
         walletBalance: user.walletBalance || 0,
         totalReferralEarnings: user.totalReferralEarnings || 0
       }
@@ -153,6 +154,7 @@ router.get('/me', authUser, async (req, res) => {
       phone: user.phone,
       role: user.role,
       referralCode: user.referralCode,
+      address: user.address,
       walletBalance: user.walletBalance || 0,
       totalReferralEarnings: user.totalReferralEarnings || 0
     });
@@ -406,6 +408,36 @@ router.post('/reset-password', async (req, res) => {
     await user.save();
 
     res.json({ message: 'Password reset successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update Profile
+router.put('/profile', authUser, async (req, res) => {
+  try {
+    const { address, name, phone } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    if (address !== undefined) user.address = address;
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    
+    await user.save();
+    
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      referralCode: user.referralCode,
+      address: user.address,
+      walletBalance: user.walletBalance || 0,
+      totalReferralEarnings: user.totalReferralEarnings || 0
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

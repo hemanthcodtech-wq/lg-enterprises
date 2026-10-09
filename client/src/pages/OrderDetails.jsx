@@ -4,8 +4,10 @@ import axios from 'axios';
 import { FiCheck, FiTruck, FiPackage, FiArrowLeft, FiDownload, FiPhoneCall, FiMail } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
+import { useAuth } from '../context/AuthContext';
 const OrderDetails = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,8 +29,89 @@ const OrderDetails = () => {
   }, [id]);
 
   const handleDownloadInvoice = () => {
-    toast.success('Invoice downloaded successfully!');
-    // In a real app, this would trigger a PDF download or open a new window
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice - ${order._id}</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #333; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: 900; color: #4f46e5; }
+            h1 { margin: 0; color: #1e293b; }
+            .details { display: flex; justify-content: space-between; margin-bottom: 40px; }
+            .box { padding: 15px; background: #f8fafc; border-radius: 8px; width: 45%; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+            th { background: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 12px; }
+            .total-row { font-weight: bold; font-size: 18px; }
+            .footer { text-align: center; margin-top: 50px; font-size: 12px; color: #94a3b8; border-top: 1px solid #eee; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="logo">LG Enterprises</div>
+              <p>Pan-India E-commerce Delivery</p>
+            </div>
+            <div style="text-align: right;">
+              <h1>INVOICE</h1>
+              <p><strong>Order #:</strong> ${order._id.substring(order._id.length - 8).toUpperCase()}</p>
+              <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          <div class="details">
+            <div class="box">
+              <h3>Billed To:</h3>
+              <p><strong>${user?.name || 'Customer'}</strong></p>
+              <p>${user?.email || 'N/A'}</p>
+              <p>${user?.phone || 'No phone provided'}</p>
+            </div>
+            <div class="box">
+              <h3>Shipping Address:</h3>
+              <p>${order.shippingAddress || user?.address || 'No address provided'}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Item Description</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th style="text-align: right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items.map(item => `
+                <tr>
+                  <td>${item.product?.name || 'Product'}</td>
+                  <td>${item.quantity}</td>
+                  <td>₹${item.price}</td>
+                  <td style="text-align: right;">₹${item.price * item.quantity}</td>
+                </tr>
+              `).join('')}
+              <tr class="total-row">
+                <td colspan="3" style="text-align: right; padding-top: 20px;">Total Paid (${order.paymentMethod}):</td>
+                <td style="text-align: right; padding-top: 20px; color: #10b981;">₹${order.totalAmount}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>This is a computer-generated document. No signature is required.</p>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   };
 
   if (loading) return <div className="section-pad"><p>Loading order details...</p></div>;
@@ -110,6 +193,12 @@ const OrderDetails = () => {
             <p style={{ margin: '0 0 0.5rem 0', color: '#64748b' }}>Method: <strong style={{ color: '#334155' }}>{order.paymentMethod}</strong></p>
             {order.walletUsed > 0 && <p style={{ margin: '0 0 0.5rem 0', color: '#64748b' }}>Wallet Used: <strong style={{ color: '#334155' }}>₹{order.walletUsed}</strong></p>}
             <p style={{ margin: '0 0 0.5rem 0', color: '#64748b' }}>Transaction Status: <strong style={{ color: 'var(--green)' }}>Successful</strong></p>
+            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+              <p style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontWeight: 'bold' }}>Shipping Address:</p>
+              <p style={{ margin: 0, color: '#334155', lineHeight: 1.5 }}>
+                {order.shippingAddress || user?.address || 'No address provided'}
+              </p>
+            </div>
           </div>
 
           <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '2rem', border: '1px solid #e2e8f0' }}>

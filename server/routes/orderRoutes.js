@@ -35,10 +35,14 @@ router.post('/create-razorpay-order', authUser, async (req, res) => {
 // Place an Order (Customer)
 router.post('/', authUser, async (req, res) => {
   try {
-    const { items, totalAmount, paymentMethod, promoId, walletUsed } = req.body;
+    const { items, totalAmount, paymentMethod, promoId, walletUsed, shippingAddress } = req.body;
     
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'No order items' });
+    }
+    
+    if (!shippingAddress) {
+      return res.status(400).json({ error: 'Shipping address is required' });
     }
 
     if (promoId) {
@@ -54,20 +58,26 @@ router.post('/', authUser, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Update user's default address if provided
+    if (shippingAddress) {
+      userObj.address = shippingAddress;
+    }
+
     if (walletUsed && walletUsed > 0) {
       if (userObj.walletBalance < walletUsed) {
         return res.status(400).json({ error: 'Insufficient wallet balance' });
       }
       userObj.walletBalance -= walletUsed;
-      await userObj.save();
     }
+    await userObj.save();
 
     const order = new Order({
       user: req.user.id,
       items,
       totalAmount,
       paymentMethod: paymentMethod || 'Card',
-      paymentStatus: 'Completed'
+      paymentStatus: 'Completed',
+      shippingAddress
     });
 
     await order.save(); // CRITICAL FIX: Save the order to the database

@@ -102,12 +102,14 @@ router.get('/users/:id/details', authAdmin, async (req, res) => {
     const userOrders = await Order.find({ user: req.params.id }).populate('items.product', 'name images price').sort({ createdAt: -1 });
     const referredUsers = await User.find({ referredBy: req.params.id }).select('name email createdAt walletBalance');
     const commissions = await Commission.find({ recipient: req.params.id }).populate('buyer', 'name email').populate('order', 'totalAmount _id').sort({ createdAt: -1 });
+    const orderCommissions = await Commission.find({ buyer: req.params.id }).populate('recipient', 'name email').sort({ createdAt: -1 });
     
     res.json({
       user,
       orders: userOrders,
       referredUsers,
-      commissions
+      commissions,
+      orderCommissions
     });
   } catch (err) {
     console.error(err);
@@ -121,8 +123,37 @@ router.get('/orders', authAdmin, async (req, res) => {
     const orders = await Order.find()
       .populate('user', 'name email')
       .populate('items.product', 'name price')
-      .sort({ createdAt: -1 });
-    res.json(orders);
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const commissions = await Commission.aggregate([
+      { $group: { _id: '$order', totalCommission: { $sum: '$commissionAmount' } } }
+    ]);
+    
+    const commissionMap = {};
+    commissions.forEach(c => commissionMap[c._id.toString()] = c.totalCommission);
+
+    const enrichedOrders = orders.map(o => ({
+      ...o,
+      totalCommission: commissionMap[o._id.toString()] || 0
+    }));
+
+    res.json(enrichedOrders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get specific Order Details (Admin Only)
+router.get('/orders/:id/details', authAdmin, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('user', 'name email phone address')
+      .populate('items.product', 'name images price');
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    const commissions = await Commission.find({ order: req.params.id }).populate('recipient', 'name email level');
+    res.json({ order, commissions });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -132,12 +163,14 @@ router.get('/orders', authAdmin, async (req, res) => {
 // Update Order Status (Admin Only)
 router.put('/orders/:id/status', authAdmin, async (req, res) => {
   try {
-    const { status, paymentStatus } = req.body;
+    const { status, paymentStatus, trackingNumber, courierDetails } = req.body;
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
     if (status) order.status = status;
     if (paymentStatus) order.paymentStatus = paymentStatus;
+    if (trackingNumber !== undefined) order.trackingNumber = trackingNumber;
+    if (courierDetails !== undefined) order.courierDetails = courierDetails;
 
     await order.save();
     res.json(order);

@@ -24,6 +24,7 @@ const Cart = () => {
   const [discount, setDiscount] = React.useState(0);
   const [appliedPromo, setAppliedPromo] = React.useState(null);
   const [useWallet, setUseWallet] = React.useState(false);
+  const [shippingAddress, setShippingAddress] = React.useState(user?.address || '');
 
   const handleApplyPromo = async () => {
     if (!promoCode) return;
@@ -53,6 +54,10 @@ const Cart = () => {
   const amountToPay = finalTotal - walletUsed;
 
   const handleCheckout = async () => {
+    if (!shippingAddress.trim()) {
+      return toast.error('Please enter your shipping address before checkout.');
+    }
+
     try {
       const token = localStorage.getItem('lg_token');
       
@@ -67,7 +72,8 @@ const Cart = () => {
         totalAmount: finalTotal,
         paymentMethod: amountToPay === 0 ? 'Wallet' : 'Card',
         promoId: appliedPromo ? appliedPromo.promoId : undefined,
-        walletUsed: walletUsed
+        walletUsed: walletUsed,
+        shippingAddress
       };
 
       if (amountToPay === 0) {
@@ -183,6 +189,19 @@ const Cart = () => {
         </div>
 
         <div className="cart-summary" style={{ background: 'white', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', position: 'sticky', top: '100px' }}>
+          
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>Shipping Address</h3>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <textarea 
+              placeholder="Enter your complete delivery address (Street, City, State, ZIP)..." 
+              value={shippingAddress}
+              onChange={e => setShippingAddress(e.target.value)}
+              rows="3"
+              style={{ width: '100%', padding: '0.8rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', outline: 'none', resize: 'none', fontFamily: 'inherit' }}
+            ></textarea>
+            <small style={{ color: 'var(--text-gray)', display: 'block', marginTop: '0.4rem' }}>This address will be saved to your profile for future orders.</small>
+          </div>
+
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>Order Summary</h3>
           
           {/* Promo Code Input */}

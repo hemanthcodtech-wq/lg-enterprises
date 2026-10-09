@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
-import { FiTrash2, FiPlus } from 'react-icons/fi';
+import { FiTrash2, FiPlus, FiEdit2 } from 'react-icons/fi';
 
 const AdminProducts = () => {
   const { token } = useOutletContext();
@@ -11,6 +11,7 @@ const AdminProducts = () => {
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Form State
+  const [editingId, setEditingId] = useState(null);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [price, setPrice] = useState('');
@@ -20,10 +21,29 @@ const AdminProducts = () => {
   const [description, setDescription] = useState('');
   const [images, setImages] = useState(null);
 
+  // Filter & Pagination State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
   useEffect(() => {
     fetchProducts();
     fetchCategories();
   }, []);
+
+  // Filter and Paginate Products
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = filterCategory ? p.category?._id === filterCategory : true;
+    return matchesSearch && matchesCategory;
+  });
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const currentProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const fetchProducts = async () => {
     try {
@@ -53,30 +73,59 @@ const AdminProducts = () => {
       formData.append('price', Number(price));
       if (originalPrice) {
         formData.append('originalPrice', Number(originalPrice));
+      } else {
+        formData.append('originalPrice', '');
       }
       formData.append('stock', Number(stock));
       formData.append('category', category);
-      formData.append('description', description);
+      formData.append('description', description || '');
       if (images) {
         for (let i = 0; i < images.length; i++) {
           formData.append('images', images[i]);
         }
       }
 
-      await axios.post(`${import.meta.env.VITE_API_URL}/products`, formData, {
-        headers: { 
-          'x-auth-token': token,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      // Reset form
-      setName(''); setSlug(''); setPrice(''); setOriginalPrice(''); setStock(''); setCategory(''); setDescription(''); setImages(null);
-      setShowAddForm(false);
+      if (editingId) {
+        await axios.put(`${import.meta.env.VITE_API_URL}/products/${editingId}`, formData, {
+          headers: { 
+            'x-auth-token': token,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      } else {
+        await axios.post(`${import.meta.env.VITE_API_URL}/products`, formData, {
+          headers: { 
+            'x-auth-token': token,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      }
+      
+      resetForm();
       fetchProducts();
     } catch (err) {
-      alert(err.response?.data?.error || 'Error creating product');
+      alert(err.response?.data?.error || 'Error saving product');
     }
     setLoading(false);
+  };
+
+  const handleEdit = (prod) => {
+    setEditingId(prod._id);
+    setName(prod.name);
+    setSlug(prod.slug);
+    setPrice(prod.price);
+    setOriginalPrice(prod.originalPrice || '');
+    setStock(prod.stock);
+    setCategory(prod.category?._id || '');
+    setDescription(prod.description || '');
+    setImages(null);
+    setShowAddForm(true);
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setName(''); setSlug(''); setPrice(''); setOriginalPrice(''); setStock(''); setCategory(''); setDescription(''); setImages(null);
+    setShowAddForm(false);
   };
 
   const handleDelete = async (id) => {
@@ -94,74 +143,154 @@ const AdminProducts = () => {
   return (
     <div className="admin-tab-content">
       <style>{`
-        .modal-overlay {
+        .filter-bar {
+          display: flex; gap: 1rem; margin-bottom: 1.5rem;
+          flex-wrap: wrap; align-items: center; justify-content: space-between;
+          background: #ffffff; padding: 1rem; border-radius: 12px;
+          border: 1px solid #f1f5f9; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          position: relative; z-index: 1;
+        }
+        .filter-group {
+          display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 300px;
+        }
+        .filter-input {
+          flex: 1; padding: 0.6rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;
+          font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+        }
+        .filter-input:focus {
+          border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+        }
+        .pagination {
+          display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+          margin-top: 2.5rem; padding: 1rem 0 2rem; position: relative; z-index: 1;
+        }
+        .page-btn {
+          width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+          border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;
+          cursor: pointer; font-weight: 600; color: #475569; transition: all 0.2s;
+        }
+        .page-btn:hover:not(:disabled) {
+          background: #f8fafc; border-color: #cbd5e1; color: #0f172a;
+        }
+        .page-btn.active {
+          background: #4f46e5; color: #ffffff; border-color: #4f46e5;
+        }
+        .page-btn:disabled {
+          opacity: 0.5; cursor: not-allowed;
+        }
+        .side-panel-overlay {
           position: fixed; top: 0; left: 0; width: 100%; height: 100%;
           background: rgba(15, 23, 42, 0.4);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
           z-index: 1000;
-          display: flex; align-items: center; justify-content: center;
-          padding: 1rem;
+          display: flex; justify-content: flex-end;
         }
-        .modal-content {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(32px);
-          -webkit-backdrop-filter: blur(32px);
-          border: 1px solid rgba(255, 255, 255, 0.8);
-          border-radius: 24px;
-          padding: 2.5rem;
-          width: 100%; max-width: 800px; max-height: 90vh;
+        .side-panel {
+          background: rgba(248, 250, 252, 0.95);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          width: 100%; max-width: 650px; height: 100vh;
           overflow-y: auto;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(255,255,255,0.4);
-          animation: modalPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+          animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
           position: relative;
+          display: flex;
+          flex-direction: column;
+          border-left: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        .side-panel-header {
+          padding: 2rem;
+          border-bottom: 1px solid #e2e8f0;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          position: sticky;
+          top: 0;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(12px);
+          z-index: 10;
+        }
+        .side-panel-body {
+          padding: 2rem;
+          flex: 1;
+        }
+        .side-panel-footer {
+          padding: 1.5rem 2rem;
+          border-top: 1px solid #e2e8f0;
+          background: #ffffff;
+          position: sticky;
+          bottom: 0;
+          display: flex;
+          justify-content: flex-end;
+          gap: 1rem;
+          z-index: 10;
+        }
+        .panel-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 1.5rem;
+          margin-bottom: 1.5rem;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+        }
+        .panel-card-title {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 1.25rem;
         }
         
-        /* Custom Scrollbar for Modal */
-        .modal-content::-webkit-scrollbar {
-          width: 14px;
+        /* Custom Scrollbar */
+        .side-panel::-webkit-scrollbar {
+          width: 8px;
         }
-        .modal-content::-webkit-scrollbar-track {
+        .side-panel::-webkit-scrollbar-track {
           background: transparent;
         }
-        .modal-content::-webkit-scrollbar-thumb {
-          background: rgba(148, 163, 184, 0.4);
-          border-radius: 20px;
-          border: 4px solid rgba(255, 255, 255, 0);
-          background-clip: padding-box;
+        .side-panel::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
         }
-        .modal-content::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(148, 163, 184, 0.7);
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
         }
-        @keyframes modalPopIn {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .modal-close-btn {
-          position: absolute; top: 1.5rem; right: 1.5rem;
-          background: white; border: none; font-size: 1.5rem; width: 40px; height: 40px;
-          border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        .panel-close-btn {
+          background: #f1f5f9; border: none; font-size: 1.2rem; width: 32px; height: 32px;
+          border-radius: 8px; display: flex; align-items: center; justify-content: center;
           cursor: pointer; color: #64748b; line-height: 1; transition: all 0.2s ease;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
-        .modal-close-btn:hover {
-          color: #ef4444; transform: rotate(90deg); background: #fef2f2;
+        .panel-close-btn:hover {
+          background: #e2e8f0; color: #0f172a;
         }
         .glass-input {
-          background: rgba(255, 255, 255, 0.8);
-          border: 1px solid rgba(226, 232, 240, 0.8);
-          border-radius: 12px;
-          padding: 0.8rem 1rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 0.7rem 1rem;
           width: 100%;
-          transition: all 0.3s;
+          font-size: 0.9rem;
+          transition: all 0.2s;
           box-sizing: border-box;
           font-family: inherit;
+          color: #0f172a;
         }
         .glass-input:focus {
           outline: none;
-          background: rgba(255, 255, 255, 0.95);
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+          background: #ffffff;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        .admin-form-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+        .admin-form-grid .form-group {
+          margin-bottom: 0;
         }
         
         /* File Input Styling */
@@ -184,435 +313,423 @@ const AdminProducts = () => {
           position: relative;
           min-height: 100%;
         }
-        .ambient-glow-1 {
-          position: absolute;
-          top: 40px;
-          right: 5%;
-          width: 400px;
-          height: 400px;
-          background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, rgba(99, 102, 241, 0) 70%);
-          border-radius: 50%;
-          pointer-events: none;
-          z-index: 0;
-          filter: blur(50px);
-        }
-        .ambient-glow-2 {
-          position: absolute;
-          top: 380px;
-          left: 5%;
-          width: 350px;
-          height: 350px;
-          background: radial-gradient(circle, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0) 70%);
-          border-radius: 50%;
-          pointer-events: none;
-          z-index: 0;
-          filter: blur(50px);
-        }
+
         .glass-btn {
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
-          background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+          background: #4f46e5;
           color: white;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          padding: 0.75rem 1.6rem;
-          border-radius: 12px;
-          font-weight: 700;
-          font-size: 0.9rem;
+          border: 1px solid #4f46e5;
+          padding: 0.65rem 1.25rem;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.85rem;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
         .glass-btn:hover:not(:disabled) {
-          transform: translateY(-2px) scale(1.02);
-          box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
-          background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+          background: #4338ca;
+          border-color: #4338ca;
+        }
+        .glass-btn.outline {
+          background: #ffffff;
+          color: #475569;
+          border: 1px solid #cbd5e1;
+          box-shadow: none;
+        }
+        .glass-btn.outline:hover:not(:disabled) {
+          background: #f8fafc;
+          color: #0f172a;
+          border-color: #94a3b8;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .glass-btn:disabled {
           opacity: 0.6;
           cursor: not-allowed;
         }
-        .glass-product-card {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.45) 100%);
-          backdrop-filter: blur(24px) saturate(190%);
-          -webkit-backdrop-filter: blur(24px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          border-radius: 20px;
+        .table-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
           overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
-          box-shadow: 
-            0 10px 25px -5px rgba(15, 23, 42, 0.05),
-            0 2px 6px -1px rgba(15, 23, 42, 0.03),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
-          position: relative;
-        }
-        .glass-product-card::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 60%);
-          pointer-events: none;
-          z-index: 0;
-        }
-        .glass-product-card:hover {
-          transform: translateY(-6px);
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.6) 100%);
-          border-color: rgba(255, 255, 255, 1);
-          box-shadow: 
-            0 20px 35px -8px rgba(79, 70, 229, 0.16),
-            0 1px 4px rgba(15, 23, 42, 0.04),
-            inset 0 1px 2px 0 rgba(255, 255, 255, 1);
-        }
-        .card-img-box {
-          height: 195px;
-          margin: 0.75rem 0.75rem 0 0.75rem;
-          border-radius: 14px;
-          position: relative;
-          overflow: hidden;
-          padding: 0.85rem;
-          background: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.6) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.85);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.02);
-        }
-        .card-img-box img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
           position: relative;
           z-index: 1;
-          filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.12));
-          transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .glass-product-card:hover .card-img-box img {
-          transform: scale(1.08) translateY(-4px);
+        .admin-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          text-align: left;
         }
-        .card-stock-badge {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          font-size: 0.68rem;
-          font-weight: 800;
-          letter-spacing: 0.6px;
+        .admin-table th {
+          background: #f8fafc;
+          color: #64748b;
+          font-size: 0.7rem;
+          font-weight: 600;
           text-transform: uppercase;
-          padding: 0.3rem 0.65rem;
+          letter-spacing: 0.05em;
+          padding: 0.8rem 1rem;
+          border-bottom: 1px solid #e2e8f0;
+          white-space: nowrap;
+        }
+        .admin-table td {
+          padding: 1rem;
+          border-bottom: 1px solid #f1f5f9;
+          color: #1e293b;
+          font-size: 0.85rem;
+          vertical-align: middle;
+        }
+        .admin-table tr:hover td {
+          background: #f8fafc;
+        }
+        .admin-table tr:last-child td {
+          border-bottom: none;
+        }
+        .table-product-image {
+          width: 48px;
+          height: 48px;
+          border-radius: 8px;
+          object-fit: cover;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+        }
+        .table-category-tag {
+          display: inline-block;
+          font-size: 0.65rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #4f46e5;
+          background: #e0e7ff;
+          border-radius: 4px;
+          padding: 0.2rem 0.5rem;
+        }
+        .table-stock-badge {
+          font-size: 0.65rem;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          padding: 0.25rem 0.6rem;
           border-radius: 20px;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
           display: inline-flex;
           align-items: center;
-          gap: 5px;
-          z-index: 2;
+          gap: 4px;
         }
-        .card-stock-badge.in-stock {
-          background: rgba(16, 185, 129, 0.15);
-          color: #047857;
-          border: 1px solid rgba(16, 185, 129, 0.35);
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.12);
+        .table-stock-badge.in-stock {
+          background: #d1fae5;
+          color: #065f46;
         }
-        .card-stock-badge.out-of-stock {
-          background: rgba(239, 68, 68, 0.15);
-          color: #b91c1c;
-          border: 1px solid rgba(239, 68, 68, 0.35);
-          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.12);
+        .table-stock-badge.out-of-stock {
+          background: #fee2e2;
+          color: #991b1b;
         }
         .stock-dot {
-          width: 6px;
-          height: 6px;
+          width: 5px;
+          height: 5px;
           border-radius: 50%;
           background: currentColor;
-          box-shadow: 0 0 6px currentColor;
         }
-        .card-body-content {
-          padding: 0.9rem 1.15rem 1.15rem 1.15rem;
-          display: flex;
-          flex-direction: column;
-          flex-grow: 1;
-          position: relative;
-          z-index: 1;
-        }
-        .card-category-tag {
+        .table-btn-action {
           display: inline-flex;
           align-items: center;
-          font-size: 0.68rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.8px;
-          color: #4f46e5;
-          background: rgba(99, 102, 241, 0.08);
-          border: 1px solid rgba(99, 102, 241, 0.2);
-          border-radius: 6px;
-          padding: 0.2rem 0.55rem;
-          margin-bottom: 0.45rem;
-          width: fit-content;
-        }
-        .card-product-title {
-          margin: 0 0 0.6rem 0;
-          color: #0f172a;
-          font-size: 1.05rem;
-          font-weight: 700;
-          line-height: 1.35;
-          letter-spacing: -0.2px;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          min-height: 2.85rem;
-        }
-        .card-price-row {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          margin-top: auto;
-          margin-bottom: 0.9rem;
-          padding-top: 0.5rem;
-          border-top: 1px dashed rgba(226, 232, 240, 0.85);
-        }
-        .card-price-group {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-        .card-price-val {
-          display: flex;
-          align-items: baseline;
-          gap: 3px;
-          color: #0f172a;
-          font-weight: 800;
-          font-size: 1.35rem;
-          letter-spacing: -0.5px;
-          line-height: 1.1;
-        }
-        .currency-symbol {
-          font-size: 0.95rem;
-          color: #4f46e5;
-          font-weight: 700;
-        }
-        .card-price-original {
-          font-size: 0.8rem;
-          color: #94a3b8;
-          text-decoration: line-through;
-          font-weight: 600;
-        }
-        .card-discount-tag {
-          font-size: 0.65rem;
-          font-weight: 800;
-          color: #059669;
-          background: rgba(16, 185, 129, 0.12);
-          border: 1px solid rgba(16, 185, 129, 0.25);
-          border-radius: 4px;
-          padding: 0.1rem 0.35rem;
-          letter-spacing: 0.3px;
-          display: inline-block;
-          width: fit-content;
-        }
-        .card-discount-badge-top {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          font-size: 0.65rem;
-          font-weight: 800;
-          letter-spacing: 0.5px;
-          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-          color: #ffffff;
-          border-radius: 6px;
-          padding: 0.22rem 0.5rem;
-          z-index: 2;
-          box-shadow: 0 4px 10px rgba(217, 119, 6, 0.25);
-        }
-        .card-stock-hint {
-          font-size: 0.75rem;
-          color: #64748b;
-          font-weight: 600;
-        }
-        .glass-btn-delete {
-          display: flex;
-          align-items: center;
           justify-content: center;
-          gap: 0.5rem;
-          background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
-          color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          border-radius: 12px;
-          padding: 0.72rem 1rem;
-          font-size: 0.85rem;
-          font-weight: 700;
-          letter-spacing: 0.2px;
+          gap: 0.4rem;
+          border: none;
+          border-radius: 6px;
+          padding: 0.4rem 0.6rem;
+          font-size: 0.75rem;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-          width: 100%;
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.35);
-          position: relative;
-          z-index: 1;
+          transition: all 0.2s ease;
         }
-        .glass-btn-delete:hover {
-          background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-          color: #ffffff;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 22px rgba(79, 70, 229, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+        .table-btn-delete {
+          background: #fee2e2;
+          color: #b91c1c;
         }
-        .glass-btn-delete:active {
-          transform: translateY(0);
-          box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+        .table-btn-delete:hover {
+          background: #f87171;
+          color: white;
         }
-        .glass-btn-delete .btn-icon {
-          font-size: 0.95rem;
-          transition: transform 0.2s ease;
+        .table-btn-edit {
+          background: #e0e7ff;
+          color: #4f46e5;
         }
-        .glass-btn-delete:hover .btn-icon {
-          transform: scale(1.15) rotate(-6deg);
+        .table-btn-edit:hover {
+          background: #6366f1;
+          color: white;
         }
       `}</style>
-      {/* Ambient background glow orbs for authentic glassmorphism */}
-      <div className="ambient-glow-1"></div>
-      <div className="ambient-glow-2"></div>
+
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', marginTop: '0.5rem', position: 'relative', zIndex: 1 }}>
         <div>
           <h2 style={{ fontSize: '1.8rem', color: '#0f172a', margin: '0 0 0.25rem 0', fontWeight: '800', letterSpacing: '-0.5px' }}>Product Catalog</h2>
           <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Manage your inventory, pricing, and live listings</p>
         </div>
-        <button className="glass-btn" onClick={() => setShowAddForm(true)}>
+        <button className="glass-btn" onClick={() => { resetForm(); setShowAddForm(true); }}>
           <FiPlus style={{ fontSize: '1.15rem' }} /> Add Product
         </button>
       </div>
 
       {showAddForm && (
-        <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <button className="modal-close-btn" onClick={() => setShowAddForm(false)}>&times;</button>
-            <h3 style={{ marginBottom: '2rem', fontSize: '1.6rem', color: '#1e293b', background: 'linear-gradient(90deg, #1e293b, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: '800' }}>Add New Product</h3>
-            <form onSubmit={handleSubmit} className="admin-form admin-form-grid">
-              <div className="form-group">
-                <label style={{ fontWeight: '600', color: '#475569' }}>Product Name</label>
-                <input type="text" className="glass-input" value={name} onChange={e => {
-                  setName(e.target.value);
-                  setSlug(e.target.value.toLowerCase().replace(/ /g, '-'));
-                }} required />
+        <div className="side-panel-overlay" onClick={resetForm}>
+          <div className="side-panel" onClick={e => e.stopPropagation()}>
+            <div className="side-panel-header">
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.1)', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {editingId ? <FiEdit2 size={20} style={{ strokeWidth: '3px' }} /> : <FiPlus size={20} style={{ strokeWidth: '3px' }} />}
+                </div>
+                <div>
+                  <h3 style={{ margin: '0 0 0.3rem 0', fontSize: '1.25rem', color: '#0f172a', fontWeight: '800', letterSpacing: '-0.02em' }}>
+                    {editingId ? 'Edit Product' : 'Add New Product'}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                    {editingId ? 'Update details for this product' : 'Fill in the details to add a product to your catalog'}
+                  </p>
+                </div>
               </div>
-              
-              <div className="form-group">
-                <label style={{ fontWeight: '600', color: '#475569' }}>Slug</label>
-                <input type="text" className="glass-input" value={slug} onChange={e => setSlug(e.target.value)} required />
-              </div>
+              <button className="panel-close-btn" onClick={resetForm}>&times;</button>
+            </div>
+            
+            <div className="side-panel-body">
+              <form id="add-product-form" onSubmit={handleSubmit} className="admin-form">
+                
+                <div className="panel-card">
+                  <div className="admin-form-grid">
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                      <label style={{ fontWeight: '600', color: '#475569' }}>Product Name</label>
+                      <input type="text" className="glass-input" value={name} onChange={e => {
+                        setName(e.target.value);
+                        setSlug(e.target.value.toLowerCase().replace(/ /g, '-'));
+                      }} required />
+                    </div>
+                    
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                      <label style={{ fontWeight: '600', color: '#475569' }}>Slug</label>
+                      <input type="text" className="glass-input" value={slug} onChange={e => setSlug(e.target.value)} required />
+                    </div>
+                  </div>
+                </div>
 
-              <div className="form-group">
-                <label style={{ fontWeight: '600', color: '#475569' }}>Original Price / MRP (₹)</label>
-                <input type="number" min="0" className="glass-input" placeholder="e.g. 79999" value={originalPrice} onChange={e => setOriginalPrice(e.target.value)} />
-                <small style={{ color: '#94a3b8' }}>Optional: standard retail price</small>
-              </div>
+                <div className="panel-card">
+                  <h4 className="panel-card-title">Pricing</h4>
+                  <div className="admin-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                    <div className="form-group">
+                      <label style={{ fontWeight: '600', color: '#475569' }}>MRP / Original Price (₹)</label>
+                      <input type="number" min="0" className="glass-input" placeholder="e.g. 79999" value={originalPrice} onChange={e => setOriginalPrice(e.target.value)} />
+                      <small style={{ color: '#94a3b8' }}>Optional: standard retail price</small>
+                    </div>
 
-              <div className="form-group">
-                <label style={{ fontWeight: '600', color: '#475569' }}>Discounted Price (₹) *</label>
-                <input type="number" min="0" className="glass-input" placeholder="e.g. 69999" value={price} onChange={e => setPrice(e.target.value)} required />
-                <small style={{ color: '#94a3b8' }}>
-                  {originalPrice && Number(originalPrice) > Number(price) ? (
-                    <span style={{ color: '#16a34a', fontWeight: '700' }}>
-                      🎉 {Math.round(((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100)}% Discount to buyer
-                    </span>
-                  ) : 'Selling price customers pay'}
-                </small>
-              </div>
+                    <div className="form-group">
+                      <label style={{ fontWeight: '600', color: '#475569' }}>Selling Price (₹) *</label>
+                      <input type="number" min="0" className="glass-input" placeholder="e.g. 69999" value={price} onChange={e => setPrice(e.target.value)} required />
+                      <small style={{ color: '#94a3b8' }}>
+                        {originalPrice && Number(originalPrice) > Number(price) ? (
+                          <span style={{ color: '#16a34a', fontWeight: '700' }}>
+                            🎉 {Math.round(((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100)}% OFF
+                          </span>
+                        ) : 'Price customers pay'}
+                      </small>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontWeight: '600', color: '#475569' }}>Stock Quantity *</label>
-                <input type="number" min="0" className="glass-input" placeholder="e.g. 50" value={stock} onChange={e => setStock(e.target.value)} required />
-              </div>
+                <div className="panel-card">
+                  <h4 className="panel-card-title">Inventory & Category</h4>
+                  <div className="admin-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                    <div className="form-group">
+                      <label style={{ fontWeight: '600', color: '#475569' }}>Stock Quantity *</label>
+                      <input type="number" min="0" className="glass-input" placeholder="e.g. 50" value={stock} onChange={e => setStock(e.target.value)} required />
+                    </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontWeight: '600', color: '#475569' }}>Category</label>
-                <select className="glass-input" value={category} onChange={e => setCategory(e.target.value)} required>
-                  <option value="">Select a Category</option>
-                  {categories.map(c => (
-                    <option key={c._id} value={c._id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
+                    <div className="form-group">
+                      <label style={{ fontWeight: '600', color: '#475569' }}>Category *</label>
+                      <select className="glass-input" value={category} onChange={e => setCategory(e.target.value)} required>
+                        <option value="">Select a Category</option>
+                        {categories.map(c => (
+                          <option key={c._id} value={c._id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontWeight: '600', color: '#475569' }}>Description</label>
-                <textarea className="glass-input" rows="3" value={description} onChange={e => setDescription(e.target.value)}></textarea>
-              </div>
+                <div className="panel-card">
+                  <h4 className="panel-card-title">Description</h4>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <textarea className="glass-input" rows="4" placeholder="Product description..." value={description} onChange={e => setDescription(e.target.value)}></textarea>
+                  </div>
+                </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontWeight: '600', color: '#475569' }}>Product Images (Cloudinary)</label>
-                <input type="file" className="glass-input" style={{ padding: '0.6rem' }} multiple accept="image/*" onChange={e => setImages(e.target.files)} />
-                <small style={{ color: '#64748b' }}>Select one or more images</small>
-              </div>
+                <div className="panel-card">
+                  <h4 className="panel-card-title">Images</h4>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <input type="file" className="glass-input" style={{ padding: '0.6rem' }} multiple accept="image/*" onChange={e => setImages(e.target.files)} />
+                    <small style={{ color: '#64748b', display: 'block', marginTop: '0.5rem' }}>Select one or more images (Cloudinary)</small>
+                  </div>
+                </div>
 
-              <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button type="submit" className="glass-btn" disabled={loading}>
-                  {loading ? 'Adding...' : 'Add Product'}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
+
+            <div className="side-panel-footer">
+              <button type="button" className="glass-btn outline" onClick={resetForm}>
+                Cancel
+              </button>
+              <button type="submit" form="add-product-form" className="glass-btn" disabled={loading}>
+                {loading ? 'Saving...' : (editingId ? '✓ Save Changes' : '✓ Add Product')}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.5rem', marginTop: '1.5rem', width: '100%', position: 'relative', zIndex: 1 }}>
-          {products.length === 0 ? (
-            <div style={{ gridColumn: '1 / -1', padding: '4rem', textAlign: 'center', background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(16px)', borderRadius: '24px', border: '2px dashed rgba(203, 213, 225, 0.7)' }}>
-              <p style={{ color: '#475569', fontSize: '1.2rem', margin: 0, fontWeight: '500' }}>No products found in the catalog.</p>
-            </div>
-          ) : (
-            products.map(prod => (
-              <div key={prod._id} className="glass-product-card">
-                <div className="card-img-box">
-                  {prod.originalPrice && prod.originalPrice > prod.price && (
-                    <span className="card-discount-badge-top">
-                      {Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}% OFF
-                    </span>
-                  )}
-                  {prod.images && prod.images.length > 0 ? (
-                    <img src={prod.images[0]} alt={prod.name} />
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', fontSize: '3rem', position: 'relative', zIndex: 1 }}>📦</div>
-                  )}
-                  <span className={`card-stock-badge ${prod.stock > 0 ? 'in-stock' : 'out-of-stock'}`}>
-                    <span className="stock-dot"></span>
-                    {prod.stock > 0 ? `${prod.stock} in stock` : 'Out of stock'}
-                  </span>
-                </div>
-                <div className="card-body-content">
-                  <span className="card-category-tag">
-                    {prod.category?.name || 'General'}
-                  </span>
-                  <h4 className="card-product-title" title={prod.name}>{prod.name}</h4>
-                  <div className="card-price-row">
-                    <div className="card-price-group">
-                      <div className="card-price-val">
-                        <span className="currency-symbol">₹</span>
-                        {prod.price?.toLocaleString('en-IN')}
-                      </div>
-                      {prod.originalPrice && prod.originalPrice > prod.price ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span className="card-price-original">
-                            ₹{prod.originalPrice?.toLocaleString('en-IN')}
-                          </span>
-                          <span className="card-discount-tag">
-                            {Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}% OFF
-                          </span>
-                        </div>
-                      ) : null}
-                    </div>
-                    <span className="card-stock-hint">{prod.stock} left</span>
-                  </div>
-                  <button onClick={() => handleDelete(prod._id)} className="glass-btn-delete">
-                    <FiTrash2 className="btn-icon" /> Delete Product
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+      <div className="filter-bar">
+        <div className="filter-group">
+          <input 
+            type="text" 
+            placeholder="Search products by name..." 
+            className="filter-input"
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+          />
+          <select 
+            className="filter-input" 
+            style={{ maxWidth: '200px' }}
+            value={filterCategory}
+            onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="">All Categories</option>
+            {categories.map(c => (
+              <option key={c._id} value={c._id}>{c.name}</option>
+            ))}
+          </select>
         </div>
+        <div style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>
+          Showing {filteredProducts.length} product(s)
+        </div>
+      </div>
+
+      <div className="table-card">
+        <div style={{ overflowX: 'auto' }}>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th>MRP (₹)</th>
+                <th>Selling Price (₹)</th>
+                <th>Stock</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentProducts.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ padding: '4rem', textAlign: 'center' }}>
+                    <p style={{ color: '#475569', fontSize: '1.1rem', margin: 0, fontWeight: '500' }}>No products match your criteria.</p>
+                  </td>
+                </tr>
+              ) : (
+                currentProducts.map(prod => (
+                  <tr key={prod._id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        {prod.images && prod.images.length > 0 ? (
+                          <img src={prod.images[0]} alt={prod.name} className="table-product-image" />
+                        ) : (
+                          <div className="table-product-image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', color: '#cbd5e1' }}>📦</div>
+                        )}
+                        <div>
+                          <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '0.2rem' }}>{prod.name}</div>
+                          {prod.originalPrice && prod.originalPrice > prod.price && (
+                            <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: '700' }}>
+                              {Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}% OFF
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="table-category-tag">
+                        {prod.category?.name || 'General'}
+                      </span>
+                    </td>
+                    <td>
+                      {prod.originalPrice ? (
+                        <span style={{ color: '#94a3b8', textDecoration: 'line-through', fontWeight: '500' }}>
+                          {prod.originalPrice.toLocaleString('en-IN')}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: '700', color: '#0f172a' }}>
+                        {prod.price?.toLocaleString('en-IN')}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', alignItems: 'flex-start' }}>
+                        <span className={`table-stock-badge ${prod.stock > 0 ? 'in-stock' : 'out-of-stock'}`}>
+                          <span className="stock-dot"></span>
+                          {prod.stock > 0 ? 'IN STOCK' : 'OUT OF STOCK'}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>
+                          {prod.stock} units
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={() => handleEdit(prod)} className="table-btn-action table-btn-edit">
+                          <FiEdit2 /> Edit
+                        </button>
+                        <button onClick={() => handleDelete(prod._id)} className="table-btn-action table-btn-delete">
+                          <FiTrash2 /> Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+        {totalPages > 1 && (
+          <div className="pagination">
+            <button 
+              className="page-btn" 
+              disabled={currentPage === 1} 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            >
+              &lt;
+            </button>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button 
+                key={page} 
+                className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button 
+              className="page-btn" 
+              disabled={currentPage === totalPages} 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            >
+              &gt;
+            </button>
+          </div>
+        )}
     </div>
   );
 };
