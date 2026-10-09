@@ -20,6 +20,7 @@ const AdminProducts = () => {
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [images, setImages] = useState(null);
+  const [tags, setTags] = useState([]);
 
   // Filter & Pagination State
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,6 +80,7 @@ const AdminProducts = () => {
       formData.append('stock', Number(stock));
       formData.append('category', category);
       formData.append('description', description || '');
+      formData.append('tags', JSON.stringify(tags));
       if (images) {
         for (let i = 0; i < images.length; i++) {
           formData.append('images', images[i]);
@@ -118,13 +120,14 @@ const AdminProducts = () => {
     setStock(prod.stock);
     setCategory(prod.category?._id || '');
     setDescription(prod.description || '');
+    setTags(prod.tags || []);
     setImages(null);
     setShowAddForm(true);
   };
 
   const resetForm = () => {
     setEditingId(null);
-    setName(''); setSlug(''); setPrice(''); setOriginalPrice(''); setStock(''); setCategory(''); setDescription(''); setImages(null);
+    setName(''); setSlug(''); setPrice(''); setOriginalPrice(''); setStock(''); setCategory(''); setDescription(''); setImages(null); setTags([]);
     setShowAddForm(false);
   };
 
@@ -555,6 +558,39 @@ const AdminProducts = () => {
                           <option key={c._id} value={c._id}>{c.name}</option>
                         ))}
                       </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="panel-card">
+                  <h4 className="panel-card-title">Tags & Badges</h4>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontWeight: '600', color: '#475569', display: 'block', marginBottom: '0.5rem' }}>Select Tags</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {['Deal of the Day', 'Trending', 'Top Seller', 'Limited'].map(tag => (
+                        <label key={tag} style={{ 
+                          padding: '0.5rem 1rem', 
+                          background: tags.includes(tag) ? '#4f46e5' : '#f1f5f9', 
+                          color: tags.includes(tag) ? 'white' : '#475569',
+                          borderRadius: '20px', 
+                          fontSize: '0.85rem', 
+                          fontWeight: 600, 
+                          cursor: 'pointer',
+                          border: `1px solid ${tags.includes(tag) ? '#4f46e5' : '#e2e8f0'}`,
+                          transition: 'all 0.2s'
+                        }}>
+                          <input 
+                            type="checkbox" 
+                            style={{ display: 'none' }}
+                            checked={tags.includes(tag)}
+                            onChange={(e) => {
+                              if (e.target.checked) setTags([...tags, tag]);
+                              else setTags(tags.filter(t => t !== tag));
+                            }}
+                          />
+                          {tag}
+                        </label>
+                      ))}
                     </div>
                   </div>
                 </div>

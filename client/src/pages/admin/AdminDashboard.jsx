@@ -113,6 +113,9 @@ const AdminDashboard = () => {
           <NavLink to="/admin/dashboard/carousel" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
             <FiShoppingBag className="nav-icon" /> {!isCollapsed && <span>Carousel</span>}
           </NavLink>
+          <NavLink to="/admin/dashboard/brands" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
+            <FiShoppingBag className="nav-icon" /> {!isCollapsed && <span>Top Brands</span>}
+          </NavLink>
 
           {!isCollapsed && <div className="nav-section-title" style={{ marginTop: '1rem' }}>Settings</div>}
           <NavLink to="/admin/dashboard/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
@@ -139,6 +142,7 @@ const AdminDashboard = () => {
               {location.pathname.includes('orders') && 'Order History'}
               {location.pathname.includes('promos') && 'Manage Promo Codes'}
               {location.pathname.includes('carousel') && 'Manage Carousel'}
+              {location.pathname.includes('brands') && 'Manage Brands'}
               {location.pathname.includes('settings') && 'System Settings'}
               {location.pathname === '/admin/dashboard' && 'Dashboard Overview'}
               {location.pathname === '/admin/dashboard/' && 'Dashboard Overview'}

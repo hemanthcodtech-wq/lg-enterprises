@@ -230,8 +230,13 @@ const AdminUserDetails = () => {
             <h4 style={{ margin: '0 0 1.5rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FiAward /> Referral & Wallet</h4>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <span style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.3rem' }}>Wallet Balance</span>
+              <span style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.3rem' }}>Usable Wallet Balance</span>
               <div style={{ fontSize: '2rem', fontWeight: 800 }}>₹{user?.walletBalance?.toLocaleString() || 0}</div>
+              {user?.pendingWalletBalance > 0 && (
+                <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', marginTop: '0.25rem' }}>
+                  + ₹{user.pendingWalletBalance.toLocaleString()} pending (awaiting delivery)
+                </div>
+              )}
             </div>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '1rem' }}>

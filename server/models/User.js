@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema({
   referralCode: { type: String, unique: true },
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   walletBalance: { type: Number, default: 0 },
+  pendingWalletBalance: { type: Number, default: 0 },
   totalReferralEarnings: { type: Number, default: 0 },
   isEmailVerified: { type: Boolean, default: false },
   otp: { type: String },

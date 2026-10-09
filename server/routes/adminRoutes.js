@@ -171,8 +171,44 @@ router.put('/orders/:id/status', authAdmin, async (req, res) => {
     if (paymentStatus) order.paymentStatus = paymentStatus;
     if (trackingNumber !== undefined) order.trackingNumber = trackingNumber;
     if (courierDetails !== undefined) order.courierDetails = courierDetails;
+    if (!order.shippingAddress) order.shippingAddress = 'Address not provided (legacy order)';
 
     await order.save();
+
+    if (status === 'Delivered') {
+      const Commission = require('../models/Commission');
+      const commissions = await Commission.find({ order: order._id, status: 'Pending' });
+      for (const comm of commissions) {
+        const user = await User.findById(comm.recipient);
+        if (user) {
+          user.pendingWalletBalance = Math.max(0, (user.pendingWalletBalance || 0) - comm.commissionAmount);
+          user.walletBalance = Math.round(((user.walletBalance || 0) + comm.commissionAmount) * 100) / 100;
+          user.totalReferralEarnings = Math.round(((user.totalReferralEarnings || 0) + comm.commissionAmount) * 100) / 100;
+          await user.save();
+        }
+        comm.status = 'Credited';
+        await comm.save();
+      }
+    } else if (status === 'Cancelled' || status === 'Returned') {
+      const Commission = require('../models/Commission');
+      const commissions = await Commission.find({ order: order._id, status: { $ne: 'Cancelled' } });
+      for (const comm of commissions) {
+        const user = await User.findById(comm.recipient);
+        if (user) {
+          if (comm.status === 'Pending') {
+            user.pendingWalletBalance = Math.max(0, (user.pendingWalletBalance || 0) - comm.commissionAmount);
+          } else if (comm.status === 'Credited') {
+            user.walletBalance = Math.max(0, (user.walletBalance || 0) - comm.commissionAmount);
+            user.totalReferralEarnings = Math.max(0, (user.totalReferralEarnings || 0) - comm.commissionAmount);
+          }
+          await user.save();
+        }
+        comm.status = 'Cancelled';
+        comm.commissionAmount = 0;
+        await comm.save();
+      }
+    }
+
     res.json(order);
   } catch (err) {
     console.error(err);

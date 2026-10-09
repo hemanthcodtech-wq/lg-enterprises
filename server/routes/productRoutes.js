@@ -8,6 +8,14 @@ const { upload } = require('../config/cloudinary');
 router.post('/', authAdmin, upload.array('images', 5), async (req, res) => {
   try {
     const { name, slug, description, price, originalPrice, stock, category, isFeatured } = req.body;
+    let tags = [];
+    if (req.body.tags) {
+      try {
+        tags = JSON.parse(req.body.tags);
+      } catch (e) {
+        tags = Array.isArray(req.body.tags) ? req.body.tags : [req.body.tags];
+      }
+    }
     let images = [];
     if (req.files && req.files.length > 0) {
       images = req.files.map(file => file.path);
@@ -17,7 +25,7 @@ router.post('/', authAdmin, upload.array('images', 5), async (req, res) => {
     if (product) {
       return res.status(400).json({ error: 'Product with this slug already exists' });
     }
-    product = new Product({ name, slug, description, price, originalPrice, stock, category, images, isFeatured });
+    product = new Product({ name, slug, description, price, originalPrice, stock, category, images, isFeatured, tags });
     await product.save();
     res.status(201).json(product);
   } catch (err) {
@@ -65,6 +73,14 @@ router.delete('/:id', authAdmin, async (req, res) => {
 router.put('/:id', authAdmin, upload.array('images', 5), async (req, res) => {
   try {
     const { name, slug, description, price, originalPrice, stock, category, isFeatured } = req.body;
+    let tags;
+    if (req.body.tags) {
+      try {
+        tags = JSON.parse(req.body.tags);
+      } catch (e) {
+        tags = Array.isArray(req.body.tags) ? req.body.tags : [req.body.tags];
+      }
+    }
     let product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
@@ -84,6 +100,7 @@ router.put('/:id', authAdmin, upload.array('images', 5), async (req, res) => {
     product.stock = stock !== undefined ? stock : product.stock;
     product.category = category || product.category;
     product.isFeatured = isFeatured !== undefined ? isFeatured : product.isFeatured;
+    if (tags !== undefined) product.tags = tags;
 
     // Optional: If new images are uploaded, replace the old ones (or append them based on requirements)
     // Here we'll replace them

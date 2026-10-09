@@ -4,6 +4,7 @@ const Order = require('../models/Order');
 const Promo = require('../models/Promo');
 const User = require('../models/User');
 const Commission = require('../models/Commission');
+const Product = require('../models/Product');
 const { authUser } = require('../middleware/auth');
 const Razorpay = require('razorpay');
 const sendEmail = require('../utils/mailer');
@@ -82,6 +83,15 @@ router.post('/', authUser, async (req, res) => {
 
     await order.save(); // CRITICAL FIX: Save the order to the database
 
+    // Deduct stock for each item in the order
+    for (const item of items) {
+      if (item.product) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: -item.quantity }
+        });
+      }
+    }
+
     // 5-Level Multi-Tier Referral Commission Distribution
     // Level 1: 5%, Level 2: 2.5%, Level 3: 2%, Level 4: 1.5%, Level 5: 1%
     const TIER_RATES = [
@@ -108,8 +118,7 @@ router.post('/', authUser, async (req, res) => {
       const commissionAmount = Math.round((totalAmount * tier.factor) * 100) / 100;
 
       if (commissionAmount > 0) {
-        uplineUser.walletBalance = Math.round(((uplineUser.walletBalance || 0) + commissionAmount) * 100) / 100;
-        uplineUser.totalReferralEarnings = Math.round(((uplineUser.totalReferralEarnings || 0) + commissionAmount) * 100) / 100;
+        uplineUser.pendingWalletBalance = Math.round(((uplineUser.pendingWalletBalance || 0) + commissionAmount) * 100) / 100;
         await uplineUser.save();
 
         await Commission.create({
@@ -162,6 +171,24 @@ router.post('/', authUser, async (req, res) => {
   }
 });
 
+// Get Active Promos (for customers to see)
+router.get('/active-promos', async (req, res) => {
+  try {
+    const promos = await Promo.find({ 
+      isActive: true,
+      $expr: {
+        $or: [
+          { $eq: ["$maxUses", null] },
+          { $lt: ["$currentUses", "$maxUses"] }
+        ]
+      }
+    });
+    res.json(promos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch promos' });
+  }
+});
+
 // Validate Promo Code
 router.post('/validate-promo', authUser, async (req, res) => {
   try {
@@ -208,6 +235,65 @@ router.get('/myorders', authUser, async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(orders);
   } catch (err) {
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Cancel or Return Order (Customer)
+router.put('/:id/status', authUser, async (req, res) => {
+  try {
+    const { action, refundDetails } = req.body; // 'cancel' or 'return'
+    const order = await Order.findOne({ _id: req.params.id, user: req.user.id });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (action === 'update_refund') {
+      if (!refundDetails) return res.status(400).json({ error: 'Refund details are required' });
+      order.refundDetails = refundDetails;
+      await order.save();
+      return res.json(order);
+    }
+
+    if (action === 'cancel') {
+      if (order.status !== 'Pending' && order.status !== 'Processing') {
+        return res.status(400).json({ error: 'Order cannot be cancelled at this stage' });
+      }
+      order.status = 'Cancelled';
+    } else if (action === 'return') {
+      if (order.status !== 'Delivered') {
+        return res.status(400).json({ error: 'Only delivered orders can be returned' });
+      }
+      order.status = 'Returned';
+    } else {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+    
+    if (refundDetails) {
+      order.refundDetails = refundDetails;
+    }
+
+    if (!order.shippingAddress) order.shippingAddress = 'Address not provided (legacy order)';
+    await order.save();
+    
+    // Reverse commissions if cancelled or returned
+    const commissions = await Commission.find({ order: order._id, status: { $ne: 'Cancelled' } });
+    for (const comm of commissions) {
+      const user = await User.findById(comm.recipient);
+      if (user) {
+        if (comm.status === 'Pending') {
+          user.pendingWalletBalance = Math.max(0, (user.pendingWalletBalance || 0) - comm.commissionAmount);
+        } else if (comm.status === 'Credited') {
+          user.walletBalance = Math.max(0, (user.walletBalance || 0) - comm.commissionAmount);
+          user.totalReferralEarnings = Math.max(0, (user.totalReferralEarnings || 0) - comm.commissionAmount);
+        }
+        await user.save();
+      }
+      comm.status = 'Cancelled';
+      comm.commissionAmount = 0;
+      await comm.save();
+    }
+    
+    res.json(order);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Server Error' });
   }
 });

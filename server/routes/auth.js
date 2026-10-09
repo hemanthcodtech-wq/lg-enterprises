@@ -156,6 +156,7 @@ router.get('/me', authUser, async (req, res) => {
       referralCode: user.referralCode,
       address: user.address,
       walletBalance: user.walletBalance || 0,
+      pendingWalletBalance: user.pendingWalletBalance || 0,
       totalReferralEarnings: user.totalReferralEarnings || 0
     });
   } catch (err) {
@@ -255,8 +256,7 @@ router.get('/referral-stats', authUser, async (req, res) => {
     // 2. Fetch all commissions earned by this user
     const commissions = await Commission.find({ recipient: user._id })
       .populate('buyer', 'name email')
-      .sort({ createdAt: -1 })
-      .limit(30);
+      .sort({ createdAt: -1 });
 
     // 3. Compute earnings breakdown per level
     const earningsAgg = await Commission.aggregate([
@@ -283,6 +283,7 @@ router.get('/referral-stats', authUser, async (req, res) => {
     res.json({
       referralCode: user.referralCode,
       walletBalance: user.walletBalance || 0,
+      pendingWalletBalance: user.pendingWalletBalance || 0,
       totalCommissionEarned: Math.round(totalCommissionEarned * 100) / 100,
       levelCounts,
       levelEarnings,
@@ -299,6 +300,7 @@ router.get('/referral-stats', authUser, async (req, res) => {
         level: c.level,
         percent: c.commissionPercent,
         amount: c.commissionAmount,
+        status: c.status || 'Pending',
         orderTotal: c.orderTotal,
         orderId: c.order,
         buyerName: c.buyer?.name ? c.buyer.name : 'Unknown',

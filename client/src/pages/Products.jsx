@@ -55,6 +55,8 @@ const Products = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [slideIdx, setSlideIdx] = useState(0);
   const [apiSlides, setApiSlides] = useState([]);
+  const [apiBrands, setApiBrands] = useState([]);
+  const [apiCategories, setApiCategories] = useState([]);
   const [dbProducts, setDbProducts] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,12 +66,21 @@ const Products = () => {
   const dealsFilter    = params.get('deals') === 'true';
   const newFilter      = params.get('new') === 'true';
   const wholesaleFilter= params.get('wholesale') === 'true';
+  const limitedFilter  = location.pathname === '/limited';
 
   useEffect(() => {
     // Fetch carousel
     axios.get(`${import.meta.env.VITE_API_URL}/carousel`)
       .then(res => setApiSlides(res.data))
       .catch(err => console.error('Error fetching carousel:', err));
+
+    axios.get(`${import.meta.env.VITE_API_URL}/brands`)
+      .then(res => setApiBrands(res.data))
+      .catch(err => console.error('Error fetching brands:', err));
+
+    axios.get(`${import.meta.env.VITE_API_URL}/categories`)
+      .then(res => setApiCategories(res.data))
+      .catch(err => console.error('Error fetching categories:', err));
 
     // Fetch products
     axios.get(`${import.meta.env.VITE_API_URL}/products`)
@@ -82,6 +93,7 @@ const Products = () => {
           image: p.images?.[0] || 'https://via.placeholder.com/300',
           category: p.category?.name?.toLowerCase() || 'other',
           discount: p.originalPrice ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0,
+          tags: p.tags || [],
           rating: 4.5,
           reviews: Math.floor(Math.random() * 200) + 10
         }));
@@ -115,6 +127,8 @@ const Products = () => {
     // mock 'wholesale' by limiting to grocery or bulk
     if (wholesaleFilter && p.category !== 'grocery' && p.category !== 'electronics') return false; 
     
+    if (limitedFilter && !p.tags.includes('Limited')) return false;
+
     if (activeTab !== 'All' && p.category !== activeTab.toLowerCase()) return false;
     return true;
   });
@@ -125,7 +139,7 @@ const Products = () => {
         <div className="section-title-row" style={{ flexWrap:'wrap', gap:'0.5rem', marginBottom:'1rem' }}>
           <h2 className="section-title">All Products</h2>
           <div className="featured-tabs">
-            {featuredTabs.map(t => (
+            {['All', ...apiCategories.map(c => c.name)].map(t => (
               <button
                 key={t}
                 className={`featured-tab${activeTab === t ? ' active' : ''}`}
@@ -150,27 +164,29 @@ const Products = () => {
       </div>
 
       {/* ─── Top Brands ─── */}
-      <div className="brands-section">
-        <div className="brands-header">
-          <h2>Top Brands</h2>
-          <button className="view-all-btn">Explore All <FiChevronRight /></button>
-        </div>
-        <div className="brands-marquee-wrapper">
-          <div className="brands-marquee">
-            {['AASHIRVAAD', 'ARIEL', 'B-MAX', 'BALTRA', 'HAWAMAHAL', 'NIRLON', 'NUTRAJ', 'PUMA', 'LuvLap', 'M.O.M'].map((brand, i) => (
-              <div key={i} className="brand-card">
-                {brand}
-              </div>
-            ))}
-            {/* Duplicate for seamless scrolling */}
-            {['AASHIRVAAD', 'ARIEL', 'B-MAX', 'BALTRA', 'HAWAMAHAL', 'NIRLON', 'NUTRAJ', 'PUMA', 'LuvLap', 'M.O.M'].map((brand, i) => (
-              <div key={`dup-${i}`} className="brand-card">
-                {brand}
-              </div>
-            ))}
+      {apiBrands.length > 0 && (
+        <div className="brands-section">
+          <div className="brands-header">
+            <h2>Top Brands</h2>
+            <button className="view-all-btn">Explore All <FiChevronRight /></button>
+          </div>
+          <div className="brands-marquee-wrapper">
+            <div className="brands-marquee">
+              {apiBrands.map((brand, i) => (
+                <div key={brand._id} className="brand-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={brand.imageUrl} alt={brand.name} style={{ maxWidth: '100%', maxHeight: '60px', objectFit: 'contain' }} />
+                </div>
+              ))}
+              {/* Duplicate for seamless scrolling */}
+              {apiBrands.map((brand, i) => (
+                <div key={`dup-${brand._id}`} className="brand-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={brand.imageUrl} alt={brand.name} style={{ maxWidth: '100%', maxHeight: '60px', objectFit: 'contain' }} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ─── Partner Section ─── */}
       <div className="partner-section">

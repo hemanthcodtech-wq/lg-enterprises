@@ -194,6 +194,7 @@ const AdminOrders = () => {
       case 'Pending':
         return { bg: '#fffbeb', text: '#b45309', border: '#fde68a' };
       case 'Cancelled':
+      case 'Returned':
         return { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' };
       default:
         return { bg: '#f8fafc', text: '#475569', border: '#e2e8f0' };
@@ -981,7 +982,7 @@ const AdminOrders = () => {
 
           {/* Status Segmented Filter Pills */}
           <div className="status-filter-pills">
-            {['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(status => {
+            {['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'].map(status => {
               const count = status === 'All' 
                 ? orders.length 
                 : orders.filter(o => o.status === status).length;
@@ -1108,6 +1109,7 @@ const AdminOrders = () => {
                             <option value="Shipped">● Shipped</option>
                             <option value="Delivered">● Delivered</option>
                             <option value="Cancelled">● Cancelled</option>
+                            <option value="Returned">● Returned</option>
                           </select>
                           <span className="status-dropdown-arrow" style={{ color: statusStyle.text }}>▼</span>
                         </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { FiTrash2, FiMinus, FiPlus, FiArrowLeft, FiShoppingBag, FiLock } from 'react-icons/fi';
+import { FiTrash2, FiMinus, FiPlus, FiArrowLeft, FiShoppingBag, FiLock, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 const Cart = () => {
@@ -25,6 +25,20 @@ const Cart = () => {
   const [appliedPromo, setAppliedPromo] = React.useState(null);
   const [useWallet, setUseWallet] = React.useState(false);
   const [shippingAddress, setShippingAddress] = React.useState(user?.address || '');
+  const [activePromos, setActivePromos] = React.useState([]);
+  const [showPromos, setShowPromos] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchPromos = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/orders/active-promos`);
+        setActivePromos(res.data);
+      } catch (err) {
+        console.error('Failed to load active promos');
+      }
+    };
+    fetchPromos();
+  }, []);
 
   const handleApplyPromo = async () => {
     if (!promoCode) return;
@@ -205,7 +219,7 @@ const Cart = () => {
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>Order Summary</h3>
           
           {/* Promo Code Input */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <input 
               type="text" 
               placeholder="Promo Code" 
@@ -215,6 +229,60 @@ const Cart = () => {
             />
             <button onClick={handleApplyPromo} className="btn-primary" style={{ padding: '0.6rem 1rem', borderRadius: 'var(--radius)' }}>Apply</button>
           </div>
+          
+          {activePromos.length > 0 && (
+            <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              <div 
+                onClick={() => setShowPromos(!showPromos)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '0.2rem 0', userSelect: 'none' }}
+              >
+                <h4 style={{ fontSize: '0.85rem', color: '#64748b', margin: 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <FiShoppingBag color="#64748b" /> View Available Offers ({activePromos.length})
+                </h4>
+                {showPromos ? <FiChevronUp color="#64748b" /> : <FiChevronDown color="#64748b" />}
+              </div>
+
+              {showPromos && activePromos.map(promo => (
+                <div 
+                  key={promo._id} 
+                  onClick={() => {
+                    setPromoCode(promo.code);
+                    setShowPromos(false);
+                    toast.success(`Code ${promo.code} applied! Click Apply button.`);
+                  }}
+                  style={{ 
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: '#fafafa', 
+                    border: '1px solid #eaeaea', 
+                    padding: '0.8rem 1rem', 
+                    borderRadius: '8px', 
+                    cursor: 'pointer', 
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.borderColor = '#4f46e5';
+                    e.currentTarget.style.background = '#f5f7ff';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.borderColor = '#eaeaea';
+                    e.currentTarget.style.background = '#fafafa';
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#111', fontSize: '0.95rem', letterSpacing: '0.5px' }}>{promo.code}</div>
+                    <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
+                      Save {promo.discountType === 'percentage' ? `${promo.discountValue}%` : `₹${promo.discountValue}`}
+                    </div>
+                  </div>
+                  
+                  <div style={{ color: '#4f46e5', fontSize: '0.85rem', fontWeight: 600 }}>
+                    Apply
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {activePromos.length === 0 && <div style={{ marginBottom: '1.5rem' }}></div>}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', color: 'var(--text-gray)' }}>
             <span>Subtotal ({cart.length} items)</span>

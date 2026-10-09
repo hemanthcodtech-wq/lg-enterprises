@@ -10,6 +10,7 @@ const ProductSchema = new mongoose.Schema({
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
   images: [{ type: String }],
   isFeatured: { type: Boolean, default: false },
+  tags: [{ type: String }] // Array to store tags like 'Deal of the Day', 'Trending Now', etc.
 }, { timestamps: true });
 
 module.exports = mongoose.model('Product', ProductSchema);

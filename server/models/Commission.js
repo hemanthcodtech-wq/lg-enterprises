@@ -7,7 +7,8 @@ const CommissionSchema = new mongoose.Schema({
   level: { type: Number, required: true, min: 1, max: 5 },
   commissionPercent: { type: Number, required: true },
   commissionAmount: { type: Number, required: true },
-  orderTotal: { type: Number, required: true }
+  orderTotal: { type: Number, required: true },
+  status: { type: String, default: 'Pending', enum: ['Pending', 'Credited', 'Cancelled'] }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Commission', CommissionSchema);

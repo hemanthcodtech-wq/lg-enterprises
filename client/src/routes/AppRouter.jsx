@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import TopBar from '../components/TopBar';
 import Navbar from '../components/Navbar';
 import CategoryBar from '../components/CategoryBar';
+import PromoBanner from '../components/PromoBanner';
 import Footer from '../components/Footer';
 import Home from '../pages/Home';
 import Products from '../pages/Products';
@@ -30,6 +31,7 @@ import AdminOrderDetails from '../pages/admin/AdminOrderDetails';
 import AdminPromos from '../pages/admin/AdminPromos';
 import AdminWithdrawals from '../pages/admin/AdminWithdrawals';
 import AdminCarousel from '../pages/admin/AdminCarousel';
+import AdminBrands from '../pages/admin/AdminBrands';
 import AdminSettings from '../pages/admin/AdminSettings';
 import ScrollToTop from '../components/ScrollToTop';
 
@@ -49,6 +51,7 @@ const AppRouter = () => (
         <Route path="promos" element={<AdminPromos />} />
         <Route path="withdrawals" element={<AdminWithdrawals />} />
         <Route path="carousel" element={<AdminCarousel />} />
+        <Route path="brands" element={<AdminBrands />} />
         <Route path="settings" element={<AdminSettings />} />
       </Route>
 
@@ -56,11 +59,13 @@ const AppRouter = () => (
       <Route path="*" element={
         <>
           <Navbar />
+          <PromoBanner />
           <CategoryBar />
           <main className="main-content">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/limited" element={<Products />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/login" element={<Login />} />

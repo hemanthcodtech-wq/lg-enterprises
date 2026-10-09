@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
   FiUser, FiMail, FiPhone, FiMapPin, FiHeart, FiPackage, FiLogOut, 
   FiEdit2, FiCreditCard, FiTag, FiCopy, FiShare2, FiUsers, FiTrendingUp, 
-  FiCheckCircle, FiClock, FiDollarSign, FiChevronRight, FiGift
+  FiCheckCircle, FiClock, FiDollarSign, FiChevronRight, FiGift, FiSearch, FiChevronLeft
 } from 'react-icons/fi';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Orders from './Orders';
@@ -27,6 +27,12 @@ const Profile = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
   const [ordersCount, setOrdersCount] = useState(0);
+
+  // Commission filtering & pagination state
+  const [commSearch, setCommSearch] = useState('');
+  const [commStatus, setCommStatus] = useState('All');
+  const [commPage, setCommPage] = useState(1);
+  const [commPerPage, setCommPerPage] = useState(10);
 
   useEffect(() => {
     if (location.pathname.includes('/orders')) setActiveTab('orders');
@@ -121,6 +127,23 @@ const Profile = () => {
     }
   };
 
+  const filteredCommissions = useMemo(() => {
+    if (!referralData?.recentCommissions) return [];
+    return referralData.recentCommissions.filter(c => {
+      const matchesSearch = c.buyerName.toLowerCase().includes(commSearch.toLowerCase()) || 
+                            (c.orderId && c.orderId.toLowerCase().includes(commSearch.toLowerCase()));
+      const matchesStatus = commStatus === 'All' || c.status === commStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [referralData, commSearch, commStatus]);
+
+  const currentCommissions = useMemo(() => {
+    const start = (commPage - 1) * commPerPage;
+    return filteredCommissions.slice(start, start + commPerPage);
+  }, [filteredCommissions, commPage, commPerPage]);
+  
+  const totalCommPages = Math.ceil(filteredCommissions.length / commPerPage);
+
   if (!user) {
     return (
       <div className="section-pad" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -205,7 +228,7 @@ const Profile = () => {
   };
 
   return (
-    <div className="section-pad profile-layout" style={{ maxWidth: '1240px', margin: '0 auto', minHeight: '80vh', paddingTop: '2.5rem', position: 'relative', display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+    <div className="section-pad profile-layout" style={{ maxWidth: '1400px', margin: '0 auto', minHeight: '80vh', paddingTop: '2.5rem', position: 'relative', display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
       
       {/* Withdraw Modal */}
       {showWithdrawModal && (
@@ -364,6 +387,9 @@ const Profile = () => {
             <span style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Active Wallet Balance</span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '6px' }}>
               <span style={{ fontSize: '2.4rem', fontWeight: 800, color: '#38bdf8' }}>₹{(user.walletBalance || 0).toFixed(2)}</span>
+            </div>
+            <div style={{ fontSize: '0.95rem', color: '#e2e8f0', marginTop: '4px', fontWeight: 500 }}>
+              <span style={{ color: '#fbbf24', fontWeight: 700 }}>₹{(user.pendingWalletBalance || 0).toFixed(2)}</span> Pending (Awaiting Delivery)
             </div>
             <p style={{ margin: '8px 0 0 0', fontSize: '0.8rem', color: '#cbd5e1' }}>
               Instant credit from 5-level referral commissions. 100% redeemable on any order!
@@ -566,7 +592,7 @@ const Profile = () => {
               <FiTrendingUp style={{ color: '#4f46e5' }} /> Your 5-Tier Network Breakdown
             </h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
               {(referralData?.tiers || [
                 { level: 1, rate: 5.0, count: 0, earned: 0, description: 'Direct Referrals' },
                 { level: 2, rate: 2.5, count: 0, earned: 0, description: '2nd-Gen Referrals' },
@@ -578,8 +604,8 @@ const Profile = () => {
                   key={idx}
                   style={{ 
                     background: 'white', 
-                    borderRadius: '18px', 
-                    padding: '1.4rem', 
+                    borderRadius: '16px', 
+                    padding: '1.2rem', 
                     border: '1px solid #f1f5f9', 
                     boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
                     position: 'relative',
@@ -641,60 +667,133 @@ const Profile = () => {
 
             {/* Recent Commission Transactions */}
             <div style={{ background: 'white', borderRadius: '24px', padding: '2rem', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div>
                   <h3 style={{ margin: '0 0 0.3rem 0', fontSize: '1.3rem', color: '#1e293b' }}>Recent Referral Commissions</h3>
                   <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>Real-time audit log of wallet credits from downline purchases.</p>
                 </div>
-                <button onClick={fetchReferralStats} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '6px 14px', fontSize: '0.85rem', color: '#475569', cursor: 'pointer', fontWeight: 600 }}>
-                  Refresh
-                </button>
+                
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
+                  {/* Search Bar */}
+                  <div style={{ position: 'relative', minWidth: '300px', flex: 1 }}>
+                    <FiSearch style={{ position: 'absolute', left: '12px', top: '10px', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      placeholder="Search shopper or order..."
+                      value={commSearch}
+                      onChange={(e) => { setCommSearch(e.target.value); setCommPage(1); }}
+                      style={{
+                        padding: '8px 12px 8px 36px', borderRadius: '8px', border: '1px solid #e2e8f0', 
+                        width: '100%', outline: 'none', fontSize: '0.9rem', color: '#1e293b'
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Status Filter */}
+                  <select
+                    value={commStatus}
+                    onChange={(e) => { setCommStatus(e.target.value); setCommPage(1); }}
+                    style={{
+                      padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', 
+                      outline: 'none', background: 'white', color: '#1e293b', fontSize: '0.9rem', cursor: 'pointer'
+                    }}
+                  >
+                    <option value="All">All Status</option>
+                    <option value="Credited">Credited</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+
+                  <button onClick={fetchReferralStats} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 14px', fontSize: '0.9rem', color: '#475569', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FiClock /> Refresh
+                  </button>
+                </div>
               </div>
 
-              {referralData?.recentCommissions?.length > 0 ? (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid #f1f5f9', color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase' }}>
-                        <th style={{ padding: '12px 16px' }}>Shopper</th>
-                        <th style={{ padding: '12px 16px' }}>Order ID</th>
-                        <th style={{ padding: '12px 16px' }}>Tier Level</th>
-                        <th style={{ padding: '12px 16px' }}>Commission Rate</th>
-                        <th style={{ padding: '12px 16px' }}>Order Amount</th>
-                        <th style={{ padding: '12px 16px' }}>Wallet Credit</th>
-                        <th style={{ padding: '12px 16px' }}>Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {referralData.recentCommissions.map((comm, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s' }}>
-                          <td style={{ padding: '14px 16px', fontWeight: 600, color: '#1e293b' }}>{comm.buyerName}</td>
-                          <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '0.8rem' }}>
-                            {comm.orderId ? comm.orderId.substring(comm.orderId.length - 8) : 'N/A'}
-                          </td>
-                          <td style={{ padding: '14px 16px' }}>
-                            <span style={{ background: '#eff6ff', color: '#2563eb', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700 }}>
-                              Level {comm.level}
-                            </span>
-                          </td>
-                          <td style={{ padding: '14px 16px', fontWeight: 700, color: '#4f46e5' }}>{comm.percent}%</td>
-                          <td style={{ padding: '14px 16px', color: '#64748b' }}>₹{comm.orderTotal}</td>
-                          <td style={{ padding: '14px 16px', fontWeight: 800, color: '#16a34a' }}>+₹{comm.amount.toFixed(2)}</td>
-                          <td style={{ padding: '14px 16px', color: '#94a3b8', fontSize: '0.8rem' }}>
-                            {new Date(comm.date).toLocaleDateString()}
-                          </td>
+              {filteredCommissions.length > 0 ? (
+                <>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #f1f5f9', color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                          <th style={{ padding: '12px 8px' }}>Shopper</th>
+                          <th style={{ padding: '12px 8px' }}>Order ID</th>
+                          <th style={{ padding: '12px 8px' }}>Tier Level</th>
+                          <th style={{ padding: '12px 8px' }}>Commission Rate</th>
+                          <th style={{ padding: '12px 8px' }}>Order Amount</th>
+                          <th style={{ padding: '12px 8px' }}>Wallet Credit</th>
+                          <th style={{ padding: '12px 8px' }}>Status</th>
+                          <th style={{ padding: '12px 8px' }}>Date</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {currentCommissions.map((comm, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s' }}>
+                            <td style={{ padding: '14px 8px', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>{comm.buyerName}</td>
+                            <td style={{ padding: '14px 8px', color: '#64748b', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                              {comm.orderId ? comm.orderId.substring(comm.orderId.length - 8) : 'N/A'}
+                            </td>
+                            <td style={{ padding: '14px 8px', whiteSpace: 'nowrap' }}>
+                              <span style={{ background: '#eff6ff', color: '#2563eb', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }}>
+                                Level {comm.level}
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 8px', fontWeight: 700, color: '#4f46e5', whiteSpace: 'nowrap' }}>{comm.percent}%</td>
+                            <td style={{ padding: '14px 8px', color: '#64748b', whiteSpace: 'nowrap' }}>₹{comm.orderTotal}</td>
+                            <td style={{ padding: '14px 8px', fontWeight: 800, color: '#16a34a', whiteSpace: 'nowrap' }}>+₹{comm.amount.toFixed(2)}</td>
+                            <td style={{ padding: '14px 8px', whiteSpace: 'nowrap' }}>
+                              {comm.status === 'Credited' && <span style={{ background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }}>Credited</span>}
+                              {comm.status === 'Pending' && <span style={{ background: '#fef9c3', color: '#854d0e', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }}>Pending</span>}
+                              {comm.status === 'Cancelled' && <span style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }}>Cancelled</span>}
+                            </td>
+                            <td style={{ padding: '14px 8px', color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                              {new Date(comm.date).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Controls */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                      Showing {((commPage - 1) * commPerPage) + 1} to {Math.min(commPage * commPerPage, filteredCommissions.length)} of {filteredCommissions.length} commissions
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        disabled={commPage === 1}
+                        onClick={() => setCommPage(p => p - 1)}
+                        style={{ padding: '6px 12px', border: '1px solid #e2e8f0', background: commPage === 1 ? '#f8fafc' : 'white', borderRadius: '6px', cursor: commPage === 1 ? 'not-allowed' : 'pointer', color: commPage === 1 ? '#94a3b8' : '#1e293b' }}
+                      >
+                        <FiChevronLeft />
+                      </button>
+                      <span style={{ padding: '6px 12px', border: '1px solid #4f46e5', background: '#eef2ff', color: '#4f46e5', borderRadius: '6px', fontWeight: 600 }}>
+                        {commPage}
+                      </span>
+                      <button
+                        disabled={commPage >= totalCommPages}
+                        onClick={() => setCommPage(p => p + 1)}
+                        style={{ padding: '6px 12px', border: '1px solid #e2e8f0', background: commPage >= totalCommPages ? '#f8fafc' : 'white', borderRadius: '6px', cursor: commPage >= totalCommPages ? 'not-allowed' : 'pointer', color: commPage >= totalCommPages ? '#94a3b8' : '#1e293b' }}
+                      >
+                        <FiChevronRight />
+                      </button>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
                   <FiClock style={{ fontSize: '2.5rem', marginBottom: '0.8rem', opacity: 0.5 }} />
-                  <p style={{ margin: 0, fontSize: '0.95rem' }}>No commissions earned yet.</p>
-                  <p style={{ margin: '6px 0 0 0', fontSize: '0.85rem' }}>
-                    Share your referral code <strong>{user.referralCode}</strong> with friends. When they buy electronics, furniture or groceries, you'll see instant wallet credits here!
+                  <p style={{ margin: 0, fontSize: '0.95rem' }}>
+                    {commSearch || commStatus !== 'All' 
+                      ? 'No commissions match your filters.' 
+                      : 'No commissions earned yet.'}
                   </p>
+                  {!commSearch && commStatus === 'All' && (
+                    <p style={{ margin: '6px 0 0 0', fontSize: '0.85rem' }}>
+                      Share your referral code <strong>{user.referralCode}</strong> with friends. When they buy electronics, furniture or groceries, you'll see instant wallet credits here!
+                    </p>
+                  )}
                 </div>
               )}
             </div>
