@@ -31,6 +31,21 @@ app.use('/api/carousel', carouselRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/testimonials', testimonialRoutes);
 
+const path = require('path');
+
+// Serve frontend in production (if not deployed as serverless API on Vercel)
+if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.json({ message: 'LG Enterprises API is running smoothly.' });
+  });
+}
+
 const PORT = process.env.PORT || 5000;
 if (require.main === module) {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -204,7 +204,7 @@ const Home = () => {
               <h2 className="section-title">
                 ⚡ Deals of the Day
               </h2>
-              <button className="view-all-btn">View All Deals <FiChevronRight /></button>
+              <button className="view-all-btn" onClick={() => navigate('/products')}>View All Deals <FiChevronRight /></button>
             </div>
             <div className="products-row">
               {dealProducts.map(p => <ProductCard key={p.id} product={p} />)}
@@ -217,7 +217,7 @@ const Home = () => {
               <h2 className="section-title">
                 ⏳ Limited Edition
               </h2>
-              <button className="view-all-btn" onClick={() => navigate('/limited')}>View All <FiChevronRight /></button>
+              <button className="view-all-btn" onClick={() => navigate('/products')}>View All <FiChevronRight /></button>
             </div>
             <div className="products-row">
               {limitedProducts.map(p => <ProductCard key={p.id} product={p} />)}
@@ -230,7 +230,7 @@ const Home = () => {
               <h2 className="section-title">
                 🔥 Trending Now
               </h2>
-              <button className="view-all-btn">View All <FiChevronRight /></button>
+              <button className="view-all-btn" onClick={() => navigate('/products')}>View All <FiChevronRight /></button>
             </div>
             <div className="products-row">
               {trendingProducts.map(p => <ProductCard key={p.id} product={p} />)}
@@ -243,7 +243,7 @@ const Home = () => {
               <h2 className="section-title">
                 🏆 Top Selling
               </h2>
-              <button className="view-all-btn">View All <FiChevronRight /></button>
+              <button className="view-all-btn" onClick={() => navigate('/products')}>View All <FiChevronRight /></button>
             </div>
             <div className="products-row">
               {topSellingProducts.map(p => <ProductCard key={p.id} product={p} />)}
@@ -300,7 +300,7 @@ const Home = () => {
                 >{t}</button>
               ))}
             </div>
-            <button className="view-all-btn">View All <FiChevronRight /></button>
+            <button className="view-all-btn" onClick={() => navigate('/products')}>View All <FiChevronRight /></button>
           </div>
         )}
 
@@ -316,7 +316,7 @@ const Home = () => {
 
         {visibleProducts.length > 0 ? (
           <div className="products-grid">
-            {visibleProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            {visibleProducts.slice(0, 10).map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         ) : (
           <div className="empty-state">
@@ -331,7 +331,7 @@ const Home = () => {
         <div className="brands-section">
           <div className="brands-header">
             <h2>Top Brands</h2>
-            <button className="view-all-btn">Explore All <FiChevronRight /></button>
+            <button className="view-all-btn" onClick={() => navigate('/products')}>Explore All <FiChevronRight /></button>
           </div>
           <div className="brands-marquee-wrapper">
             <div className="brands-marquee">
