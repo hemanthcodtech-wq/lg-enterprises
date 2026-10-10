@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   FiSearch, FiShoppingCart, FiUser, FiHeart,
   FiMenu, FiX, FiLogOut, FiPackage, FiChevronDown,
-  FiHome, FiInfo, FiPhone
+  FiHome, FiInfo, FiPhone, FiCreditCard, FiGift
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -176,26 +176,85 @@ const Navbar = () => {
       {/* Mobile Menu Overlay */}
       {menuOpen && (
         <div className="mobile-menu-overlay" onClick={() => setMenuOpen(false)}>
-          <div className="mobile-menu" onClick={e => e.stopPropagation()}>
+          <div className="mobile-menu" onClick={e => e.stopPropagation()} style={{ width: '300px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
+              <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0f172a' }}>Navigation</span>
+              <button 
+                onClick={() => setMenuOpen(false)} 
+                style={{ background: 'none', border: 'none', fontSize: '1.35rem', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: '4px' }}
+                aria-label="Close menu"
+              >
+                <FiX />
+              </button>
+            </div>
+
             {user ? (
-              <div className="mobile-user-info">
-                <div className="user-avatar large">{user.name?.charAt(0).toUpperCase()}</div>
-                <p className="user-name">{user.name}</p>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{user.email}</p>
+              <div className="mobile-user-info" style={{ textAlign: 'center', paddingBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', marginBottom: '1rem' }}>
+                <div className="user-avatar large" style={{ margin: '0 auto 0.5rem' }}>{user.name?.charAt(0).toUpperCase()}</div>
+                <p className="user-name" style={{ margin: '0 0 0.2rem 0', fontWeight: 700, color: '#0f172a' }}>{user.name}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 0.75rem 0' }}>{user.email}</p>
+                
+                {/* Mobile Wallet Balance Chip */}
+                <Link 
+                  to="/profile#referrals" 
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+                    color: '#1d4ed8',
+                    padding: '0.45rem 0.95rem',
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    border: '1px solid #bfdbfe',
+                    boxShadow: '0 2px 6px rgba(37,99,235,0.08)'
+                  }}
+                >
+                  <FiCreditCard /> Wallet: ₹{(user.walletBalance || 0).toFixed(2)}
+                </Link>
               </div>
             ) : (
-              <div className="mobile-auth-btns">
+              <div className="mobile-auth-btns" style={{ marginBottom: '1rem' }}>
                 <Link to="/login" className="btn-primary" onClick={() => setMenuOpen(false)}>Sign In</Link>
                 <Link to="/register" className="btn-outline-primary" onClick={() => setMenuOpen(false)}>Register</Link>
               </div>
             )}
-            <nav className="mobile-nav-links">
+
+            <nav className="mobile-nav-links" style={{ overflowY: 'auto', flex: 1, paddingRight: '0.3rem', gap: '1rem' }}>
+              {user && (
+                <>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', margin: '0.2rem 0 0.1rem 0' }}>
+                    My Account
+                  </div>
+                  <Link to="/profile" onClick={() => setMenuOpen(false)}><FiUser /> My Profile</Link>
+                  <Link to="/orders" onClick={() => setMenuOpen(false)}><FiPackage /> My Orders</Link>
+                  <Link to="/profile#referrals" onClick={() => setMenuOpen(false)}><FiGift /> Wallet & Referrals</Link>
+                  <Link to="/wishlist" onClick={() => setMenuOpen(false)}><FiHeart /> Wishlist</Link>
+                  
+                  <div style={{ height: '1px', background: '#f1f5f9', margin: '0.25rem 0' }}></div>
+                </>
+              )}
+
+              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', margin: '0.2rem 0 0.1rem 0' }}>
+                Explore Store
+              </div>
               <Link to="/" onClick={() => setMenuOpen(false)}><FiHome /> Home</Link>
-              <Link to="/products" onClick={() => setMenuOpen(false)}><FiPackage /> Products</Link>
+              <Link to="/products" onClick={() => setMenuOpen(false)}><FiPackage /> All Products</Link>
+              <Link to="/cart" onClick={() => setMenuOpen(false)}>
+                <FiShoppingCart /> Cart {cartCount > 0 && <span style={{ background: '#2563eb', color: 'white', borderRadius: '10px', padding: '0.1rem 0.5rem', fontSize: '0.75rem', marginLeft: 'auto', fontWeight: 700 }}>{cartCount}</span>}
+              </Link>
               <Link to="/about" onClick={() => setMenuOpen(false)}><FiInfo /> About Us</Link>
               <Link to="/contact" onClick={() => setMenuOpen(false)}><FiPhone /> Contact</Link>
-              <Link to="/cart" onClick={() => setMenuOpen(false)}><FiShoppingCart /> Cart ({cartCount})</Link>
-              {user && <button onClick={handleLogout}><FiLogOut /> Sign Out</button>}
+
+              {user && (
+                <>
+                  <div style={{ height: '1px', background: '#f1f5f9', margin: '0.4rem 0' }}></div>
+                  <button onClick={handleLogout} style={{ color: '#ef4444', fontWeight: 700, padding: '0.4rem 0' }}><FiLogOut /> Sign Out</button>
+                </>
+              )}
             </nav>
           </div>
         </div>

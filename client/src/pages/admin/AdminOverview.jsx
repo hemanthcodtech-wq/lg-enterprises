@@ -4,9 +4,15 @@ import axios from 'axios';
 import { 
   FiUsers, FiShoppingBag, FiBox, 
   FiArrowRight, FiCheckCircle, FiClock, FiAlertCircle,
-  FiRefreshCw, FiChevronLeft, FiChevronRight
+  FiRefreshCw, FiChevronLeft, FiChevronRight,
+  FiDollarSign, FiCornerDownLeft, FiPieChart, FiTrendingUp, FiActivity
 } from 'react-icons/fi';
 import { FaRupeeSign } from 'react-icons/fa';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+  BarChart, Bar, Legend
+} from 'recharts';
+import * as XLSX from 'xlsx';
 
 const AdminOverview = () => {
   const context = useOutletContext() || {};
@@ -18,6 +24,12 @@ const AdminOverview = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
+  const [chartFilter, setChartFilter] = useState('daily'); // 'daily' or 'monthly'
+  
+  // Date filter state
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -28,7 +40,12 @@ const AdminOverview = () => {
       const token = localStorage.getItem('adminToken') || context?.token;
       if (!token) return;
 
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/dashboard-stats`, {
+      let queryParams = '';
+      if (startDate && endDate) {
+        queryParams = `?startDate=${startDate}&endDate=${endDate}`;
+      }
+
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/dashboard-stats${queryParams}`, {
         headers: { 'x-auth-token': token }
       });
       setStats(res.data);
@@ -42,11 +59,11 @@ const AdminOverview = () => {
       setRefreshing(false);
       setLoading(false);
     }
-  }, [context?.token, setOutletStats]);
+  }, [context?.token, setOutletStats, startDate, endDate]);
 
   useEffect(() => {
     fetchLiveStats();
-  }, [fetchLiveStats]);
+  }, [fetchLiveStats, startDate, endDate]);
 
   // Keep local stats synced if outletStats updates externally
   useEffect(() => {
@@ -75,6 +92,31 @@ const AdminOverview = () => {
 
   const recentOrders = currentStats.recentOrders || [];
   const totalPages = Math.ceil(recentOrders.length / itemsPerPage) || 1;
+  const exportToExcel = () => {
+    if (!currentStats.recentOrders || currentStats.recentOrders.length === 0) return;
+
+    const dataToExport = currentStats.recentOrders.map(order => ({
+      'Order ID': order._id,
+      'Customer Name': order.user?.name || 'N/A',
+      'Customer Email': order.user?.email || 'N/A',
+      'Amount': order.totalAmount,
+      'Payment Status': order.paymentStatus,
+      'Fulfillment Status': order.status,
+      'Date': new Date(order.createdAt).toLocaleDateString('en-IN')
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Orders");
+    
+    let fileName = 'Orders_Export.xlsx';
+    if (startDate && endDate) {
+      fileName = `Orders_Export_${startDate}_to_${endDate}.xlsx`;
+    }
+    
+    XLSX.writeFile(wb, fileName);
+  };
+
   const paginatedOrders = recentOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
@@ -393,7 +435,30 @@ const AdminOverview = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
+          
+          {/* Date Filters */}
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)}
+              style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.8rem' }}
+            />
+            <span style={{ color: '#64748b', fontSize: '0.8rem' }}>to</span>
+            <input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)}
+              style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.8rem' }}
+            />
+            {(startDate || endDate) && (
+              <button 
+                onClick={() => { setStartDate(''); setEndDate(''); }}
+                style={{ padding: '0.4rem 0.8rem', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
+              >Clear</button>
+            )}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.6rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', backdropFilter: 'blur(10px)' }}>
             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }}></span>
             <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#334155', letterSpacing: '0.04em' }}>
@@ -458,6 +523,127 @@ const AdminOverview = () => {
             <p>{currentStats.productsCount ?? 0}</p>
           </div>
         </div>
+
+        {/* Commissions */}
+        <div className="glass-card stat-card-glass">
+          <div className="stat-icon-box" style={{ background: 'rgba(236, 72, 153, 0.12)', color: '#ec4899', border: '1px solid rgba(236, 72, 153, 0.25)' }}>
+            <FiPieChart />
+          </div>
+          <div className="stat-data">
+            <h3>Commissions</h3>
+            <p>₹{Number(currentStats.totalCommissions || 0).toLocaleString('en-IN')}</p>
+          </div>
+        </div>
+
+        {/* Net Revenue */}
+        <div className="glass-card stat-card-glass">
+          <div className="stat-icon-box" style={{ background: 'rgba(14, 165, 233, 0.12)', color: '#0ea5e9', border: '1px solid rgba(14, 165, 233, 0.25)' }}>
+            <FiTrendingUp />
+          </div>
+          <div className="stat-data">
+            <h3>Net Revenue</h3>
+            <p>₹{Number(currentStats.netRevenue || 0).toLocaleString('en-IN')}</p>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Analytics Charts Section */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+        
+        {/* Sales & Commissions Trend Chart */}
+        <div className="glass-card" style={{ padding: '1.5rem', position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a', fontWeight: '700' }}>Sales & Commissions</h3>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>Revenue vs Commission payouts over time</p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.25rem', borderRadius: '8px' }}>
+              <button 
+                onClick={() => setChartFilter('daily')}
+                style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: '600', border: 'none', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', background: chartFilter === 'daily' ? '#fff' : 'transparent', color: chartFilter === 'daily' ? '#0f172a' : '#64748b', boxShadow: chartFilter === 'daily' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
+              >Daily</button>
+              <button 
+                onClick={() => setChartFilter('monthly')}
+                style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: '600', border: 'none', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', background: chartFilter === 'monthly' ? '#fff' : 'transparent', color: chartFilter === 'monthly' ? '#0f172a' : '#64748b', boxShadow: chartFilter === 'monthly' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
+              >Monthly</button>
+            </div>
+          </div>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer width="99%" height="100%">
+              <AreaChart data={chartFilter === 'daily' ? currentStats.salesData || [] : currentStats.monthlySalesData || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorComm" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ec4899" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value) => `₹${value}`} />
+                <RechartsTooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+                  formatter={(value, name) => [`₹${Number(value).toLocaleString('en-IN')}`, name]}
+                  labelStyle={{ color: '#0f172a', fontWeight: 'bold', marginBottom: '0.5rem' }}
+                />
+                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '0.8rem', fontWeight: 500 }} />
+                <Area type="monotone" dataKey="revenue" name="Total Revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                <Area type="monotone" dataKey="commission" name="Commission" stroke="#ec4899" strokeWidth={3} fillOpacity={1} fill="url(#colorComm)" />
+                <Area type="monotone" dataKey="netRevenue" name="Net Revenue" stroke="#0ea5e9" strokeWidth={2} strokeDasharray="5 5" fill="none" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Low Stock Information */}
+        <div className="glass-card" style={{ padding: '1.5rem', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a', fontWeight: '700' }}>Inventory Alerts</h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>Products with low stock requiring attention</p>
+          </div>
+          
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {currentStats.lowStockProducts && currentStats.lowStockProducts.length > 0 ? (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                {currentStats.lowStockProducts.map(product => (
+                  <li key={product._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem 1rem', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                      <div style={{ width: '36px', height: '36px', background: '#fef2f2', color: '#ef4444', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                        <FiAlertCircle />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#0f172a' }}>{product.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>₹{product.price}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      {product.stock === 0 ? (
+                        <span style={{ display: 'inline-block', padding: '0.2rem 0.6rem', background: '#94a3b8', color: '#ffffff', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700' }}>
+                          Out of Stock
+                        </span>
+                      ) : (
+                        <span style={{ display: 'inline-block', padding: '0.2rem 0.6rem', background: '#fef2f2', color: '#ef4444', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700' }}>
+                          {product.stock} left
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                <FiCheckCircle style={{ fontSize: '2.5rem', color: '#10b981', marginBottom: '0.5rem' }} />
+                <p style={{ margin: 0, fontWeight: '600', color: '#334155' }}>All stock levels are healthy</p>
+                <small style={{ fontSize: '0.75rem' }}>No low stock alerts at the moment.</small>
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
 
       {/* Real Recent Orders Section */}
@@ -467,9 +653,14 @@ const AdminOverview = () => {
             <h3 style={{ margin: 0, fontSize: '1rem', color: '#0f172a', fontWeight: '700' }}>Recent Customer Orders</h3>
             <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>Latest purchases placed on your store</p>
           </div>
-          <button className="btn-view-all" onClick={() => navigate('/admin/dashboard/orders')}>
-            View All Orders <FiArrowRight />
-          </button>
+          <div style={{ display: 'flex', gap: '0.8rem' }}>
+            <button className="btn-view-all" onClick={exportToExcel} style={{ background: '#10b981', color: '#fff', border: 'none' }}>
+              Export to Excel
+            </button>
+            <button className="btn-view-all" onClick={() => navigate('/admin/dashboard/orders')}>
+              View All Orders <FiArrowRight />
+            </button>
+          </div>
         </div>
 
         <div style={{ overflowX: 'auto', position: 'relative', zIndex: 1 }}>

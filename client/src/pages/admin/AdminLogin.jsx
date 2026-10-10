@@ -176,7 +176,7 @@ const AdminLogin = () => {
                   </div>
                 </div>
                 
-                <button type="submit" className="login-btn" style={{ width: '100%', padding: '0.8rem', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: '1rem' }} disabled={loading}>
+                <button type="submit" className="login-btn btn-premium" disabled={loading}>
                   {loading ? 'Authenticating...' : 'Secure Login'}
                 </button>
               </form>
@@ -306,22 +306,49 @@ const AdminLogin = () => {
           border-color: var(--primary);
           box-shadow: 0 0 0 3px var(--primary-alpha);
         }
-        .btn-admin-login {
-          background: var(--primary);
+        .btn-premium {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           color: white;
           padding: 1rem;
           border: none;
-          border-radius: 10px;
-          font-size: 1rem;
+          border-radius: 12px;
+          font-size: 1.05rem;
           font-weight: 700;
-          margin-top: 1rem;
+          margin-top: 1.5rem;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          width: 100%;
+          box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+          position: relative;
+          overflow: hidden;
+          letter-spacing: 0.5px;
         }
-        .btn-admin-login:hover {
-          background: var(--primary-dark);
+        .btn-premium::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+          transition: all 0.4s ease;
+        }
+        .btn-premium:hover::after {
+          left: 100%;
+        }
+        .btn-premium:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px var(--primary-alpha);
+          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+        }
+        .btn-premium:active {
+          transform: translateY(1px);
+          box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+        }
+        .btn-premium:disabled {
+          background: #94a3b8;
+          box-shadow: none;
+          cursor: not-allowed;
+          transform: none;
         }
 
         /* Responsive Design */

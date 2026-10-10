@@ -154,11 +154,11 @@ const AdminProducts = () => {
           position: relative; z-index: 1;
         }
         .filter-group {
-          display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 300px;
+          display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 200px; flex-wrap: wrap;
         }
         .filter-input {
           flex: 1; padding: 0.6rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;
-          font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+          font-size: 0.9rem; outline: none; transition: border-color 0.2s; min-width: 150px;
         }
         .filter-input:focus {
           border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
@@ -469,7 +469,7 @@ const AdminProducts = () => {
       `}</style>
 
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', marginTop: '0.5rem', position: 'relative', zIndex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem', marginTop: '0.5rem', position: 'relative', zIndex: 1 }}>
         <div>
           <h2 style={{ fontSize: '1.8rem', color: '#0f172a', margin: '0 0 0.25rem 0', fontWeight: '800', letterSpacing: '-0.5px' }}>Product Catalog</h2>
           <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Manage your inventory, pricing, and live listings</p>

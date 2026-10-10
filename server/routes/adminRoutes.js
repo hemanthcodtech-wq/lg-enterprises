@@ -47,25 +47,156 @@ const { authAdmin } = require('../middleware/auth');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 
+const Commission = require('../models/Commission');
+
 // Dashboard Real Stats Route (Admin Only)
 router.get('/dashboard-stats', authAdmin, async (req, res) => {
   try {
-    const usersCount = await User.countDocuments({ role: { $ne: 'admin' } });
-    const ordersCount = await Order.countDocuments();
+    const { startDate, endDate } = req.query;
+    let dateFilter = {};
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      dateFilter = {
+        createdAt: {
+          $gte: start,
+          $lte: end
+        }
+      };
+    }
+
+    const usersCount = await User.countDocuments({ role: { $ne: 'admin' }, ...dateFilter });
+    const ordersCount = await Order.countDocuments({ ...dateFilter });
     const productsCount = await Product.countDocuments();
     const categoriesCount = await Category.countDocuments();
 
+    // Total Revenue (excluding Failed or Returned)
     const revenueAgg = await Order.aggregate([
-      { $match: { paymentStatus: { $ne: 'Failed' } } },
+      { $match: { paymentStatus: { $ne: 'Failed' }, status: { $ne: 'Returned' }, ...dateFilter } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
     ]);
     const revenue = revenueAgg.length > 0 ? revenueAgg[0].total : 0;
 
-    const recentOrders = await Order.find()
+    // Total Returned Amount
+    const returnedAgg = await Order.aggregate([
+      { $match: { status: 'Returned', ...dateFilter } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    ]);
+    const returnedAmount = returnedAgg.length > 0 ? returnedAgg[0].total : 0;
+
+    // Total Commissions
+    const commissionAgg = await Commission.aggregate([
+      { $match: { status: { $ne: 'Cancelled' }, ...dateFilter } },
+      { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+    ]);
+    const totalCommissions = commissionAgg.length > 0 ? commissionAgg[0].total : 0;
+
+    // Net Revenue
+    const netRevenue = revenue - totalCommissions;
+
+    // Daily Sales Data for the last 30 days (or based on filter)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    let startFilterDate = thirtyDaysAgo;
+    let endFilterDate = new Date();
+    
+    if (startDate && endDate) {
+      startFilterDate = new Date(startDate);
+      startFilterDate.setHours(0, 0, 0, 0);
+      
+      endFilterDate = new Date(endDate);
+      endFilterDate.setHours(23, 59, 59, 999);
+    }
+
+    const dailyDataAgg = await Order.aggregate([
+      { 
+        $match: { 
+          createdAt: { $gte: startFilterDate, $lte: endFilterDate },
+          paymentStatus: { $ne: 'Failed' }
+        } 
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          dailyRevenue: { $sum: '$totalAmount' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Daily Commission Data
+    const dailyCommAgg = await Commission.aggregate([
+      { 
+        $match: { 
+          createdAt: { $gte: startFilterDate, $lte: endFilterDate },
+          status: { $ne: 'Cancelled' }
+        } 
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          dailyCommission: { $sum: '$commissionAmount' }
+        }
+      }
+    ]);
+
+    // Merge Daily Data
+    const salesDataMap = {};
+    dailyDataAgg.forEach(item => {
+      salesDataMap[item._id] = {
+        date: item._id,
+        revenue: item.dailyRevenue,
+        commission: 0,
+        orders: item.orderCount
+      };
+    });
+
+    dailyCommAgg.forEach(item => {
+      if (!salesDataMap[item._id]) {
+        salesDataMap[item._id] = { date: item._id, revenue: 0, commission: 0, orders: 0 };
+      }
+      salesDataMap[item._id].commission = item.dailyCommission;
+    });
+
+    const salesData = Object.values(salesDataMap).sort((a, b) => a.date.localeCompare(b.date));
+
+    // Calculate daily Net Revenue
+    salesData.forEach(item => {
+      item.netRevenue = item.revenue - item.commission;
+    });
+
+    // Monthly Data
+    const monthlyDataMap = {};
+    salesData.forEach(item => {
+      const month = item.date.substring(0, 7); // YYYY-MM
+      if (!monthlyDataMap[month]) {
+        monthlyDataMap[month] = { date: month, revenue: 0, commission: 0, netRevenue: 0, orders: 0 };
+      }
+      monthlyDataMap[month].revenue += item.revenue;
+      monthlyDataMap[month].commission += item.commission;
+      monthlyDataMap[month].netRevenue += item.netRevenue;
+      monthlyDataMap[month].orders += item.orders;
+    });
+    const monthlySalesData = Object.values(monthlyDataMap).sort((a, b) => a.date.localeCompare(b.date));
+
+    // Low Stock Information (5 or below)
+    const lowStockProducts = await Product.find({ stock: { $lte: 5 } })
+      .select('name stock price')
+      .sort({ stock: 1 })
+      .limit(5);
+
+    const recentOrdersQuery = dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {};
+    const recentOrders = await Order.find(recentOrdersQuery)
       .populate('user', 'name email')
       .populate('items.product', 'name price images')
       .sort({ createdAt: -1 })
-      .limit(6);
+      .limit(startDate ? 0 : 6); // fetch all if filtered, else 6
 
     res.json({
       usersCount,
@@ -73,6 +204,12 @@ router.get('/dashboard-stats', authAdmin, async (req, res) => {
       productsCount,
       categoriesCount,
       revenue,
+      returnedAmount,
+      totalCommissions,
+      netRevenue,
+      salesData,
+      monthlySalesData,
+      lowStockProducts,
       recentOrders
     });
   } catch (err) {
@@ -216,8 +353,6 @@ router.put('/orders/:id/status', authAdmin, async (req, res) => {
   }
 });
 
-const Commission = require('../models/Commission');
-
 // Get all Commissions & Income History (Admin Only)
 router.get('/commissions', authAdmin, async (req, res) => {
   try {
@@ -310,6 +445,55 @@ router.put('/withdrawals/:id/status', authAdmin, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update withdrawal' });
+  }
+});
+
+// Get all product reviews across all products (Admin)
+router.get('/reviews', authAdmin, async (req, res) => {
+  try {
+    const products = await Product.find({ 'reviews.0': { $exists: true } }).select('name reviews');
+    let allReviews = [];
+    products.forEach(p => {
+      p.reviews.forEach(r => {
+        allReviews.push({ ...r.toObject(), product: { _id: p._id, name: p.name } });
+      });
+    });
+    
+    // Sort by newest first
+    allReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(allReviews);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Approve or reject a review (Admin)
+router.put('/reviews/:productId/:reviewId/approve', authAdmin, async (req, res) => {
+  try {
+    const { isApproved } = req.body;
+    const product = await Product.findById(req.params.productId);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    const review = product.reviews.id(req.params.reviewId);
+    if (!review) return res.status(404).json({ error: 'Review not found' });
+
+    review.isApproved = isApproved;
+    
+    // Calculate new average rating based on approved reviews only
+    const approvedReviews = product.reviews.filter(r => r.isApproved);
+    if (approvedReviews.length > 0) {
+      const avg = approvedReviews.reduce((acc, item) => item.rating + acc, 0) / approvedReviews.length;
+      product.rating = Math.round(avg * 10) / 10;
+    } else {
+      product.rating = 0;
+    }
+
+    await product.save();
+    res.json({ message: 'Review status updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

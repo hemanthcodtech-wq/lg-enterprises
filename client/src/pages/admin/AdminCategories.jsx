@@ -8,6 +8,8 @@ const AdminCategories = () => {
   const [categories, setCategories] = useState([]);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [description, setDescription] = useState('');
+  const [image, setImage] = useState(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -28,13 +30,23 @@ const AdminCategories = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('slug', slug);
+      formData.append('description', description);
+      if (image) {
+        formData.append('image', image);
+      }
+
       await axios.post(
         `${import.meta.env.VITE_API_URL}/categories`,
-        { name, slug, image: '' },
-        { headers: { 'x-auth-token': token } }
+        formData,
+        { headers: { 'x-auth-token': token, 'Content-Type': 'multipart/form-data' } }
       );
       setName('');
       setSlug('');
+      setDescription('');
+      setImage(null);
       fetchCategories();
     } catch (err) {
       alert(err.response?.data?.error || 'Error creating category');
@@ -272,6 +284,32 @@ const AdminCategories = () => {
               </small>
             </div>
 
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
+                Description
+              </label>
+              <textarea 
+                className="glass-input"
+                placeholder="Category description..."
+                value={description} 
+                onChange={e => setDescription(e.target.value)} 
+                rows="3"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
+                Banner Image (Cloudinary)
+              </label>
+              <input 
+                type="file" 
+                className="glass-input"
+                accept="image/*"
+                onChange={e => setImage(e.target.files[0])} 
+                style={{ padding: '0.5rem' }}
+              />
+            </div>
+
             <button type="submit" className="btn-indigo-submit" disabled={loading} style={{ marginTop: '0.5rem' }}>
               <FiPlus style={{ fontSize: '1.15rem' }} />
               {loading ? 'Creating...' : 'Create Category'}
@@ -312,11 +350,16 @@ const AdminCategories = () => {
                   <tr key={cat._id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                        <div className="cat-icon-chip" style={{ width: '32px', height: '32px', fontSize: '0.95rem' }}>
-                          <FiFolder />
-                        </div>
+                        {cat.image ? (
+                          <img src={cat.image} alt={cat.name} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                        ) : (
+                          <div className="cat-icon-chip" style={{ width: '36px', height: '36px', fontSize: '0.95rem' }}>
+                            <FiFolder />
+                          </div>
+                        )}
                         <div>
-                          <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.95rem' }}>{cat.name}</span>
+                          <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.95rem', display: 'block' }}>{cat.name}</span>
+                          {cat.description && <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{cat.description.substring(0, 30)}{cat.description.length > 30 ? '...' : ''}</span>}
                         </div>
                       </div>
                     </td>

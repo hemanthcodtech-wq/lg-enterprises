@@ -11,6 +11,28 @@ const OrderDetails = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [reviewingProduct, setReviewingProduct] = useState(null);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+
+  const handleSubmitReview = async (productId) => {
+    if (!reviewForm.comment.trim()) return toast.error('Please write a review comment');
+    setSubmittingReview(true);
+    try {
+      const token = localStorage.getItem('lg_token');
+      await axios.post(`${import.meta.env.VITE_API_URL}/products/${productId}/reviews`, 
+        { ...reviewForm, name: user.name }, 
+        { headers: { 'x-auth-token': token } }
+      );
+      toast.success('Review submitted successfully! Waiting for admin approval.');
+      setReviewingProduct(null);
+      setReviewForm({ rating: 5, comment: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -212,9 +234,15 @@ const OrderDetails = () => {
             </button>
           )}
           {order.status === 'Delivered' && (
-            <button disabled={updating} onClick={() => handleUpdateStatus('return')} className="btn-primary" style={{ background: '#f59e0b' }}>
-              {updating ? '...' : 'Return Order'}
-            </button>
+            ((new Date() - new Date(order.updatedAt)) / (1000 * 60 * 60 * 24) <= 7) ? (
+              <button disabled={updating} onClick={() => handleUpdateStatus('return')} className="btn-primary" style={{ background: '#f59e0b' }}>
+                {updating ? '...' : 'Return Order'}
+              </button>
+            ) : (
+              <div style={{ background: '#fef3c7', color: '#b45309', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                Return window closed
+              </div>
+            )
           )}
           <button onClick={handleDownloadInvoice} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#334155' }}>
             <FiDownload /> Download Invoice
@@ -280,17 +308,58 @@ const OrderDetails = () => {
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', color: '#1e293b' }}>Order Items</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {order.items?.map((item, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+              <div key={idx} style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem', flexWrap: 'wrap' }}>
                 <img 
                   src={item.product?.images?.[0] || 'https://via.placeholder.com/80'} 
                   alt={item.product?.name} 
                   style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} 
                 />
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
                   <h4 style={{ fontSize: '1rem', margin: '0 0 0.3rem 0', color: '#334155' }}>{item.product?.name}</h4>
                   <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem', margin: '0 0 0.3rem 0' }}>Qty: {item.quantity}</p>
                   <p style={{ fontWeight: '800', color: 'var(--primary)', margin: 0 }}>₹{item.price}</p>
                 </div>
+                {order.status === 'Delivered' && !item.product?.reviews?.some(r => r.user === (user.id || user._id)) && (
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <button 
+                      onClick={() => setReviewingProduct(item.product?._id)} 
+                      style={{ background: '#4f46e5', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)', transition: '0.2s' }}
+                      onMouseOver={e => e.currentTarget.style.background = '#4338ca'}
+                      onMouseOut={e => e.currentTarget.style.background = '#4f46e5'}
+                    >
+                      <span style={{ color: '#fbbf24', fontSize: '1rem' }}>★</span> Rate & Review
+                    </button>
+                  </div>
+                )}
+                {order.status === 'Delivered' && item.product?.reviews?.some(r => r.user === (user.id || user._id)) && (
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ background: '#f1f5f9', color: '#64748b', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <FiCheck /> Reviewed
+                    </div>
+                  </div>
+                )}
+                {reviewingProduct === item.product?._id && (
+                  <div style={{ width: '100%', marginTop: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <h5 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>Review {item.product?.name}</h5>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <button key={star} type="button" onClick={() => setReviewForm({ ...reviewForm, rating: star })} style={{ background: 'none', border: 'none', color: reviewForm.rating >= star ? '#fbbf24' : '#cbd5e1', fontSize: '1.5rem', cursor: 'pointer', padding: 0 }}>
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                    <textarea 
+                      placeholder="Write your review here..."
+                      value={reviewForm.comment}
+                      onChange={e => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', marginBottom: '0.5rem', minHeight: '60px', resize: 'vertical' }}
+                    ></textarea>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button disabled={submittingReview} onClick={() => handleSubmitReview(item.product?._id)} className="btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>{submittingReview ? 'Submitting...' : 'Submit Review'}</button>
+                      <button onClick={() => setReviewingProduct(null)} style={{ background: 'none', border: '1px solid #cbd5e1', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', color: '#475569' }}>Cancel</button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

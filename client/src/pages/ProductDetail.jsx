@@ -14,6 +14,7 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   React.useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/products/${id}`)
@@ -28,7 +29,9 @@ const ProductDetail = () => {
           image: p.images?.[0] || 'https://via.placeholder.com/600',
           category: p.category?.name?.toLowerCase() || 'other',
           discount: p.originalPrice ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0,
-          reviews: Math.floor(Math.random() * 200) + 10
+          reviews: p.reviews ? p.reviews.filter(r => r.isApproved) : [],
+          rating: p.rating || 0,
+          numReviews: p.numReviews || 0
         });
         setLoading(false);
       })
@@ -108,8 +111,10 @@ const ProductDetail = () => {
           <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-dark)', lineHeight: 1.2 }}>{product.title}</h1>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', color: 'var(--text-gray)' }}>
-            <span style={{ color: '#f59e0b', fontSize: '1.2rem' }}>★★★★☆</span>
-            <span>({product.reviews || '128'} reviews)</span>
+            <span style={{ color: '#f59e0b', fontSize: '1.2rem' }}>
+              {'★'.repeat(Math.round(product.rating))}<span style={{ color: '#e2e8f0' }}>{'★'.repeat(5 - Math.round(product.rating))}</span>
+            </span>
+            <span>({product.reviews?.length || 0} reviews)</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', marginBottom: '2rem' }}>
@@ -137,6 +142,43 @@ const ProductDetail = () => {
           </div>
 
         </div>
+      </div>
+
+      {/* Reviews Section */}
+      <div style={{ marginTop: '4rem', background: 'white', padding: '3rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}>
+        <h2 style={{ fontSize: '1.8rem', color: '#1e293b', marginBottom: '2rem', borderBottom: '2px solid #f1f5f9', paddingBottom: '1rem' }}>Customer Reviews</h2>
+        
+        {product.reviews && product.reviews.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {(showAllReviews ? product.reviews : product.reviews.slice(0, 3)).map((review) => (
+              <div key={review._id} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <div style={{ fontWeight: '700', color: '#334155', fontSize: '1.1rem' }}>{review.name}</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>{new Date(review.createdAt).toLocaleDateString()}</div>
+                </div>
+                <div style={{ color: '#fbbf24', fontSize: '1.1rem', marginBottom: '0.8rem' }}>
+                  {'★'.repeat(review.rating)}<span style={{ color: '#e2e8f0' }}>{'★'.repeat(5 - review.rating)}</span>
+                </div>
+                <p style={{ color: '#475569', lineHeight: 1.6, margin: 0, fontSize: '1rem' }}>"{review.comment}"</p>
+              </div>
+            ))}
+            
+            {product.reviews.length > 3 && (
+              <button 
+                onClick={() => setShowAllReviews(!showAllReviews)}
+                style={{ background: 'none', border: '1px solid #cbd5e1', color: '#475569', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', alignSelf: 'center', transition: 'all 0.2s', marginTop: '1rem' }}
+                onMouseOver={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#0f172a'; }}
+                onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#475569'; }}
+              >
+                {showAllReviews ? 'Hide Reviews' : `View All ${product.reviews.length} Reviews`}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>
+            <p style={{ fontSize: '1.1rem' }}>No reviews yet. Be the first to review this product!</p>
+          </div>
+        )}
       </div>
 
       <style>{`

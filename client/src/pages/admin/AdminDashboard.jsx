@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag, FiSettings } from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag, FiSettings, FiMessageSquare, FiGrid, FiList, FiBox, FiClipboard, FiImage, FiStar, FiMessageCircle } from 'react-icons/fi';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -93,16 +93,19 @@ const AdminDashboard = () => {
         <nav className="sidebar-nav">
           {!isCollapsed && <div className="nav-section-title">Menu</div>}
           <NavLink to="/admin/dashboard" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
-            <FiShoppingBag className="nav-icon" /> {!isCollapsed && <span>Dashboard</span>}
+            <FiGrid className="nav-icon" /> {!isCollapsed && <span>Dashboard</span>}
           </NavLink>
           <NavLink to="/admin/dashboard/categories" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
-            <FiShoppingBag className="nav-icon" /> {!isCollapsed && <span>Categories</span>}
+            <FiList className="nav-icon" /> {!isCollapsed && <span>Categories</span>}
           </NavLink>
           <NavLink to="/admin/dashboard/products" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
-            <FiShoppingBag className="nav-icon" /> {!isCollapsed && <span>Products</span>}
+            <FiBox className="nav-icon" /> {!isCollapsed && <span>Products</span>}
+          </NavLink>
+          <NavLink to="/admin/dashboard/reviews" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
+            <FiMessageSquare className="nav-icon" /> {!isCollapsed && <span>Product Reviews</span>}
           </NavLink>
           <NavLink to="/admin/dashboard/orders" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
-            <FiUsers className="nav-icon" /> {!isCollapsed && <span>Order History</span>}
+            <FiClipboard className="nav-icon" /> {!isCollapsed && <span>Order History</span>}
           </NavLink>
           <NavLink to="/admin/dashboard/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
             <FiUsers className="nav-icon" /> {!isCollapsed && <span>Users</span>}
@@ -111,10 +114,13 @@ const AdminDashboard = () => {
             <FiTag className="nav-icon" /> {!isCollapsed && <span>Promo Codes</span>}
           </NavLink>
           <NavLink to="/admin/dashboard/carousel" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
-            <FiShoppingBag className="nav-icon" /> {!isCollapsed && <span>Carousel</span>}
+            <FiImage className="nav-icon" /> {!isCollapsed && <span>Carousel</span>}
           </NavLink>
           <NavLink to="/admin/dashboard/brands" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
-            <FiShoppingBag className="nav-icon" /> {!isCollapsed && <span>Top Brands</span>}
+            <FiStar className="nav-icon" /> {!isCollapsed && <span>Top Brands</span>}
+          </NavLink>
+          <NavLink to="/admin/dashboard/testimonials" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
+            <FiMessageCircle className="nav-icon" /> {!isCollapsed && <span>Testimonials</span>}
           </NavLink>
 
           {!isCollapsed && <div className="nav-section-title" style={{ marginTop: '1rem' }}>Settings</div>}
@@ -143,6 +149,8 @@ const AdminDashboard = () => {
               {location.pathname.includes('promos') && 'Manage Promo Codes'}
               {location.pathname.includes('carousel') && 'Manage Carousel'}
               {location.pathname.includes('brands') && 'Manage Brands'}
+              {location.pathname.includes('testimonials') && 'Manage Testimonials'}
+              {location.pathname.includes('reviews') && 'Product Reviews'}
               {location.pathname.includes('settings') && 'System Settings'}
               {location.pathname === '/admin/dashboard' && 'Dashboard Overview'}
               {location.pathname === '/admin/dashboard/' && 'Dashboard Overview'}
@@ -176,7 +184,16 @@ const AdminDashboard = () => {
             <FiTag className="popup-icon" /> Promo Codes
           </NavLink>
           <NavLink to="/admin/dashboard/carousel" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
-            <FiShoppingBag className="popup-icon" /> Carousel
+            <FiImage className="popup-icon" /> Carousel
+          </NavLink>
+          <NavLink to="/admin/dashboard/brands" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
+            <FiStar className="popup-icon" /> Top Brands
+          </NavLink>
+          <NavLink to="/admin/dashboard/testimonials" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
+            <FiMessageCircle className="popup-icon" /> Testimonials
+          </NavLink>
+          <NavLink to="/admin/dashboard/reviews" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
+            <FiMessageSquare className="popup-icon" /> Product Reviews
           </NavLink>
           <NavLink to="/admin/dashboard/settings" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
             <FiSettings className="popup-icon" /> Settings
@@ -189,15 +206,15 @@ const AdminDashboard = () => {
         {/* Mobile Bottom Nav */}
         <div className="mobile-bottom-nav">
           <NavLink to="/admin/dashboard" end className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsBottomMenuOpen(false)}>
-            <FiShoppingBag className="bottom-nav-icon" />
+            <FiGrid className="bottom-nav-icon" />
             <span>Home</span>
           </NavLink>
           <NavLink to="/admin/dashboard/orders" className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsBottomMenuOpen(false)}>
-            <FiUsers className="bottom-nav-icon" />
+            <FiClipboard className="bottom-nav-icon" />
             <span>Orders</span>
           </NavLink>
           <NavLink to="/admin/dashboard/products" className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsBottomMenuOpen(false)}>
-            <FiShoppingBag className="bottom-nav-icon" />
+            <FiBox className="bottom-nav-icon" />
             <span>Products</span>
           </NavLink>
           <button className={`bottom-nav-item ${isBottomMenuOpen ? 'active' : ''}`} onClick={() => setIsBottomMenuOpen(!isBottomMenuOpen)}>
@@ -259,7 +276,7 @@ const AdminDashboard = () => {
         .admin-layout.collapsed .brand-logo-img {
           width: 35px; height: 35px; margin: 0 auto;
         }
-        .sidebar-brand h2 { font-size: 1.3rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; color: #cc2222; }
+        .sidebar-brand h2 { font-size: 1.3rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
         .collapse-btn {
           background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 1.2rem;
@@ -510,7 +527,7 @@ const AdminDashboard = () => {
             color: #64748b; font-size: 0.7rem; font-weight: 600; text-decoration: none; gap: 4px;
             background: none; border: none; cursor: pointer; padding: 0.2rem 0.5rem; outline: none;
           }
-          .bottom-nav-item.active { color: #cc2222; }
+          .bottom-nav-item.active { color: #4f46e5; }
           .bottom-nav-icon { font-size: 1.3rem; }
           
           /* Bottom Popup */
@@ -531,6 +548,8 @@ const AdminDashboard = () => {
             transform: translateY(100%);
             visibility: hidden;
             transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
           }
           .bottom-menu-popup.show {
             transform: translateY(0);
@@ -544,7 +563,7 @@ const AdminDashboard = () => {
             font-size: 1rem;
           }
           .popup-item:hover { background: #f8fafc; }
-          .popup-item.active { color: #cc2222; background: #fef2f2; }
+          .popup-item.active { color: #4f46e5; background: #e0e7ff; }
           .popup-icon { font-size: 1.2rem; }
         }
       `}</style>

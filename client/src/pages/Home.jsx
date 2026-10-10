@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ProductCard from '../components/ProductCard';
+import TestimonialSlider from '../components/TestimonialSlider';
 import { ALL_PRODUCTS, CATEGORY_DATA } from '../utils/data';
 import { IMAGES } from '../utils/images';
 import {
@@ -85,7 +86,7 @@ const Home = () => {
           price: p.price,
           originalPrice: p.originalPrice || Math.round(p.price * 1.2),
           image: p.images?.[0] || 'https://via.placeholder.com/300',
-          category: p.category?.name?.toLowerCase() || 'other',
+          category: p.category?.slug || p.category?.name?.toLowerCase() || 'other',
           discount: p.originalPrice ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0,
           tags: p.tags || [],
           rating: 4.5,
@@ -128,23 +129,26 @@ const Home = () => {
   return (
     <div>
       {/* ─── Category Banner (when a category is selected) ─── */}
-      {categoryFilter && CATEGORY_DATA[categoryFilter] && (
-        <div className="category-banner-bar" style={{
-          backgroundImage: `url(${CATEGORY_DATA[categoryFilter].image})`,
-        }}>
-          <div className="category-banner-overlay">
-            <h2>{CATEGORY_DATA[categoryFilter].label}</h2>
-            <p>{CATEGORY_DATA[categoryFilter].desc}</p>
+      {categoryFilter && apiCategories.find(c => c.slug === categoryFilter) && (() => {
+        const catData = apiCategories.find(c => c.slug === categoryFilter);
+        return (
+          <div className="category-banner-bar" style={{
+            backgroundImage: `url(${catData.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80'})`,
+          }}>
+            <div className="category-banner-overlay">
+              <h2>{catData.name}</h2>
+              <p>{catData.description || 'Explore our wide range of products'}</p>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ─── Hero (only on home) ─── */}
       {!categoryFilter && !searchFilter && (
         <>
           <div className="hero-layout">
-            <div className="hero-main" style={{ 
-              backgroundImage: `url(${slide.bg})`,
+            <div className="hero-main dark-hero" style={{ 
+              backgroundImage: `linear-gradient(to right, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.4) 100%), url(${slide.bg})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}>
@@ -380,6 +384,9 @@ const Home = () => {
           </div>
         </div>
       </div>
+
+      {/* ─── Testimonial Slider (Positioned at bottom on top of Footer) ─── */}
+      <TestimonialSlider />
 
     </div>
   );

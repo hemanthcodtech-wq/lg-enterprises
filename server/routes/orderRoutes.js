@@ -302,7 +302,7 @@ router.put('/:id/status', authUser, async (req, res) => {
 router.get('/:id', authUser, async (req, res) => {
   try {
     const order = await Order.findOne({ _id: req.params.id, user: req.user.id })
-      .populate('items.product', 'name images price description');
+      .populate('items.product', 'name images price description reviews');
     if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {

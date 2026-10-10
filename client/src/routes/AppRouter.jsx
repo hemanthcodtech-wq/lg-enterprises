@@ -33,6 +33,8 @@ import AdminWithdrawals from '../pages/admin/AdminWithdrawals';
 import AdminCarousel from '../pages/admin/AdminCarousel';
 import AdminBrands from '../pages/admin/AdminBrands';
 import AdminSettings from '../pages/admin/AdminSettings';
+import AdminTestimonials from '../pages/admin/AdminTestimonials';
+import AdminReviews from '../pages/admin/AdminReviews';
 import ScrollToTop from '../components/ScrollToTop';
 
 const AppRouter = () => (
@@ -53,6 +55,8 @@ const AppRouter = () => (
         <Route path="carousel" element={<AdminCarousel />} />
         <Route path="brands" element={<AdminBrands />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="testimonials" element={<AdminTestimonials />} />
+        <Route path="reviews" element={<AdminReviews />} />
       </Route>
 
       {/* Main Store Routes (includes Navbar/Footer) */}

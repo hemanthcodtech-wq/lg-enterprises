@@ -16,6 +16,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState(() => {
     if (location.pathname.includes('/orders')) return 'orders';
     if (location.pathname.includes('/wishlist')) return 'wishlist';
+    if (location.hash === '#referrals') return 'referrals';
     return 'profile';
   });
   const [referralData, setReferralData] = useState(null);
@@ -37,6 +38,8 @@ const Profile = () => {
   useEffect(() => {
     if (location.pathname.includes('/orders')) setActiveTab('orders');
     else if (location.pathname.includes('/wishlist')) setActiveTab('wishlist');
+    else if (location.hash === '#referrals') setActiveTab('referrals');
+    else if (location.pathname.includes('/profile')) setActiveTab('profile');
   }, [location]);
 
   useEffect(() => {
@@ -228,7 +231,128 @@ const Profile = () => {
   };
 
   return (
-    <div className="section-pad profile-layout" style={{ maxWidth: '1400px', margin: '0 auto', minHeight: '80vh', paddingTop: '2.5rem', position: 'relative', display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+    <div className="section-pad profile-layout">
+      <style>{`
+        .profile-layout {
+          max-width: 1400px;
+          margin: 0 auto;
+          min-height: 80vh;
+          padding-top: 2rem;
+          position: relative;
+          display: flex;
+          gap: 2rem;
+          align-items: flex-start;
+        }
+        .profile-sidebar {
+          position: sticky;
+          top: 100px;
+          flex: 0 0 280px;
+          width: 280px;
+        }
+        .profile-sidebar-card {
+          background: white;
+          border-radius: 24px;
+          padding: 2rem 1rem;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+          border: 1px solid #f1f5f9;
+        }
+        .profile-nav-list {
+          display: flex;
+          flex-direction: column;
+        }
+        .profile-main {
+          flex: 1;
+          min-width: 0;
+          width: 100%;
+        }
+        .wallet-summary-banner {
+          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+          border-radius: 24px;
+          padding: 2rem;
+          color: white;
+          margin-bottom: 2rem;
+          box-shadow: 0 10px 30px rgba(15,23,42,0.15);
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 1.5rem;
+          align-items: center;
+        }
+
+        @media (max-width: 992px) {
+          .profile-layout {
+            flex-direction: column !important;
+            gap: 1.25rem !important;
+            padding-top: 1rem !important;
+          }
+          .profile-sidebar {
+            position: static !important;
+            flex: none !important;
+            width: 100% !important;
+            top: 0 !important;
+          }
+          .profile-sidebar-card {
+            padding: 1.25rem !important;
+            border-radius: 18px !important;
+          }
+          .profile-user-badge-container {
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+            text-align: left !important;
+            margin-bottom: 1rem !important;
+            padding-bottom: 0.75rem !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+          }
+          .profile-user-avatar-circle {
+            width: 55px !important;
+            height: 55px !important;
+            font-size: 1.5rem !important;
+            margin: 0 !important;
+            flex-shrink: 0 !important;
+          }
+          .profile-nav-list {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+            padding-bottom: 0.5rem !important;
+            margin-bottom: 1rem !important;
+          }
+          .profile-nav-btn {
+            width: 100% !important;
+            padding: 0.8rem 1rem !important;
+            font-size: 0.95rem !important;
+            margin-bottom: 0 !important;
+            border-radius: 12px !important;
+            white-space: nowrap !important;
+            text-align: left !important;
+          }
+          .profile-nav-btn span:last-child {
+            display: inline-block;
+          }
+          .wallet-summary-banner {
+            padding: 1.5rem 1.25rem !important;
+            border-radius: 18px !important;
+            grid-template-columns: 1fr !important;
+            gap: 1.25rem !important;
+          }
+          .wallet-summary-banner > div:nth-child(2) {
+            border-left: none !important;
+            border-top: 1px solid rgba(255,255,255,0.1) !important;
+            padding-left: 0 !important;
+            padding-top: 1rem !important;
+          }
+          .profile-stats-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0.85rem !important;
+          }
+        }
+
+        @media (max-width: 540px) {
+          .profile-nav-btn {
+            font-size: 0.85rem !important;
+          }
+        }
+      `}</style>
       
       {/* Withdraw Modal */}
       {showWithdrawModal && (
@@ -284,20 +408,23 @@ const Profile = () => {
       )}
       
       {/* Sidebar Navigation */}
-      <div className="profile-sidebar" style={{ position: 'sticky', top: '100px', flex: '0 0 280px' }}>
-        <div style={{ background: 'white', borderRadius: '24px', padding: '2rem 1rem', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
+      <div className="profile-sidebar">
+        <div className="profile-sidebar-card">
           
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: '800', margin: '0 auto 1rem', boxShadow: '0 8px 15px rgba(79,70,229,0.25)' }}>
+          <div className="profile-user-badge-container" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div className="profile-user-avatar-circle" style={{ width: '90px', height: '90px', borderRadius: '50%', background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: '800', margin: '0 auto 1rem', boxShadow: '0 8px 15px rgba(79,70,229,0.25)' }}>
               {user.name?.charAt(0).toUpperCase()}
             </div>
-            <h3 style={{ margin: '0 0 0.3rem 0', color: '#1e293b', fontSize: '1.2rem' }}>{user.name}</h3>
-            <span style={{ fontSize: '0.8rem', color: '#64748b', background: '#f1f5f9', padding: '0.2rem 0.8rem', borderRadius: '20px' }}>Member</span>
+            <div>
+              <h3 style={{ margin: '0 0 0.3rem 0', color: '#1e293b', fontSize: '1.2rem' }}>{user.name}</h3>
+              <span style={{ fontSize: '0.8rem', color: '#64748b', background: '#f1f5f9', padding: '0.2rem 0.8rem', borderRadius: '20px' }}>Member</span>
+            </div>
           </div>
 
-          <nav style={{ display: 'flex', flexDirection: 'column' }}>
+          <nav className="profile-nav-list">
             <button 
-              onClick={() => setActiveTab('profile')}
+              className="profile-nav-btn"
+              onClick={() => { setActiveTab('profile'); navigate('/profile'); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.5rem',
                 borderRadius: '12px', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'all 0.3s ease',
@@ -307,11 +434,12 @@ const Profile = () => {
                 marginBottom: '0.5rem'
               }}
             >
-              <FiUser style={{ fontSize: '1.2rem' }} /> My Profile
+              <FiUser style={{ fontSize: '1.2rem' }} /> <span>My Profile</span>
             </button>
 
             <button 
-              onClick={() => setActiveTab('referrals')}
+              className="profile-nav-btn"
+              onClick={() => { setActiveTab('referrals'); navigate('/profile#referrals'); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.5rem',
                 borderRadius: '12px', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'all 0.3s ease',
@@ -330,6 +458,7 @@ const Profile = () => {
             </button>
 
             <button 
+              className="profile-nav-btn"
               onClick={() => { setActiveTab('orders'); navigate('/orders'); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.5rem',
@@ -340,9 +469,10 @@ const Profile = () => {
                 marginBottom: '0.5rem'
               }}
             >
-              <FiPackage style={{ fontSize: '1.2rem', opacity: activeTab === 'orders' ? 1 : 0.7 }} /> My Orders
+              <FiPackage style={{ fontSize: '1.2rem', opacity: activeTab === 'orders' ? 1 : 0.7 }} /> <span>My Orders</span>
             </button>
             <button 
+              className="profile-nav-btn"
               onClick={() => { setActiveTab('wishlist'); navigate('/wishlist'); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.5rem',
@@ -353,36 +483,25 @@ const Profile = () => {
                 marginBottom: '0.5rem'
               }}
             >
-              <FiHeart style={{ fontSize: '1.2rem', opacity: activeTab === 'wishlist' ? 1 : 0.7 }} /> Wishlist
+              <FiHeart style={{ fontSize: '1.2rem', opacity: activeTab === 'wishlist' ? 1 : 0.7 }} /> <span>Wishlist</span>
             </button>
-            <div style={{ height: '1px', background: '#f1f5f9', margin: '1rem 0' }}></div>
-            <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.5rem', borderRadius: '12px', background: 'transparent', border: 'none', color: '#ef4444', fontWeight: '600', cursor: 'pointer', textAlign: 'left', transition: 'background 0.3s' }} onMouseOver={e => e.currentTarget.style.background = '#fef2f2'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-              <FiLogOut style={{ fontSize: '1.2rem' }} /> Sign Out
+            <div style={{ height: '1px', background: '#f1f5f9', margin: '0.5rem 0' }}></div>
+            <button onClick={handleLogout} className="profile-nav-btn" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.5rem', borderRadius: '12px', background: 'transparent', border: 'none', color: '#ef4444', fontWeight: '600', cursor: 'pointer', textAlign: 'left', transition: 'background 0.3s' }} onMouseOver={e => e.currentTarget.style.background = '#fef2f2'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+              <FiLogOut style={{ fontSize: '1.2rem' }} /> <span>Sign Out</span>
             </button>
           </nav>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="profile-main" style={{ flex: 1, minWidth: 0 }}>
+      <div className="profile-main">
         {activeTab === 'orders' && <Orders />}
         {activeTab === 'wishlist' && <Wishlist />}
         
         {activeTab === 'profile' && (
           <>
             {/* Top Wallet & Summary Banner */}
-        <div style={{ 
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', 
-          borderRadius: '24px', 
-          padding: '2rem', 
-          color: 'white', 
-          marginBottom: '2rem', 
-          boxShadow: '0 10px 30px rgba(15,23,42,0.15)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1.5rem',
-          alignItems: 'center'
-        }}>
+            <div className="wallet-summary-banner">
           <div>
             <span style={{ fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Active Wallet Balance</span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '6px' }}>
@@ -419,7 +538,7 @@ const Profile = () => {
               Withdraw to Bank/UPI
             </button>
             <button 
-              onClick={() => setActiveTab('referrals')}
+              onClick={() => { setActiveTab('referrals'); navigate('/profile#referrals'); }}
               style={{ padding: '0.75rem 1.2rem', textAlign: 'center', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 600, background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer' }}
             >
               View 5-Tier Network
@@ -555,13 +674,13 @@ const Profile = () => {
               <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '1.5rem', border: '1px dashed #cbd5e1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem', alignItems: 'center' }}>
                 <div>
                   <span style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Your Referral Code</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
-                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#4f46e5', letterSpacing: '2px', background: 'white', padding: '4px 16px', borderRadius: '10px', border: '1px solid #c7d2fe' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginTop: '6px' }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#4f46e5', letterSpacing: '1px', background: 'white', padding: '6px 12px', borderRadius: '10px', border: '1px solid #c7d2fe', flex: '1 1 100px', textAlign: 'center', minWidth: '150px' }}>
                       {user.referralCode || 'Generating...'}
                     </span>
                     <button 
                       onClick={() => copyToClipboard(user.referralCode, 'code')}
-                      style={{ background: copiedCode ? '#16a34a' : '#4f46e5', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: '0.2s' }}
+                      style={{ background: copiedCode ? '#16a34a' : '#4f46e5', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.2s', flex: '1 1 auto', minWidth: '120px' }}
                     >
                       <FiCopy /> {copiedCode ? 'Copied!' : 'Copy Code'}
                     </button>
@@ -570,15 +689,15 @@ const Profile = () => {
 
                 <div>
                   <span style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>1-Click Invitation Link</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
                     <input 
                       readOnly 
                       value={referralLink} 
-                      style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.85rem', color: '#334155' }}
+                      style={{ flex: '1 1 150px', minWidth: '0', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.85rem', color: '#334155' }}
                     />
                     <button 
                       onClick={() => handleShare(referralLink)}
-                      style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                      style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: '100px' }}
                     >
                       <FiShare2 /> Share
                     </button>
