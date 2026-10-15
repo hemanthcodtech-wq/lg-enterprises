@@ -5,6 +5,7 @@ const PromoSchema = new mongoose.Schema({
   discountType: { type: String, enum: ['percentage', 'fixed'], required: true },
   discountValue: { type: Number, required: true },
   isActive: { type: Boolean, default: true },
+  minOrderAmount: { type: Number, default: 0 },
   maxUses: { type: Number, default: null }, // Null means unlimited
   currentUses: { type: Number, default: 0 }
 }, { timestamps: true });

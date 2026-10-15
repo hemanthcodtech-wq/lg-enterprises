@@ -369,7 +369,7 @@ const AdminOrderDetails = () => {
               <button 
                 type="submit" 
                 disabled={saving}
-                style={{ width: '100%', padding: '1rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontSize: '1rem' }}
+                style={{ width: '100%', padding: '1rem', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontSize: '1rem', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)' }}
               >
                 {saving ? 'Saving...' : 'Save Updates'}
               </button>

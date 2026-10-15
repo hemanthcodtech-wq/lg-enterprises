@@ -1,12 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
-import { FiSliders, FiImage, FiPlus, FiTrash2, FiExternalLink, FiLayers, FiTag } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
+import { 
+  FiSliders, FiImage, FiPlus, FiTrash2, FiExternalLink, 
+  FiLayers, FiRefreshCw, FiInfo, FiSearch, FiX, 
+  FiChevronLeft, FiChevronRight 
+} from 'react-icons/fi';
 
 const AdminCarousel = () => {
   const { token } = useOutletContext();
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Search & Filter State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [badgeFilter, setBadgeFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
   const [formData, setFormData] = useState({
     title: '',
     subtitle: '',
@@ -16,14 +29,19 @@ const AdminCarousel = () => {
     image: null
   });
 
-  const fetchSlides = async () => {
+  const fetchSlides = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/carousel/admin`, {
         headers: { 'x-auth-token': token }
       });
       setSlides(res.data);
+      if (showToast) toast.success('Carousel slides refreshed');
     } catch (err) {
       console.error('Failed to fetch slides', err);
+      toast.error('Failed to load slides');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -58,245 +76,581 @@ const AdminCarousel = () => {
         }
       });
       
+      toast.success('Hero slide published successfully');
       setFormData({
         title: '', subtitle: '', badgeText: 'Trending', buttonText: 'Shop Now', buttonLink: '/#products', image: null
       });
+      const fileInput = document.getElementById('slide-image-file');
+      if (fileInput) fileInput.value = '';
       fetchSlides();
     } catch (err) {
-      alert(err.response?.data?.error || 'Error adding slide');
+      toast.error(err.response?.data?.error || 'Error adding slide');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this slide?')) return;
+    if (!window.confirm('Delete this slide banner?')) return;
     try {
       await axios.delete(`${import.meta.env.VITE_API_URL}/carousel/${id}`, {
         headers: { 'x-auth-token': token }
       });
+      toast.success('Slide removed');
       fetchSlides();
     } catch (err) {
-      alert('Error deleting slide');
+      toast.error('Error deleting slide');
     }
   };
 
+  // Filter slides
+  const filteredSlides = useMemo(() => {
+    return slides.filter(slide => {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = 
+        (slide.title || '').toLowerCase().includes(term) ||
+        (slide.subtitle || '').toLowerCase().includes(term) ||
+        (slide.badgeText || '').toLowerCase().includes(term);
+
+      const matchesBadge = 
+        badgeFilter === 'All' ? true :
+        badgeFilter === 'WithBadge' ? Boolean(slide.badgeText && slide.badgeText.trim()) :
+        !slide.badgeText || !slide.badgeText.trim();
+
+      return matchesSearch && matchesBadge;
+    });
+  }, [slides, searchTerm, badgeFilter]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSlides.length / itemsPerPage) || 1;
+  const currentSlides = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredSlides.slice(start, start + itemsPerPage);
+  }, [filteredSlides, currentPage, itemsPerPage]);
+
   return (
-    <div className="admin-tab-content">
+    <div className="admin-carousel-page">
       <style>{`
-        .admin-tab-content {
-          position: relative;
-          min-height: 100%;
+        /* Exact match to AdminOrders typography and scale */
+        .admin-carousel-page {
+          padding-bottom: 3rem;
+          color: #0f172a;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
-        .glass-card {
+        .header-section {
+          margin-bottom: 1.5rem;
+        }
+        .page-title-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 1rem;
+          margin-bottom: 1.25rem;
+        }
+        .page-title-group h2 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 0.15rem 0;
+          letter-spacing: -0.01em;
+        }
+        .page-title-group p {
+          font-size: 0.8rem;
+          color: #64748b;
+          margin: 0;
+        }
+
+        .header-actions-group {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+        }
+        .refresh-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 0.8rem;
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-          position: relative;
-          overflow: hidden;
+          border-radius: 8px;
+          color: #475569;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+          font-family: inherit;
+        }
+        .refresh-btn:hover {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+          color: #0f172a;
+        }
+        .refresh-btn .spin {
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
-        .carousel-split-grid {
-          display: grid;
-          grid-template-columns: 400px 1fr;
-          gap: 2rem;
-          position: relative;
-          z-index: 1;
+        .badge-count-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.35rem 0.75rem;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #334155;
         }
-        @media (max-width: 950px) {
-          .carousel-split-grid {
+        .badge-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #10b981;
+        }
+
+        /* 2-Column Responsive Layout */
+        .carousel-split-layout {
+          display: grid;
+          grid-template-columns: 360px 1fr;
+          gap: 1.5rem;
+          align-items: start;
+        }
+        @media (max-width: 980px) {
+          .carousel-split-layout {
             grid-template-columns: 1fr;
           }
         }
 
-        .glass-input {
-          background: #f8fafc;
+        /* Enterprise Card Container */
+        .table-enterprise-card {
+          background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 0.7rem 1rem;
-          width: 100%;
-          outline: none;
-          font-family: inherit;
-          font-size: 0.9rem;
+          border-radius: 14px;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+          overflow: hidden;
+        }
+
+        .card-header-bar {
+          padding: 0.85rem 1.25rem;
+          border-bottom: 1px solid #f1f5f9;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .card-title-group h3 {
+          font-size: 0.95rem;
+          font-weight: 700;
           color: #0f172a;
-          transition: all 0.25s ease;
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+        .card-title-group p {
+          font-size: 0.75rem;
+          color: #64748b;
+          margin: 0.15rem 0 0 0;
+        }
+
+        /* Form Controls */
+        .form-body-padded {
+          padding: 1.25rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+        .field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+        }
+        .field-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #334155;
+        }
+        .official-input {
+          width: 100%;
+          padding: 0.45rem 0.75rem;
+          font-size: 0.8rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          color: #0f172a;
+          font-family: inherit;
+          transition: all 0.2s ease;
           box-sizing: border-box;
         }
-        .glass-input:focus {
-          border-color: #6366f1;
+        .official-input:focus {
+          outline: none;
           background: #ffffff;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
-        /* File Selector Styling */
-        input[type=file]::file-selector-button {
-          background: #f1f5f9;
-          border: 1px solid #cbd5e1;
-          padding: 0.45rem 0.9rem;
-          border-radius: 8px;
-          color: #475569;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 0.85rem;
-          margin-right: 0.8rem;
-          transition: all 0.2s ease;
+        .file-upload-input {
+          padding: 0.4rem 0.5rem;
+          font-size: 0.78rem;
         }
-        input[type=file]::file-selector-button:hover {
-          background: #e2e8f0;
-          color: #1e293b;
-        }
-
-        .btn-indigo-submit {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
+        .file-upload-input::file-selector-button {
           background: #4f46e5;
           color: #ffffff;
           border: none;
-          border-radius: 8px;
-          padding: 0.75rem 1.5rem;
-          font-size: 0.9rem;
+          padding: 0.35rem 0.75rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
-          width: 100%;
+          margin-right: 0.65rem;
+          transition: background 0.2s ease;
         }
-        .btn-indigo-submit:hover:not(:disabled) {
+        .file-upload-input::file-selector-button:hover {
           background: #4338ca;
         }
-        .btn-indigo-submit:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
+
+        .aspect-ratio-notice {
+          padding: 0.5rem 0.75rem;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 8px;
+          font-size: 0.72rem;
+          color: #1e40af;
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          line-height: 1.4;
         }
 
-        .btn-action-delete {
+        .submit-btn-official {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 0.4rem;
-          background: #fee2e2;
-          color: #b91c1c;
-          border: none;
-          border-radius: 6px;
-          padding: 0.4rem 0.6rem;
-          font-size: 0.75rem;
+          padding: 0.55rem 1rem;
+          background: #4f46e5;
+          color: #ffffff;
+          border: 1px solid #4f46e5;
+          border-radius: 8px;
+          font-size: 0.8rem;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+          font-family: inherit;
+          width: 100%;
         }
-        .btn-action-delete:hover {
-          background: #f87171;
-          color: white;
+        .submit-btn-official:hover:not(:disabled) {
+          background: #4338ca;
+          border-color: #4338ca;
+        }
+        .submit-btn-official:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
-        .carousel-table {
+        /* Filter Toolbar */
+        .table-filter-bar {
+          padding: 0.75rem 1.25rem;
+          background: #ffffff;
+          border-bottom: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+        .search-field-wrapper {
+          position: relative;
+          min-width: 200px;
+          flex: 1;
+          max-width: 280px;
+        }
+        .search-field-icon {
+          position: absolute;
+          left: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          font-size: 0.85rem;
+        }
+        .search-field-input {
+          width: 100%;
+          padding: 0.45rem 2rem 0.45rem 2rem;
+          font-size: 0.8rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          color: #0f172a;
+          outline: none;
+          transition: all 0.2s ease;
+          font-family: inherit;
+          box-sizing: border-box;
+        }
+        .search-field-input:focus {
+          border-color: #4f46e5;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .search-clear-btn {
+          position: absolute;
+          right: 0.6rem;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          font-size: 0.8rem;
+          padding: 2px;
+          display: flex;
+          align-items: center;
+        }
+
+        .filter-controls-group {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+        .filter-pill {
+          padding: 0.35rem 0.7rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          background: #ffffff;
+          color: #64748b;
+          border: 1px solid transparent;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          font-family: inherit;
+        }
+        .filter-pill:hover {
+          background: #f1f5f9;
+          color: #334155;
+        }
+        .filter-pill.active {
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
+          font-weight: 600;
+        }
+
+        /* Modern Official Table */
+        .official-table-wrapper {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          width: 100%;
+        }
+        .official-table {
           width: 100%;
           border-collapse: separate;
           border-spacing: 0;
           text-align: left;
         }
-        .carousel-table th {
+        .official-table th {
           background: #f8fafc;
-          color: #64748b;
-          font-size: 0.7rem;
+          padding: 0.65rem 1rem;
+          font-size: 0.65rem;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          padding: 0.8rem 1rem;
+          color: #64748b;
           border-bottom: 1px solid #e2e8f0;
           white-space: nowrap;
         }
-        .carousel-table td {
-          padding: 1rem;
+        .official-table td {
+          padding: 0.75rem 1rem;
           border-bottom: 1px solid #f1f5f9;
-          color: #1e293b;
-          font-size: 0.85rem;
           vertical-align: middle;
+          background: #ffffff;
+          font-size: 0.8rem;
+          transition: background-color 0.15s ease;
         }
-        .carousel-table tr:hover td {
-          background: #f8fafc;
-        }
-        .carousel-table tr:last-child td {
+        .official-table tr:last-child td {
           border-bottom: none;
         }
+        .official-table tr:hover td {
+          background: #f8fafc;
+        }
 
-        .slide-thumb {
-          width: 120px;
-          height: 64px;
+        .slide-thumbnail {
+          width: 110px;
+          height: 60px;
           object-fit: cover;
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.9);
-          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
           display: block;
         }
 
-        .badge-pill {
+        .badge-pill-micro {
           display: inline-flex;
           align-items: center;
-          padding: 0.2rem 0.55rem;
-          background: rgba(79, 70, 229, 0.1);
-          color: #4f46e5;
-          border: 1px solid rgba(79, 70, 229, 0.25);
-          border-radius: 6px;
-          font-size: 0.72rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          margin-bottom: 0.3rem;
+          padding: 0.15rem 0.5rem;
+          border-radius: 999px;
+          font-size: 0.68rem;
+          font-weight: 600;
+          background: #f1f5f9;
+          color: #334155;
+          border: 1px solid #e2e8f0;
+          margin-bottom: 0.2rem;
         }
 
-        .cat-icon-chip {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          background: rgba(79, 70, 229, 0.1);
-          color: #4f46e5;
+        .btn-table-delete {
           display: inline-flex;
           align-items: center;
+          gap: 0.35rem;
+          padding: 0.35rem 0.65rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          border: 1px solid #fecaca;
+          background: #fff5f5;
+          color: #dc2626;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          font-family: inherit;
+        }
+        .btn-table-delete:hover {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+
+        /* Pagination Footer */
+        .table-pagination-footer {
+          padding: 0.75rem 1.25rem;
+          border-top: 1px solid #e2e8f0;
+          background: #ffffff;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+        .pagination-meta-info {
+          font-size: 0.75rem;
+          color: #64748b;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 1.25rem;
+        }
+        .rows-select {
+          padding: 0.15rem 0.4rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          background: #f8fafc;
+          font-size: 0.75rem;
+          color: #334155;
+          cursor: pointer;
+          outline: none;
+          font-family: inherit;
+        }
+        .pagination-controls-row {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+        }
+        .pagination-nav-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          display: flex;
+          align-items: center;
           justify-content: center;
-          font-size: 1.1rem;
-          border: 1px solid rgba(79, 70, 229, 0.2);
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .pagination-nav-btn:hover:not(:disabled) {
+          background: #f1f5f9;
+          color: #0f172a;
+          border-color: #cbd5e1;
+        }
+        .pagination-nav-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .page-pill-btn {
+          min-width: 32px;
+          height: 32px;
+          padding: 0 0.5rem;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          border: 1px solid transparent;
+          background: transparent;
+          color: #475569;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+        }
+        .page-pill-btn:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+        }
+        .page-pill-btn.active {
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
         }
       `}</style>
 
-      {/* Header section */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', marginTop: '0.5rem', position: 'relative', zIndex: 1, flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.8rem', color: '#0f172a', margin: '0 0 0.25rem 0', fontWeight: '800', letterSpacing: '-0.5px' }}>Hero Carousel</h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Manage the featured interactive banners displayed on your storefront hero slider</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.45rem 1rem', background: 'rgba(79, 70, 229, 0.1)', border: '1px solid rgba(79, 70, 229, 0.25)', borderRadius: '20px', backdropFilter: 'blur(10px)' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4f46e5', boxShadow: '0 0 8px #4f46e5' }}></span>
-          <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#4f46e5', letterSpacing: '0.3px' }}>
-            {slides.length} SLIDES ACTIVE
-          </span>
+      {/* Top Header & Page Actions */}
+      <div className="header-section">
+        <div className="page-title-row">
+          <div className="page-title-group">
+            <h2>Hero Carousel</h2>
+            <p>Manage the featured interactive banners displayed on your storefront hero slider.</p>
+          </div>
+          <div className="header-actions-group">
+            <div className="badge-count-pill">
+              <span className="badge-dot"></span>
+              <span>{slides.length} SLIDES ACTIVE</span>
+            </div>
+            <button 
+              className="refresh-btn" 
+              onClick={() => fetchSlides(true)} 
+              disabled={refreshing}
+              title="Refresh carousel slides"
+            >
+              <FiRefreshCw className={refreshing ? 'spin' : ''} />
+              <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="carousel-split-grid">
-        {/* Left Form: Add Carousel Slide */}
-        <div className="glass-card" style={{ padding: '2rem', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', position: 'relative', zIndex: 1 }}>
-            <div className="cat-icon-chip">
-              <FiSliders />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: '800' }}>Add Hero Slide</h3>
-              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>Configure headline, media and CTA</p>
+      {/* 2-Column Split: Form & Slides List */}
+      <div className="carousel-split-layout">
+        {/* Left Card: Add Slide */}
+        <div className="table-enterprise-card">
+          <div className="card-header-bar">
+            <div className="card-title-group">
+              <h3>Add Hero Slide</h3>
+              <p>Configure headline, media, and CTA button</p>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem', position: 'relative', zIndex: 1 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
-                Headline Title *
-              </label>
+          <form onSubmit={handleSubmit} className="form-body-padded">
+            <div className="field-group">
+              <label className="field-label">Headline Title *</label>
               <input 
                 type="text" 
                 name="title" 
-                className="glass-input" 
+                className="official-input" 
                 placeholder="e.g. Next-Gen OLED Smart TVs" 
                 value={formData.title} 
                 onChange={handleChange} 
@@ -304,13 +658,11 @@ const AdminCarousel = () => {
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
-                Subtitle Description *
-              </label>
+            <div className="field-group">
+              <label className="field-label">Subtitle Description *</label>
               <textarea 
                 name="subtitle" 
-                className="glass-input" 
+                className="official-input" 
                 rows={2} 
                 placeholder="e.g. Discover brilliant colors and unmatched contrast with up to 40% off." 
                 value={formData.subtitle} 
@@ -319,42 +671,36 @@ const AdminCarousel = () => {
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
-                Badge Highlight
-              </label>
+            <div className="field-group">
+              <label className="field-label">Badge Highlight</label>
               <input 
                 type="text" 
                 name="badgeText" 
-                className="glass-input" 
+                className="official-input" 
                 placeholder="e.g. Trending, Hot Deal, New Launch" 
                 value={formData.badgeText} 
                 onChange={handleChange} 
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
-                  Button Label
-                </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="field-group">
+                <label className="field-label">Button Label</label>
                 <input 
                   type="text" 
                   name="buttonText" 
-                  className="glass-input" 
+                  className="official-input" 
                   placeholder="e.g. Shop Now" 
                   value={formData.buttonText} 
                   onChange={handleChange} 
                 />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
-                  Target Link
-                </label>
+              <div className="field-group">
+                <label className="field-label">Target Link</label>
                 <input 
                   type="text" 
                   name="buttonLink" 
-                  className="glass-input" 
+                  className="official-input" 
                   placeholder="e.g. /#products" 
                   value={formData.buttonLink} 
                   onChange={handleChange} 
@@ -362,87 +708,110 @@ const AdminCarousel = () => {
               </div>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
-                Slide Image (Cloudinary) *
-              </label>
+            <div className="field-group">
+              <label className="field-label">Slide Image (Cloudinary) *</label>
               <input 
                 type="file" 
                 name="image" 
-                className="glass-input" 
-                style={{ padding: '0.55rem' }} 
+                id="slide-image-file"
+                className="official-input file-upload-input" 
                 onChange={handleChange} 
                 required 
                 accept="image/*" 
               />
-              <small style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.3rem', display: 'block' }}>
-                High-resolution landscape image (16:9 recommended)
-              </small>
+              <div className="aspect-ratio-notice">
+                <FiInfo style={{ fontSize: '0.95rem', flexShrink: 0, marginTop: '2px' }} />
+                <span><strong>Recommended Ratio:</strong> 16:9 or 21:9 (e.g. 1920×600 px or 1920×800 px) for full-width landscape banner display.</span>
+              </div>
             </div>
 
-            <button type="submit" className="btn-indigo-submit" disabled={loading} style={{ marginTop: '0.4rem' }}>
-              <FiPlus style={{ fontSize: '1.15rem' }} />
-              {loading ? 'Uploading Slide...' : 'Publish Hero Slide'}
+            <button type="submit" className="submit-btn-official" disabled={loading}>
+              <FiPlus />
+              <span>{loading ? 'Uploading Slide...' : 'Publish Hero Slide'}</span>
             </button>
           </form>
         </div>
 
-        {/* Right Section: Active Slides List */}
-        <div className="glass-card">
-          <div style={{ padding: '1.5rem 1.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(226, 232, 240, 0.8)', position: 'relative', zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <FiLayers style={{ color: '#4f46e5', fontSize: '1.2rem' }} />
-              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: '800' }}>Active Carousel Slides</h3>
+        {/* Right Card: Slides Table with Filters and Pagination */}
+        <div className="table-enterprise-card">
+          <div className="table-filter-bar">
+            <div className="search-field-wrapper">
+              <FiSearch className="search-field-icon" />
+              <input 
+                type="text" 
+                placeholder="Search slides..." 
+                className="search-field-input"
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              />
+              {searchTerm && (
+                <button className="search-clear-btn" onClick={() => setSearchTerm('')}>
+                  <FiX />
+                </button>
+              )}
+            </div>
+
+            <div className="filter-controls-group">
+              <button 
+                className={`filter-pill ${badgeFilter === 'All' ? 'active' : ''}`}
+                onClick={() => { setBadgeFilter('All'); setCurrentPage(1); }}
+              >
+                All ({slides.length})
+              </button>
+              <button 
+                className={`filter-pill ${badgeFilter === 'WithBadge' ? 'active' : ''}`}
+                onClick={() => { setBadgeFilter('WithBadge'); setCurrentPage(1); }}
+              >
+                Highlighted ({slides.filter(s => s.badgeText).length})
+              </button>
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto', position: 'relative', zIndex: 1 }}>
-            <table className="carousel-table">
+          <div className="official-table-wrapper">
+            <table className="official-table">
               <thead>
                 <tr>
-                  <th style={{ width: '140px' }}>Preview</th>
+                  <th style={{ width: '130px' }}>Preview</th>
                   <th>Slide Details</th>
                   <th>Button Action</th>
-                  <th style={{ width: '100px', textAlign: 'right' }}>Actions</th>
+                  <th style={{ textAlign: 'right', width: '90px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {slides.length === 0 ? (
+                {currentSlides.length === 0 ? (
                   <tr>
                     <td colSpan="4" style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#64748b' }}>
-                      <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🖼️</div>
-                      <p style={{ margin: 0, fontWeight: '600', fontSize: '1rem', color: '#475569' }}>No carousel slides found</p>
-                      <small style={{ color: '#94a3b8' }}>Create your first hero banner on the left to display on the storefront</small>
+                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🖼️</div>
+                      <p style={{ margin: 0, fontWeight: '600', fontSize: '0.9rem', color: '#334155' }}>No carousel slides found</p>
+                      <small style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Publish your first hero banner on the left to display on the storefront</small>
                     </td>
                   </tr>
                 ) : (
-                  slides.map(slide => (
+                  currentSlides.map(slide => (
                     <tr key={slide._id}>
                       <td>
-                        <img src={slide.imageUrl} alt={slide.title} className="slide-thumb" />
+                        <img src={slide.imageUrl} alt={slide.title} className="slide-thumbnail" />
                       </td>
                       <td>
-                        <div>
-                          {slide.badgeText && (
-                            <span className="badge-pill">{slide.badgeText}</span>
-                          )}
-                          <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.98rem', marginBottom: '0.2rem' }}>
-                            {slide.title}
-                          </div>
-                          <div style={{ color: '#64748b', fontSize: '0.8rem', lineHeight: '1.3', maxWidth: '320px' }}>
-                            {slide.subtitle}
-                          </div>
+                        {slide.badgeText && (
+                          <div className="badge-pill-micro">{slide.badgeText}</div>
+                        )}
+                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.82rem', marginBottom: '0.15rem' }}>
+                          {slide.title}
+                        </div>
+                        <div style={{ color: '#64748b', fontSize: '0.75rem', lineHeight: '1.3', maxWidth: '300px' }}>
+                          {slide.subtitle}
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.3rem 0.65rem', background: 'rgba(241, 245, 249, 0.8)', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600', color: '#334155', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.25rem 0.55rem', background: '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#334155', border: '1px solid #e2e8f0' }}>
                           <span>{slide.buttonText || 'Shop Now'}</span>
-                          <FiExternalLink style={{ fontSize: '0.75rem', color: '#64748b' }} />
+                          <FiExternalLink style={{ fontSize: '0.7rem', color: '#64748b' }} />
                         </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <button className="btn-action-delete" onClick={() => handleDelete(slide._id)}>
-                          <FiTrash2 style={{ fontSize: '0.9rem' }} /> Delete
+                        <button className="btn-table-delete" onClick={() => handleDelete(slide._id)}>
+                          <FiTrash2 /> Delete
                         </button>
                       </td>
                     </tr>
@@ -450,6 +819,57 @@ const AdminCarousel = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Footer */}
+          <div className="table-pagination-footer">
+            <div className="pagination-meta-info">
+              <span>
+                Showing {filteredSlides.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredSlides.length)} of {filteredSlides.length} slides
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span>Rows:</span>
+                <select 
+                  className="rows-select" 
+                  value={itemsPerPage} 
+                  onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                >
+                  <option value={5}>5</option>
+                  <option value={8}>8</option>
+                  <option value={10}>10</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="pagination-controls-row">
+              <button 
+                className="pagination-nav-btn" 
+                disabled={currentPage === 1} 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                title="Previous page"
+              >
+                <FiChevronLeft />
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button 
+                  key={page} 
+                  className={`page-pill-btn ${currentPage === page ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button 
+                className="pagination-nav-btn" 
+                disabled={currentPage === totalPages} 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                title="Next page"
+              >
+                <FiChevronRight />
+              </button>
+            </div>
           </div>
         </div>
       </div>

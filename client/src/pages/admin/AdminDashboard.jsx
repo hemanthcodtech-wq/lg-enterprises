@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag, FiSettings, FiMessageSquare, FiGrid, FiList, FiBox, FiClipboard, FiImage, FiStar, FiMessageCircle } from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag, FiSettings, FiMessageSquare, FiGrid, FiList, FiBox, FiClipboard, FiImage, FiStar, FiMessageCircle, FiBell, FiPieChart } from 'react-icons/fi';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
+  const [orderAlerts, setOrderAlerts] = useState({ pendingCount: 0, totalOrders: 0, newOrdersToday: 0, recentAlerts: [] });
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,10 +41,30 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchOrderAlerts = async () => {
+    const storedToken = localStorage.getItem('adminToken');
+    if (!storedToken) return;
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/orders/alerts`, {
+        headers: { 'x-auth-token': storedToken }
+      });
+      setOrderAlerts(res.data);
+    } catch (err) {
+      console.error('Error fetching order alerts:', err);
+    }
+  };
+
   useEffect(() => {
     if (localStorage.getItem('adminToken')) {
       fetchStats();
+      fetchOrderAlerts();
     }
+    const interval = setInterval(() => {
+      if (localStorage.getItem('adminToken')) {
+        fetchOrderAlerts();
+      }
+    }, 20000); // Poll every 20 seconds for new orders
+    return () => clearInterval(interval);
   }, [location.pathname]);
 
   const handleLogout = () => {
@@ -101,11 +123,22 @@ const AdminDashboard = () => {
           <NavLink to="/admin/dashboard/products" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
             <FiBox className="nav-icon" /> {!isCollapsed && <span>Products</span>}
           </NavLink>
+          <NavLink to="/admin/dashboard/inventory" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
+            <FiPieChart className="nav-icon" /> {!isCollapsed && <span>Inventory Analysis</span>}
+          </NavLink>
           <NavLink to="/admin/dashboard/reviews" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
             <FiMessageSquare className="nav-icon" /> {!isCollapsed && <span>Product Reviews</span>}
           </NavLink>
           <NavLink to="/admin/dashboard/orders" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
-            <FiClipboard className="nav-icon" /> {!isCollapsed && <span>Order History</span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+              <FiClipboard className="nav-icon" /> 
+              {!isCollapsed && <span>Order History</span>}
+            </div>
+            {orderAlerts.pendingCount > 0 && (
+              <span className="sidebar-alert-badge" title={`${orderAlerts.pendingCount} pending order(s)`}>
+                {orderAlerts.pendingCount}
+              </span>
+            )}
           </NavLink>
           <NavLink to="/admin/dashboard/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
             <FiUsers className="nav-icon" /> {!isCollapsed && <span>Users</span>}
@@ -119,8 +152,8 @@ const AdminDashboard = () => {
           <NavLink to="/admin/dashboard/brands" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
             <FiStar className="nav-icon" /> {!isCollapsed && <span>Top Brands</span>}
           </NavLink>
-          <NavLink to="/admin/dashboard/testimonials" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
-            <FiMessageCircle className="nav-icon" /> {!isCollapsed && <span>Testimonials</span>}
+          <NavLink to="/admin/dashboard/feedbacks" className={({ isActive }) => `nav-item ${isActive || location.pathname.includes('testimonials') || location.pathname.includes('feedbacks') ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
+            <FiMessageCircle className="nav-icon" /> {!isCollapsed && <span>Feedbacks</span>}
           </NavLink>
 
           {!isCollapsed && <div className="nav-section-title" style={{ marginTop: '1rem' }}>Settings</div>}
@@ -144,21 +177,114 @@ const AdminDashboard = () => {
             <h1 style={{ margin: 0 }}>
               {location.pathname.includes('categories') && 'Manage Categories'}
               {location.pathname.includes('products') && 'Manage Products'}
+              {location.pathname.includes('inventory') && 'Inventory & Sales Analysis'}
               {location.pathname.includes('users') && 'Customer Data'}
               {location.pathname.includes('orders') && 'Order History'}
               {location.pathname.includes('promos') && 'Manage Promo Codes'}
               {location.pathname.includes('carousel') && 'Manage Carousel'}
               {location.pathname.includes('brands') && 'Manage Brands'}
-              {location.pathname.includes('testimonials') && 'Manage Testimonials'}
+              {(location.pathname.includes('testimonials') || location.pathname.includes('feedbacks')) && 'Manage Feedbacks'}
               {location.pathname.includes('reviews') && 'Product Reviews'}
               {location.pathname.includes('settings') && 'System Settings'}
               {location.pathname === '/admin/dashboard' && 'Dashboard Overview'}
               {location.pathname === '/admin/dashboard/' && 'Dashboard Overview'}
             </h1>
           </div>
-          <div className="header-profile">
-            <div className="profile-avatar">A</div>
-            <span className="profile-name">Super Admin</span>
+          
+          <div className="header-actions">
+            {/* Top Bar Order Alert Bell */}
+            <div className="notification-bell-container">
+              <button 
+                type="button"
+                onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                className="bell-icon-btn"
+                aria-label="Order Alerts"
+                title={`${orderAlerts.pendingCount} pending orders`}
+              >
+                <FiBell style={{ fontSize: '1.2rem' }} />
+                {orderAlerts.pendingCount > 0 && (
+                  <span className="bell-badge-count">
+                    {orderAlerts.pendingCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotificationDropdown && (
+                <>
+                  <div className="bell-dropdown-overlay" onClick={() => setShowNotificationDropdown(false)}></div>
+                  <div className="bell-dropdown-card">
+                    <div className="bell-card-header">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
+                        <FiBell style={{ color: '#4f46e5' }} /> Order Alerts
+                      </div>
+                      <span className="bell-card-badge" style={{ background: orderAlerts.pendingCount > 0 ? '#fee2e2' : '#ecfdf5', color: orderAlerts.pendingCount > 0 ? '#b91c1c' : '#047857' }}>
+                        {orderAlerts.pendingCount > 0 ? `${orderAlerts.pendingCount} Pending` : 'All Caught Up'}
+                      </span>
+                    </div>
+
+                    <div className="bell-card-body">
+                      {orderAlerts.recentAlerts && orderAlerts.recentAlerts.length > 0 ? (
+                        orderAlerts.recentAlerts.map(ord => (
+                          <div 
+                            key={ord._id} 
+                            className="bell-order-row"
+                            onClick={() => {
+                              setShowNotificationDropdown(false);
+                              navigate('/admin/dashboard/orders');
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>
+                                #{ord._id.toString().slice(-6).toUpperCase()}
+                              </span>
+                              <span style={{
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                background: ord.status === 'Pending' ? '#fef3c7' : ord.status === 'Delivered' ? '#dcfce7' : '#f1f5f9',
+                                color: ord.status === 'Pending' ? '#b45309' : ord.status === 'Delivered' ? '#15803d' : '#475569'
+                              }}>
+                                {ord.status}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{ord.user?.name || 'Customer'}</span>
+                              <span style={{ fontWeight: 700, color: '#334155' }}>₹{ord.totalAmount?.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px' }}>
+                              {new Date(ord.createdAt).toLocaleDateString()} at {new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
+                          No recent orders
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bell-card-footer">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setShowNotificationDropdown(false);
+                          navigate('/admin/dashboard/orders');
+                        }}
+                        className="bell-view-all-btn"
+                      >
+                        View Order History ({orderAlerts.totalOrders || 0})
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="header-profile">
+              <div className="profile-avatar">A</div>
+              <span className="profile-name">Super Admin</span>
+            </div>
           </div>
         </header>
 
@@ -177,6 +303,9 @@ const AdminDashboard = () => {
           <NavLink to="/admin/dashboard/categories" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
             <FiShoppingBag className="popup-icon" /> Categories
           </NavLink>
+          <NavLink to="/admin/dashboard/inventory" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
+            <FiPieChart className="popup-icon" /> Inventory Analysis
+          </NavLink>
           <NavLink to="/admin/dashboard/users" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
             <FiUsers className="popup-icon" /> Users
           </NavLink>
@@ -189,8 +318,8 @@ const AdminDashboard = () => {
           <NavLink to="/admin/dashboard/brands" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
             <FiStar className="popup-icon" /> Top Brands
           </NavLink>
-          <NavLink to="/admin/dashboard/testimonials" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
-            <FiMessageCircle className="popup-icon" /> Testimonials
+          <NavLink to="/admin/dashboard/feedbacks" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
+            <FiMessageCircle className="popup-icon" /> Feedbacks
           </NavLink>
           <NavLink to="/admin/dashboard/reviews" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
             <FiMessageSquare className="popup-icon" /> Product Reviews
@@ -210,7 +339,12 @@ const AdminDashboard = () => {
             <span>Home</span>
           </NavLink>
           <NavLink to="/admin/dashboard/orders" className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsBottomMenuOpen(false)}>
-            <FiClipboard className="bottom-nav-icon" />
+            <div style={{ position: 'relative', display: 'inline-flex' }}>
+              <FiClipboard className="bottom-nav-icon" />
+              {orderAlerts.pendingCount > 0 && (
+                <span className="mobile-order-badge">{orderAlerts.pendingCount}</span>
+              )}
+            </div>
             <span>Orders</span>
           </NavLink>
           <NavLink to="/admin/dashboard/products" className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsBottomMenuOpen(false)}>
@@ -380,9 +514,135 @@ const AdminDashboard = () => {
         }
         .header-title { flex: 1; margin: 0 1rem; }
         .header-title h1 { font-size: 1.25rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .header-actions { display: flex; align-items: center; gap: 1rem; }
         .header-profile { display: flex; align-items: center; gap: 0.8rem; }
         .profile-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; }
         .profile-name { font-weight: 600; color: #334155; font-size: 0.9rem; }
+
+        /* Order Alert Badges & Dropdown */
+        .sidebar-alert-badge {
+          background: #ef4444;
+          color: white;
+          font-size: 0.72rem;
+          font-weight: 800;
+          padding: 2px 7px;
+          border-radius: 12px;
+          animation: alertPulse 2s infinite;
+          margin-left: auto;
+        }
+        @keyframes alertPulse {
+          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .notification-bell-container {
+          position: relative;
+        }
+        .bell-icon-btn {
+          position: relative;
+          width: 38px; height: 38px;
+          border-radius: 50%;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #475569;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .bell-icon-btn:hover {
+          background: #e0e7ff;
+          color: #4f46e5;
+          border-color: #c7d2fe;
+        }
+        .bell-badge-count {
+          position: absolute;
+          top: -3px; right: -3px;
+          background: #ef4444;
+          color: white;
+          border: 2px solid white;
+          font-size: 0.65rem;
+          font-weight: 800;
+          min-width: 18px; height: 18px;
+          border-radius: 9px;
+          display: flex; align-items: center; justify-content: center;
+          animation: alertPulse 2s infinite;
+        }
+        .bell-dropdown-overlay {
+          position: fixed; inset: 0; z-index: 99;
+        }
+        .bell-dropdown-card {
+          position: absolute;
+          top: 48px; right: 0;
+          width: 330px;
+          background: white;
+          border-radius: 14px;
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+          border: 1px solid #e2e8f0;
+          z-index: 100;
+          overflow: hidden;
+          animation: dropdownSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes dropdownSlide {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .bell-card-header {
+          padding: 0.85rem 1.1rem;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+          display: flex; justify-content: space-between; align-items: center;
+        }
+        .bell-card-badge {
+          font-size: 0.72rem;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 12px;
+        }
+        .bell-card-body {
+          max-height: 280px;
+          overflow-y: auto;
+        }
+        .bell-order-row {
+          padding: 0.85rem 1.1rem;
+          border-bottom: 1px solid #f1f5f9;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .bell-order-row:hover {
+          background: #f8fafc;
+        }
+        .bell-card-footer {
+          padding: 0.75rem 1.1rem;
+          background: #f8fafc;
+          border-top: 1px solid #e2e8f0;
+        }
+        .bell-view-all-btn {
+          width: 100%;
+          padding: 0.6rem;
+          background: #4f46e5;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 700;
+          font-size: 0.82rem;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .bell-view-all-btn:hover {
+          background: #4338ca;
+        }
+        .mobile-order-badge {
+          position: absolute;
+          top: -6px; right: -10px;
+          background: #ef4444;
+          color: white;
+          font-size: 0.65rem;
+          font-weight: 800;
+          border-radius: 10px;
+          padding: 1px 5px;
+          border: 1px solid white;
+          animation: alertPulse 2s infinite;
+        }
         
         .mobile-bottom-nav { display: none; }
 

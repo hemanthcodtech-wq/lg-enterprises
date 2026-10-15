@@ -1,28 +1,38 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
-import { FiImage, FiPlus, FiTrash2, FiTag, FiSearch, FiCheck, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
+import { 
+  FiImage, FiPlus, FiTrash2, FiTag, FiSearch, FiCheck, 
+  FiX, FiChevronLeft, FiChevronRight, FiRefreshCw, FiInfo 
+} from 'react-icons/fi';
 
 const AdminBrands = () => {
   const { token } = useOutletContext();
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [formData, setFormData] = useState({ name: '', image: null });
   
   // Filtering & Pagination State
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = useState(8);
 
-  const fetchBrands = async () => {
+  const fetchBrands = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/brands/admin`, {
         headers: { 'x-auth-token': token }
       });
       setBrands(res.data);
+      if (showToast) toast.success('Brands refreshed');
     } catch (err) {
       console.error('Failed to fetch brands', err);
+      toast.error('Failed to load brands');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -50,31 +60,35 @@ const AdminBrands = () => {
         headers: { 'x-auth-token': token, 'Content-Type': 'multipart/form-data' }
       });
       
+      toast.success('Brand saved successfully');
       setFormData({ name: '', image: null });
       if (document.getElementById('brand-image')) document.getElementById('brand-image').value = '';
       fetchBrands();
     } catch (err) {
-      alert(err.response?.data?.error || 'Error adding brand');
+      toast.error(err.response?.data?.error || 'Error adding brand');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this brand?')) return;
     try {
       await axios.delete(`${import.meta.env.VITE_API_URL}/brands/${id}`, { headers: { 'x-auth-token': token } });
+      toast.success('Brand removed');
       fetchBrands();
     } catch (err) {
-      alert('Error deleting brand');
+      toast.error('Error deleting brand');
     }
   };
 
   const handleToggleStatus = async (id) => {
     try {
       await axios.put(`${import.meta.env.VITE_API_URL}/brands/${id}/toggle`, {}, { headers: { 'x-auth-token': token } });
+      toast.success('Brand status updated');
       fetchBrands();
     } catch (err) {
-      alert('Error updating brand status');
+      toast.error('Error updating brand status');
     }
   };
 
@@ -88,131 +102,625 @@ const AdminBrands = () => {
     });
   }, [brands, search, statusFilter]);
 
-  const totalPages = Math.ceil(filteredBrands.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredBrands.length / itemsPerPage) || 1;
   const currentBrands = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredBrands.slice(start, start + itemsPerPage);
-  }, [filteredBrands, currentPage]);
+  }, [filteredBrands, currentPage, itemsPerPage]);
 
   return (
-    <div className="admin-tab-content">
+    <div className="admin-brands-page">
       <style>{`
-        .admin-tab-content { position: relative; min-height: 100%; }
-        .glass-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02); overflow: hidden; }
-        .carousel-split-grid { display: grid; grid-template-columns: 350px 1fr; gap: 2rem; align-items: start; }
-        @media (max-width: 900px) { .carousel-split-grid { grid-template-columns: 1fr; } }
-        .form-group { margin-bottom: 1.25rem; }
-        .form-label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem; }
-        .form-input { width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; color: #1e293b; transition: all 0.2s; background: #f8fafc; }
-        .form-input:focus { outline: none; border-color: #4f46e5; background: #ffffff; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-        .btn-primary { width: 100%; padding: 0.875rem; background: #4f46e5; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; justify-content: center; align-items: center; gap: 0.5rem; }
-        .btn-primary:hover { background: #4338ca; }
-        .slides-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; }
-        .slide-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
-        .slide-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        .slide-image { width: 100%; height: 140px; object-fit: contain; background: #f8fafc; padding: 1rem; }
-        .slide-content { padding: 1rem; flex: 1; }
-        .slide-title { font-weight: 700; color: #1e293b; margin: 0 0 0.25rem 0; font-size: 1.05rem; }
-        .slide-actions { padding: 1rem; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; background: #f8fafc; align-items: center; }
-        .btn-action { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.75rem; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-        .btn-delete { background: #fee2e2; color: #ef4444; }
-        .btn-delete:hover { background: #fecaca; }
-        .btn-toggle-active { background: #dcfce7; color: #166534; }
-        .btn-toggle-inactive { background: #f1f5f9; color: #64748b; }
-        .filter-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap; }
+        /* Exact match to AdminOrders typography and scale */
+        .admin-brands-page {
+          padding-bottom: 3rem;
+          color: #0f172a;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .header-section {
+          margin-bottom: 1.5rem;
+        }
+        .page-title-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 1rem;
+          margin-bottom: 1.25rem;
+        }
+        .page-title-group h2 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 0.15rem 0;
+          letter-spacing: -0.01em;
+        }
+        .page-title-group p {
+          font-size: 0.8rem;
+          color: #64748b;
+          margin: 0;
+        }
+
+        .header-actions-group {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+        }
+        .refresh-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 0.8rem;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          color: #475569;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+          font-family: inherit;
+        }
+        .refresh-btn:hover {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+          color: #0f172a;
+        }
+        .refresh-btn .spin {
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        /* 2-Column Split Layout */
+        .brands-split-layout {
+          display: grid;
+          grid-template-columns: 360px 1fr;
+          gap: 1.5rem;
+          align-items: start;
+        }
+        @media (max-width: 950px) {
+          .brands-split-layout {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        /* Enterprise Card Container */
+        .table-enterprise-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+          overflow: hidden;
+        }
+
+        .card-header-bar {
+          padding: 0.85rem 1.25rem;
+          border-bottom: 1px solid #f1f5f9;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .card-title-group h3 {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+        .card-title-group p {
+          font-size: 0.75rem;
+          color: #64748b;
+          margin: 0.15rem 0 0 0;
+        }
+
+        /* Form Controls */
+        .form-body-padded {
+          padding: 1.25rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+        .field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+        }
+        .field-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #334155;
+        }
+        .official-input {
+          width: 100%;
+          padding: 0.45rem 0.75rem;
+          font-size: 0.8rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          color: #0f172a;
+          font-family: inherit;
+          transition: all 0.2s ease;
+          box-sizing: border-box;
+        }
+        .official-input:focus {
+          outline: none;
+          background: #ffffff;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .file-upload-input {
+          padding: 0.4rem 0.5rem;
+          font-size: 0.78rem;
+        }
+        .file-upload-input::file-selector-button {
+          background: #4f46e5;
+          color: #ffffff;
+          border: none;
+          padding: 0.35rem 0.75rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          margin-right: 0.65rem;
+          transition: background 0.2s ease;
+        }
+        .file-upload-input::file-selector-button:hover {
+          background: #4338ca;
+        }
+
+        .aspect-ratio-notice {
+          padding: 0.5rem 0.75rem;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 8px;
+          font-size: 0.72rem;
+          color: #1e40af;
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          line-height: 1.4;
+        }
+
+        .submit-btn-official {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.4rem;
+          padding: 0.55rem 1rem;
+          background: #4f46e5;
+          color: #ffffff;
+          border: 1px solid #4f46e5;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+          font-family: inherit;
+          width: 100%;
+        }
+        .submit-btn-official:hover:not(:disabled) {
+          background: #4338ca;
+          border-color: #4338ca;
+        }
+        .submit-btn-official:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* Filter Toolbar */
+        .table-filter-bar {
+          padding: 0.75rem 1.25rem;
+          background: #ffffff;
+          border-bottom: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+        .search-field-wrapper {
+          position: relative;
+          min-width: 220px;
+          flex: 1;
+          max-width: 300px;
+        }
+        .search-field-icon {
+          position: absolute;
+          left: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          font-size: 0.85rem;
+        }
+        .search-field-input {
+          width: 100%;
+          padding: 0.45rem 2rem 0.45rem 2rem;
+          font-size: 0.8rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          color: #0f172a;
+          outline: none;
+          transition: all 0.2s ease;
+          font-family: inherit;
+          box-sizing: border-box;
+        }
+        .search-field-input:focus {
+          border-color: #4f46e5;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .search-clear-btn {
+          position: absolute;
+          right: 0.6rem;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          font-size: 0.8rem;
+          padding: 2px;
+          display: flex;
+          align-items: center;
+        }
+
+        .filter-controls-group {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+        .filter-pill {
+          padding: 0.35rem 0.7rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          background: #ffffff;
+          color: #64748b;
+          border: 1px solid transparent;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          font-family: inherit;
+        }
+        .filter-pill:hover {
+          background: #f1f5f9;
+          color: #334155;
+        }
+        .filter-pill.active {
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
+          font-weight: 600;
+        }
+
+        /* Modern Brand Cards Grid */
+        .brands-grid-container {
+          padding: 1.25rem;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+          gap: 1rem;
+        }
+        .brand-tile-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          overflow: hidden;
+          transition: all 0.2s ease;
+          display: flex;
+          flex-direction: column;
+        }
+        .brand-tile-card:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+        }
+        .brand-logo-area {
+          width: 100%;
+          height: 110px;
+          object-fit: contain;
+          background: #f8fafc;
+          padding: 0.75rem;
+          border-bottom: 1px solid #f1f5f9;
+          box-sizing: border-box;
+        }
+        .brand-body-area {
+          padding: 0.75rem 0.85rem;
+          flex: 1;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .brand-name-title {
+          font-weight: 600;
+          color: #0f172a;
+          font-size: 0.82rem;
+          margin: 0;
+        }
+        .brand-status-chip {
+          font-size: 0.68rem;
+          font-weight: 600;
+          padding: 0.15rem 0.45rem;
+          border-radius: 999px;
+        }
+        .brand-status-chip.active {
+          background: #ecfdf5;
+          color: #047857;
+          border: 1px solid #a7f3d0;
+        }
+        .brand-status-chip.inactive {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+        }
+        .brand-footer-actions {
+          padding: 0.5rem 0.85rem;
+          border-top: 1px solid #f1f5f9;
+          background: #f8fafc;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .btn-brand-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 6px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          font-family: inherit;
+        }
+        .btn-brand-toggle:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+        }
+        .btn-brand-delete {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 6px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          border: 1px solid #fecaca;
+          background: #fff5f5;
+          color: #dc2626;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          font-family: inherit;
+        }
+        .btn-brand-delete:hover {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+
+        /* Pagination Footer */
+        .table-pagination-footer {
+          padding: 0.75rem 1.25rem;
+          border-top: 1px solid #e2e8f0;
+          background: #ffffff;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+        .pagination-meta-info {
+          font-size: 0.75rem;
+          color: #64748b;
+          font-weight: 500;
+        }
+        .pagination-controls-row {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+        }
+        .pagination-nav-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .pagination-nav-btn:hover:not(:disabled) {
+          background: #f1f5f9;
+          color: #0f172a;
+          border-color: #cbd5e1;
+        }
+        .pagination-nav-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .page-pill-btn {
+          min-width: 32px;
+          height: 32px;
+          padding: 0 0.5rem;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          border: 1px solid transparent;
+          background: transparent;
+          color: #475569;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+        }
+        .page-pill-btn:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+        }
+        .page-pill-btn.active {
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
+        }
       `}</style>
 
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#1e293b', margin: '0 0 0.5rem 0' }}>Top Brands</h1>
-        <p style={{ color: '#64748b', margin: 0, fontSize: '0.95rem' }}>Upload and manage brand logos displayed on the homepage.</p>
+      {/* Top Header & Page Actions */}
+      <div className="header-section">
+        <div className="page-title-row">
+          <div className="page-title-group">
+            <h2>Brand Partners</h2>
+            <p>Upload and manage brand partner logos highlighted in the storefront brand carousel.</p>
+          </div>
+          <div className="header-actions-group">
+            <button 
+              className="refresh-btn" 
+              onClick={() => fetchBrands(true)} 
+              disabled={refreshing}
+              title="Refresh brands"
+            >
+              <FiRefreshCw className={refreshing ? 'spin' : ''} />
+              <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="carousel-split-grid">
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1e293b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FiPlus style={{ color: '#4f46e5' }} /> Add New Brand
-          </h2>
-          
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Brand Name</label>
+      {/* 2-Column Split: Form & Brands Grid */}
+      <div className="brands-split-layout">
+        {/* Left Card: Add Brand */}
+        <div className="table-enterprise-card">
+          <div className="card-header-bar">
+            <div className="card-title-group">
+              <h3>Add New Brand</h3>
+              <p>Upload partner logo and brand identifier</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="form-body-padded">
+            <div className="field-group">
+              <label className="field-label">Brand Name *</label>
               <input 
-                type="text" name="name" value={formData.name} onChange={handleChange} 
-                placeholder="e.g. Samsung" className="form-input" required 
+                type="text" 
+                name="name" 
+                value={formData.name} 
+                onChange={handleChange} 
+                placeholder="e.g. Samsung, LG, Sony" 
+                className="official-input" 
+                required 
               />
             </div>
             
-            <div className="form-group">
-              <label className="form-label">Brand Logo (Image)</label>
-              <div style={{ border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '1.5rem', textAlign: 'center', background: '#f8fafc', position: 'relative', cursor: 'pointer' }}>
-                <input 
-                  type="file" name="image" id="brand-image" onChange={handleChange} accept="image/*"
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} required
-                />
-                <FiImage style={{ fontSize: '2rem', color: '#94a3b8', marginBottom: '0.5rem' }} />
-                <div style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '500' }}>
-                  {formData.image ? formData.image.name : 'Click or drag image'}
-                </div>
+            <div className="field-group">
+              <label className="field-label">Brand Logo (Cloudinary) *</label>
+              <input 
+                type="file" 
+                name="image" 
+                id="brand-image" 
+                onChange={handleChange} 
+                accept="image/*"
+                className="official-input file-upload-input" 
+                required
+              />
+              <div className="aspect-ratio-notice">
+                <FiInfo style={{ fontSize: '0.95rem', flexShrink: 0, marginTop: '2px' }} />
+                <span><strong>Recommended Ratio:</strong> 3:2 or 1:1 (e.g. 300×150 px or 200×200 px transparent PNG) with good contrast.</span>
               </div>
             </div>
 
-            <button type="submit" className="btn-primary" disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
-              {loading ? 'Uploading...' : 'Save Brand'}
+            <button type="submit" className="submit-btn-official" disabled={loading}>
+              <FiPlus />
+              <span>{loading ? 'Uploading Brand...' : 'Save Brand Partner'}</span>
             </button>
           </form>
         </div>
 
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FiTag style={{ color: '#4f46e5' }} /> Manage Brands
-            </h2>
-            <div className="filter-bar" style={{ margin: 0 }}>
-              <div style={{ position: 'relative' }}>
-                <FiSearch style={{ position: 'absolute', left: '10px', top: '10px', color: '#94a3b8' }} />
-                <input 
-                  type="text" placeholder="Search brands..." 
-                  value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                  style={{ padding: '8px 12px 8px 32px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '0.9rem' }}
-                />
-              </div>
-              <select 
-                value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '0.9rem', background: 'white' }}
+        {/* Right Card: Brands Directory */}
+        <div className="table-enterprise-card">
+          <div className="table-filter-bar">
+            <div className="search-field-wrapper">
+              <FiSearch className="search-field-icon" />
+              <input 
+                type="text" 
+                placeholder="Search brands..." 
+                className="search-field-input"
+                value={search} 
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+              />
+              {search && (
+                <button className="search-clear-btn" onClick={() => setSearch('')}>
+                  <FiX />
+                </button>
+              )}
+            </div>
+
+            <div className="filter-controls-group">
+              <button 
+                className={`filter-pill ${statusFilter === 'All' ? 'active' : ''}`}
+                onClick={() => { setStatusFilter('All'); setCurrentPage(1); }}
               >
-                <option value="All">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+                All ({brands.length})
+              </button>
+              <button 
+                className={`filter-pill ${statusFilter === 'Active' ? 'active' : ''}`}
+                onClick={() => { setStatusFilter('Active'); setCurrentPage(1); }}
+              >
+                Active ({brands.filter(b => b.isActive).length})
+              </button>
+              <button 
+                className={`filter-pill ${statusFilter === 'Inactive' ? 'active' : ''}`}
+                onClick={() => { setStatusFilter('Inactive'); setCurrentPage(1); }}
+              >
+                Hidden ({brands.filter(b => !b.isActive).length})
+              </button>
             </div>
           </div>
-          
+
           {filteredBrands.length === 0 ? (
-            <div className="glass-card" style={{ padding: '3rem 2rem', textAlign: 'center' }}>
-              <FiImage style={{ fontSize: '3rem', color: '#cbd5e1', margin: '0 auto 1rem auto' }} />
-              <h3 style={{ color: '#475569', margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>No Brands Found</h3>
-              <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.9rem' }}>Try adjusting your filters or add a new brand.</p>
+            <div style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🏷️</div>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: '#334155' }}>No brands found</p>
+              <small style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Upload a new brand logo on the left to display on the storefront</small>
             </div>
           ) : (
             <>
-              <div className="slides-grid">
+              <div className="brands-grid-container">
                 {currentBrands.map(brand => (
-                  <div key={brand._id} className="slide-card">
-                    <img src={brand.imageUrl} alt={brand.name} className="slide-image" />
-                    <div className="slide-content">
-                      <h3 className="slide-title">{brand.name}</h3>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: '12px', background: brand.isActive ? '#dcfce7' : '#f1f5f9', color: brand.isActive ? '#166534' : '#64748b' }}>
-                        {brand.isActive ? 'Active' : 'Inactive'}
+                  <div key={brand._id} className="brand-tile-card">
+                    <img src={brand.imageUrl} alt={brand.name} className="brand-logo-area" />
+                    <div className="brand-body-area">
+                      <h4 className="brand-name-title">{brand.name}</h4>
+                      <span className={`brand-status-chip ${brand.isActive ? 'active' : 'inactive'}`}>
+                        {brand.isActive ? 'Active' : 'Hidden'}
                       </span>
                     </div>
-                    <div className="slide-actions">
+                    <div className="brand-footer-actions">
                       <button 
                         onClick={() => handleToggleStatus(brand._id)} 
-                        className={`btn-action ${brand.isActive ? 'btn-toggle-active' : 'btn-toggle-inactive'}`}
+                        className="btn-brand-toggle"
+                        title="Toggle visibility"
                       >
-                        {brand.isActive ? <FiCheck /> : <FiX />} {brand.isActive ? 'Active' : 'Hidden'}
+                        {brand.isActive ? <FiCheck /> : <FiX />} {brand.isActive ? 'Visible' : 'Hidden'}
                       </button>
-                      <button onClick={() => handleDelete(brand._id)} className="btn-action btn-delete">
+                      <button 
+                        onClick={() => handleDelete(brand._id)} 
+                        className="btn-brand-delete"
+                        title="Delete brand"
+                      >
                         <FiTrash2 /> Delete
                       </button>
                     </div>
@@ -220,26 +728,50 @@ const AdminBrands = () => {
                 ))}
               </div>
 
-              {totalPages > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', padding: '1rem', background: 'white', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredBrands.length)} of {filteredBrands.length} brands
-                  </span>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {filteredBrands.length > 0 && (
+                <div className="table-pagination-footer">
+                  <div className="pagination-meta-info" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <span>
+                      Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredBrands.length)} of {filteredBrands.length} brands
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>Cards per page:</span>
+                      <select 
+                        className="rows-select" 
+                        style={{ padding: '0.15rem 0.4rem', border: '1px solid #e2e8f0', borderRadius: '4px', background: '#f8fafc', fontSize: '0.75rem', color: '#334155', cursor: 'pointer', outline: 'none' }}
+                        value={itemsPerPage} 
+                        onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                      >
+                        <option value={6}>6</option>
+                        <option value={8}>8</option>
+                        <option value={12}>12</option>
+                        <option value={24}>24</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="pagination-controls-row">
                     <button
+                      className="pagination-nav-btn"
                       disabled={currentPage === 1}
                       onClick={() => setCurrentPage(p => p - 1)}
-                      style={{ padding: '6px 12px', border: '1px solid #e2e8f0', background: currentPage === 1 ? '#f8fafc' : 'white', borderRadius: '6px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', color: currentPage === 1 ? '#94a3b8' : '#1e293b' }}
+                      title="Previous page"
                     >
                       <FiChevronLeft />
                     </button>
-                    <span style={{ padding: '6px 12px', border: '1px solid #4f46e5', background: '#eef2ff', color: '#4f46e5', borderRadius: '6px', fontWeight: 600 }}>
-                      {currentPage}
-                    </span>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        className={`page-pill-btn ${currentPage === page ? 'active' : ''}`}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    ))}
                     <button
+                      className="pagination-nav-btn"
                       disabled={currentPage >= totalPages}
                       onClick={() => setCurrentPage(p => p + 1)}
-                      style={{ padding: '6px 12px', border: '1px solid #e2e8f0', background: currentPage >= totalPages ? '#f8fafc' : 'white', borderRadius: '6px', cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', color: currentPage >= totalPages ? '#94a3b8' : '#1e293b' }}
+                      title="Next page"
                     >
                       <FiChevronRight />
                     </button>

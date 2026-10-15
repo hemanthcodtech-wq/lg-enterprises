@@ -10,6 +10,7 @@ import {
   FaTv, FaCouch, FaBasketShopping, FaShirt, FaBlender,
   FaHandshakeAngle, FaNetworkWired, FaCoins
 } from 'react-icons/fa6';
+import { FaRupeeSign } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 // Typewriter phrases
@@ -241,10 +242,64 @@ const About = () => {
   // Active scenario step state
   const [activeStep, setActiveStep] = useState(1);
 
-  // Interactive Earnings Calculator state
-  const [directInvites, setDirectInvites] = useState(5);
-  const [subInvites, setSubInvites] = useState(3);
-  const [avgSpend, setAvgSpend] = useState(4000);
+  // Order Purchase Value state (defaults to ₹10,000 as requested)
+  const [purchaseAmount, setPurchaseAmount] = useState(10000);
+
+  // Level-wise commission calculation on purchase amount
+  const levelPayouts = [
+    {
+      level: 1,
+      name: 'Direct Referrer (1st Upline)',
+      percent: 5.0,
+      amount: Math.round((purchaseAmount * 5.0) / 100),
+      color: '#4f46e5',
+      bg: '#eef2ff',
+      badge: 'Immediate Inviter',
+      desc: 'The direct friend whose link/code introduced the buyer to LG Enterprises'
+    },
+    {
+      level: 2,
+      name: '2nd Level Upline',
+      percent: 2.5,
+      amount: Math.round((purchaseAmount * 2.5) / 100),
+      color: '#059669',
+      bg: '#ecfdf5',
+      badge: '2nd Generation',
+      desc: 'Introduced the person who invited the buyer'
+    },
+    {
+      level: 3,
+      name: '3rd Level Upline',
+      percent: 2.0,
+      amount: Math.round((purchaseAmount * 2.0) / 100),
+      color: '#0284c7',
+      bg: '#f0f9ff',
+      badge: '3rd Generation',
+      desc: 'Extended network passive earner'
+    },
+    {
+      level: 4,
+      name: '4th Level Upline',
+      percent: 1.5,
+      amount: Math.round((purchaseAmount * 1.5) / 100),
+      color: '#d97706',
+      bg: '#fffbeb',
+      badge: '4th Generation',
+      desc: 'Growing multi-tier community chain'
+    },
+    {
+      level: 5,
+      name: '5th Level Upline',
+      percent: 1.0,
+      amount: Math.round((purchaseAmount * 1.0) / 100),
+      color: '#9333ea',
+      bg: '#faf5ff',
+      badge: '5th Generation (Final Tier)',
+      desc: 'Final eligible payout level in our sustainable 5-tier system'
+    }
+  ];
+
+  const totalCommissionDistributed = levelPayouts.reduce((sum, item) => sum + item.amount, 0);
 
   // FAQ Accordion state
   const [openFaq, setOpenFaq] = useState(null);
@@ -273,22 +328,6 @@ const About = () => {
     const timer = setTimeout(handleType, typingSpeed);
     return () => clearTimeout(timer);
   }, [currentText, isDeleting, currentPhraseIndex, typingSpeed]);
-
-  // Calculator projections
-  const l1Count = directInvites;
-  const l2Count = l1Count * subInvites;
-  const l3Count = l2Count * subInvites;
-  const l4Count = l3Count * subInvites;
-  const l5Count = l4Count * subInvites;
-
-  const l1Income = Math.round(l1Count * avgSpend * 0.05);
-  const l2Income = Math.round(l2Count * avgSpend * 0.025);
-  const l3Income = Math.round(l3Count * avgSpend * 0.02);
-  const l4Income = Math.round(l4Count * avgSpend * 0.015);
-  const l5Income = Math.round(l5Count * avgSpend * 0.01);
-
-  const totalCalculatedIncome = l1Income + l2Income + l3Income + l4Income + l5Income;
-  const totalNetworkShoppers = l1Count + l2Count + l3Count + l4Count + l5Count;
 
   return (
     <div className="about-page-wrapper" style={{ background: '#f8fafc', color: '#1e293b' }}>
@@ -332,7 +371,7 @@ const About = () => {
                   <FiGift /> Explore 5-Tier Referral Plan
                 </a>
                 <a href="#calculator" className="btn-hero-secondary">
-                  <FiDollarSign /> Open Income Calculator
+                  <FaRupeeSign /> Open Income Calculator
                 </a>
                 <Link to="/" className="btn-hero-outline">
                   <FiShoppingBag /> Shop Products
@@ -703,125 +742,153 @@ const About = () => {
 
           </div>
 
-          {/* Interactive Live Earnings Calculator */}
-          <div id="calculator" className="calculator-box">
-            <div className="calculator-top">
-              <div className="calc-header-icon">
-                <FiDollarSign />
+          {/* Level-Wise Referral Payout Section (Focused on ₹10,000 Purchase) */}
+          <div id="calculator" className="purchase-payout-box">
+            
+            <div className="payout-box-header">
+              <div className="payout-icon-badge">
+                <FaRupeeSign />
               </div>
-              <div>
-                <h3 className="calc-title">Interactive 5-Tier Commission Calculator</h3>
-                <p className="calc-subtitle">Simulate your projected recurring wallet income by adjusting network size and average order values.</p>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <h3 className="payout-box-title">Order Purchase Referral Commission Breakdown</h3>
+                  <span className="payout-pill-tag">
+                    <span className="payout-pulse-dot"></span>
+                    Live Example: ₹{purchaseAmount.toLocaleString('en-IN')} Order
+                  </span>
+                </div>
+                <p className="payout-box-subtitle">
+                  When a customer purchases products worth <strong>₹{purchaseAmount.toLocaleString('en-IN')}</strong>, here is exactly how cash commissions are distributed level-by-level across all 5 uplines:
+                </p>
               </div>
             </div>
 
-            <div className="calc-grid">
+            {/* Quick Order Amount Buttons */}
+            <div className="purchase-amount-bar">
+              <div className="purchase-selector-label">
+                <span>Select Purchase Value to Preview:</span>
+              </div>
+              <div className="purchase-pills-row">
+                {[5000, 10000, 20000, 50000, 100000].map(val => (
+                  <button
+                    key={val}
+                    type="button"
+                    className={`purchase-val-pill ${purchaseAmount === val ? 'active' : ''}`}
+                    onClick={() => setPurchaseAmount(val)}
+                  >
+                    {val === 10000 ? `⭐ ₹${val.toLocaleString('en-IN')} (Standard)` : `₹${val.toLocaleString('en-IN')}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Split Layout: Level Cards Ladder on Left, Executive Summary Card on Right */}
+            <div className="payout-display-grid">
               
-              {/* Sliders Side */}
-              <div className="calc-sliders-col">
-                <div className="slider-group">
-                  <div className="slider-header">
-                    <span>Direct Friends You Invite (Level 1)</span>
-                    <strong>{directInvites} People</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="50"
-                    value={directInvites}
-                    onChange={(e) => setDirectInvites(Number(e.target.value))}
-                    className="custom-range-slider"
-                  />
-                  <div className="slider-ticks"><span>1</span><span>25</span><span>50</span></div>
-                </div>
+              {/* Left Column: 5 Levels Ladder Cards */}
+              <div className="levels-ladder-col">
+                {levelPayouts.map((tier) => (
+                  <div key={tier.level} className="level-payout-card" style={{ borderLeftColor: tier.color }}>
+                    <div className="level-payout-left">
+                      <div className="level-number-bubble" style={{ background: tier.color }}>
+                        L{tier.level}
+                      </div>
+                      <div className="level-text-info">
+                        <div className="level-title-row">
+                          <h4 className="level-title-text">{tier.name}</h4>
+                          <span className="level-rate-pill" style={{ color: tier.color, background: tier.bg, borderColor: `${tier.color}30` }}>
+                            {tier.percent}% Commission
+                          </span>
+                        </div>
+                        <p className="level-desc-text">{tier.desc}</p>
+                      </div>
+                    </div>
 
-                <div className="slider-group">
-                  <div className="slider-header">
-                    <span>Average Friends Each Person Invites</span>
-                    <strong>{subInvites} People</strong>
+                    <div className="level-payout-right">
+                      <div className="level-payout-amount" style={{ color: tier.color }}>
+                        ₹{tier.amount.toLocaleString('en-IN')}
+                      </div>
+                      <span className="level-calc-formula">
+                        ({tier.percent}% of ₹{purchaseAmount.toLocaleString('en-IN')})
+                      </span>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    value={subInvites}
-                    onChange={(e) => setSubInvites(Number(e.target.value))}
-                    className="custom-range-slider"
-                  />
-                  <div className="slider-ticks"><span>1</span><span>5</span><span>10</span></div>
-                </div>
+                ))}
 
-                <div className="slider-group">
-                  <div className="slider-header">
-                    <span>Average Monthly Spend per Customer</span>
-                    <strong>₹{avgSpend.toLocaleString()}</strong>
+                {/* Level 6 Stage Limit Notice */}
+                <div className="level-6-notice-card">
+                  <div className="level-6-pill">Level 6 & Beyond</div>
+                  <div className="level-6-info">
+                    <strong>0% Payout (₹0.00)</strong> — Referral earnings strictly cap after Level 5 to maintain financial sustainability.
                   </div>
-                  <input
-                    type="range"
-                    min="1000"
-                    max="20000"
-                    step="500"
-                    value={avgSpend}
-                    onChange={(e) => setAvgSpend(Number(e.target.value))}
-                    className="custom-range-slider"
-                  />
-                  <div className="slider-ticks"><span>₹1,000</span><span>₹10,000</span><span>₹20,000</span></div>
-                </div>
-
-                <div className="calc-tip-box">
-                  <FiZap style={{ color: '#4f46e5', flexShrink: 0 }} />
-                  <p>Commissions accumulate on <strong>all repeat orders</strong> made by referred customers throughout their shopping lifetime!</p>
                 </div>
               </div>
 
-              {/* Output Results Side */}
-              <div className="calc-results-col">
-                <div className="results-card">
-                  <span className="results-badge">Estimated Monthly Wallet Earnings</span>
-                  <div className="results-total-amount">
-                    ₹{totalCalculatedIncome.toLocaleString()}
-                    <span className="month-sub">/ month</span>
+              {/* Right Column: Executive Summary & Order Receipt Card */}
+              <div className="payout-summary-col">
+                <div className="payout-summary-card">
+                  
+                  <div className="summary-card-header">
+                    <span className="summary-badge">TRANSACTION DISTRIBUTION</span>
+                    <span className="summary-order-tag">Single Purchase</span>
                   </div>
-                  <p className="results-network-size">
-                    Supported by <strong>{totalNetworkShoppers.toLocaleString()}</strong> shoppers across your 5-level tree
-                  </p>
 
-                  <div className="tier-breakdown-list">
-                    <div className="breakdown-row">
-                      <span>Level 1 (5.0%) · {l1Count} shoppers</span>
-                      <strong>₹{l1Income.toLocaleString()}</strong>
+                  <div className="summary-order-hero">
+                    <div className="summary-order-label">Customer Order Value</div>
+                    <div className="summary-order-amount">₹{purchaseAmount.toLocaleString('en-IN')}</div>
+                    <div className="summary-order-note">100% genuine product purchase delivered to customer</div>
+                  </div>
+
+                  <div className="summary-stats-grid">
+                    <div className="summary-stat-box">
+                      <span className="stat-label">Total Commission Paid</span>
+                      <strong className="stat-value text-emerald">₹{totalCommissionDistributed.toLocaleString('en-IN')}</strong>
+                      <span className="stat-sub">12.0% Total Referral Pool</span>
                     </div>
-                    <div className="breakdown-row">
-                      <span>Level 2 (2.5%) · {l2Count} shoppers</span>
-                      <strong>₹{l2Income.toLocaleString()}</strong>
+                    <div className="summary-stat-box">
+                      <span className="stat-label">Uplines Rewarded</span>
+                      <strong className="stat-value text-indigo">5 Levels</strong>
+                      <span className="stat-sub">Instant Digital Wallet Credit</span>
                     </div>
-                    <div className="breakdown-row">
-                      <span>Level 3 (2.0%) · {l3Count} shoppers</span>
-                      <strong>₹{l3Income.toLocaleString()}</strong>
+                  </div>
+
+                  <div className="summary-table-breakdown">
+                    <div className="summary-table-row header">
+                      <span>Referral Tier</span>
+                      <span>Rate</span>
+                      <span>Wallet Payout</span>
                     </div>
-                    <div className="breakdown-row">
-                      <span>Level 4 (1.5%) · {l4Count} shoppers</span>
-                      <strong>₹{l4Income.toLocaleString()}</strong>
-                    </div>
-                    <div className="breakdown-row">
-                      <span>Level 5 (1.0%) · {l5Count} shoppers</span>
-                      <strong>₹{l5Income.toLocaleString()}</strong>
+                    {levelPayouts.map(t => (
+                      <div key={t.level} className="summary-table-row">
+                        <span className="tier-tag">Level {t.level}</span>
+                        <span className="tier-rate">{t.percent}%</span>
+                        <strong className="tier-amount">₹{t.amount.toLocaleString('en-IN')}</strong>
+                      </div>
+                    ))}
+                    <div className="summary-table-row total">
+                      <span>Total Distributed</span>
+                      <span>12.0%</span>
+                      <strong className="total-amount">₹{totalCommissionDistributed.toLocaleString('en-IN')}</strong>
                     </div>
                   </div>
 
                   {user ? (
-                    <Link to="/profile" className="btn-results-cta">
-                      View My Referral Code in Profile <FiArrowRight />
+                    <Link to="/profile" className="btn-summary-cta">
+                      <span>Get My Referral Code in Profile</span>
+                      <FiArrowRight />
                     </Link>
                   ) : (
-                    <Link to="/register" className="btn-results-cta">
-                      Sign Up & Get My Referral Code <FiArrowRight />
+                    <Link to="/register" className="btn-summary-cta">
+                      <span>Sign Up & Start Earning Referrals</span>
+                      <FiArrowRight />
                     </Link>
                   )}
+
                 </div>
               </div>
 
             </div>
+
           </div>
 
           {/* Simple 3-Step Guide */}
@@ -1971,169 +2038,516 @@ const About = () => {
           margin-top: 1rem;
         }
 
-        /* Calculator Box */
-        .calculator-box {
-          background: white;
+        /* ==========================================================================
+           Order Purchase Referral Payout Breakdown (#4f46e5 Brand System)
+           ========================================================================== */
+        .purchase-payout-box {
+          background: #ffffff;
           border-radius: 24px;
           padding: 2.5rem;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
-          border: 1px solid #f1f5f9;
+          box-shadow: 0 10px 40px rgba(79, 70, 229, 0.08);
+          border: 1.5px solid #e0e7ff;
           margin-bottom: 3.5rem;
+          position: relative;
         }
 
-        .calculator-top {
+        .payout-box-header {
           display: flex;
-          align-items: center;
-          gap: 1.2rem;
-          margin-bottom: 2rem;
+          align-items: flex-start;
+          gap: 1.25rem;
+          margin-bottom: 1.75rem;
         }
 
-        .calc-header-icon {
-          width: 52px;
-          height: 52px;
+        .payout-icon-badge {
+          width: 56px;
+          height: 56px;
           border-radius: 16px;
-          background: #e0e7ff;
+          background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
           color: #4f46e5;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.6rem;
-        }
-
-        .calc-title {
           font-size: 1.5rem;
+          box-shadow: 0 4px 14px rgba(79, 70, 229, 0.18);
+          flex-shrink: 0;
+        }
+
+        .payout-box-title {
+          font-size: 1.55rem;
+          font-weight: 800;
           color: #0f172a;
-          margin: 0 0 4px 0;
-        }
-
-        .calc-subtitle {
-          font-size: 0.9rem;
-          color: #64748b;
           margin: 0;
+          letter-spacing: -0.02em;
         }
 
-        .calc-grid {
-          display: grid;
-          grid-template-columns: 1.1fr 0.9fr;
-          gap: 2.5rem;
-        }
-
-        .slider-group {
-          margin-bottom: 1.6rem;
-        }
-
-        .slider-header {
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: #334155;
-          margin-bottom: 0.6rem;
-        }
-
-        .custom-range-slider {
-          width: 100%;
-          height: 8px;
-          border-radius: 5px;
-          background: #e2e8f0;
-          outline: none;
-          accent-color: #4f46e5;
-          cursor: pointer;
-        }
-
-        .slider-ticks {
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.75rem;
-          color: #94a3b8;
-          margin-top: 4px;
-        }
-
-        .calc-tip-box {
-          display: flex;
-          gap: 10px;
+        .payout-pill-tag {
+          display: inline-flex;
           align-items: center;
-          background: #eef2ff;
-          padding: 12px 16px;
-          border-radius: 12px;
-          font-size: 0.85rem;
-          color: #3730a3;
-        }
-
-        .results-card {
-          background: linear-gradient(135deg, #0f172a, #1e1b4b);
-          color: white;
+          gap: 6px;
+          padding: 3px 10px;
           border-radius: 20px;
-          padding: 2rem;
-          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+          background: #eef2ff;
+          color: #4f46e5;
+          font-size: 0.75rem;
+          font-weight: 700;
+          border: 1px solid #c7d2fe;
+          letter-spacing: 0.3px;
         }
 
-        .results-badge {
+        .payout-pulse-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #4f46e5;
+          box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7);
+          animation: payoutPulse 1.8s infinite;
+        }
+
+        @keyframes payoutPulse {
+          0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
+          70% { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+        }
+
+        .payout-box-subtitle {
+          font-size: 0.92rem;
+          color: #64748b;
+          margin-top: 6px;
+          line-height: 1.5;
+        }
+
+        .payout-box-subtitle strong {
+          color: #1e293b;
+        }
+
+        /* Purchase Amount Quick Selector Bar */
+        .purchase-amount-bar {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 0.9rem 1.25rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          margin-bottom: 2rem;
+          flex-wrap: wrap;
+        }
+
+        .purchase-selector-label {
           font-size: 0.8rem;
+          font-weight: 700;
+          color: #475569;
           text-transform: uppercase;
-          letter-spacing: 1px;
-          color: #a5b4fc;
+          letter-spacing: 0.5px;
+        }
+
+        .purchase-pills-row {
+          display: flex;
+          align-items: center;
+          gap: 0.55rem;
+          flex-wrap: wrap;
+        }
+
+        .purchase-val-pill {
+          padding: 0.45rem 0.95rem;
+          border-radius: 10px;
+          font-size: 0.82rem;
+          font-weight: 600;
+          border: 1.5px solid #cbd5e1;
+          background: #ffffff;
+          color: #334155;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .purchase-val-pill:hover {
+          border-color: #4f46e5;
+          color: #4f46e5;
+          background: #f5f3ff;
+          transform: translateY(-1px);
+        }
+
+        .purchase-val-pill.active {
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
+          box-shadow: 0 3px 10px rgba(79, 70, 229, 0.28);
           font-weight: 700;
         }
 
-        .results-total-amount {
-          font-size: 2.6rem;
-          font-weight: 800;
-          color: #38bdf8;
-          margin: 8px 0;
+        /* 2-Column Split Display Grid */
+        .payout-display-grid {
+          display: grid;
+          grid-template-columns: 1.15fr 0.85fr;
+          gap: 2.25rem;
+          align-items: start;
         }
 
-        .month-sub {
-          font-size: 1rem;
-          font-weight: 500;
-          color: #cbd5e1;
-        }
-
-        .results-network-size {
-          font-size: 0.85rem;
-          color: #94a3b8;
-          margin-bottom: 1.5rem;
-        }
-
-        .tier-breakdown-list {
+        /* Left Column: 5 Levels Ladder */
+        .levels-ladder-col {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-          padding-top: 1.2rem;
-          margin-bottom: 1.5rem;
+          gap: 0.9rem;
         }
 
-        .breakdown-row {
+        .level-payout-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-left: 5px solid #4f46e5;
+          border-radius: 16px;
+          padding: 1.15rem 1.35rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .level-payout-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(79, 70, 229, 0.08);
+          border-color: #c7d2fe;
+        }
+
+        .level-payout-left {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          flex: 1;
+        }
+
+        .level-number-bubble {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          color: #ffffff;
+          font-weight: 800;
+          font-size: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
+
+        .level-text-info {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        .level-title-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .level-title-text {
+          font-size: 0.98rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0;
+        }
+
+        .level-rate-pill {
+          font-size: 0.72rem;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 20px;
+          border: 1px solid;
+          letter-spacing: 0.2px;
+        }
+
+        .level-desc-text {
+          font-size: 0.79rem;
+          color: #64748b;
+          margin: 0;
+          line-height: 1.35;
+        }
+
+        .level-payout-right {
+          text-align: right;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+        }
+
+        .level-payout-amount {
+          font-size: 1.55rem;
+          font-weight: 900;
+          line-height: 1.1;
+          letter-spacing: -0.02em;
+        }
+
+        .level-calc-formula {
+          font-size: 0.74rem;
+          color: #94a3b8;
+          font-weight: 500;
+        }
+
+        /* Level 6 & Beyond Notice Card */
+        .level-6-notice-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: #f8fafc;
+          border: 1.5px dashed #cbd5e1;
+          border-radius: 14px;
+          padding: 0.85rem 1.15rem;
+          margin-top: 0.25rem;
+        }
+
+        .level-6-pill {
+          background: #e2e8f0;
+          color: #475569;
+          font-size: 0.74rem;
+          font-weight: 700;
+          padding: 3px 8px;
+          border-radius: 6px;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+
+        .level-6-info {
+          font-size: 0.78rem;
+          color: #64748b;
+          line-height: 1.4;
+        }
+
+        .level-6-info strong {
+          color: #334155;
+        }
+
+        /* Right Column: Executive Summary & Order Receipt Card */
+        .payout-summary-col {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .payout-summary-card {
+          background: linear-gradient(145deg, #1e1b4b 0%, #312e81 35%, #4338ca 70%, #4f46e5 100%);
+          color: #ffffff;
+          border-radius: 24px;
+          padding: 2.2rem;
+          box-shadow: 0 20px 45px -10px rgba(79, 70, 229, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .payout-summary-card::before {
+          content: '';
+          position: absolute;
+          top: -80px;
+          right: -80px;
+          width: 220px;
+          height: 220px;
+          background: radial-gradient(circle, rgba(165, 180, 252, 0.35) 0%, transparent 70%);
+          border-radius: 50%;
+          pointer-events: none;
+        }
+
+        .summary-card-header {
           display: flex;
           justify-content: space-between;
-          font-size: 0.85rem;
+          align-items: center;
+          gap: 1rem;
+          margin-bottom: 1.25rem;
+          position: relative;
+          z-index: 2;
+        }
+
+        .summary-badge {
+          font-size: 0.74rem;
+          font-weight: 800;
+          letter-spacing: 1px;
+          color: #c7d2fe;
+          text-transform: uppercase;
+        }
+
+        .summary-order-tag {
+          background: rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #ffffff;
+          padding: 2px 9px;
+          border-radius: 12px;
+          font-size: 0.72rem;
+          font-weight: 700;
+        }
+
+        .summary-order-hero {
+          margin-bottom: 1.25rem;
+          position: relative;
+          z-index: 2;
+        }
+
+        .summary-order-label {
+          font-size: 0.8rem;
+          color: #c7d2fe;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 4px;
+          font-weight: 600;
+        }
+
+        .summary-order-amount {
+          font-size: 2.75rem;
+          font-weight: 900;
+          letter-spacing: -0.02em;
+          color: #ffffff;
+          line-height: 1.05;
+          text-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .summary-order-note {
+          font-size: 0.78rem;
+          color: #cbd5e1;
+          margin-top: 6px;
+        }
+
+        .summary-stats-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.85rem;
+          margin-bottom: 1.25rem;
+          position: relative;
+          z-index: 2;
+        }
+
+        .summary-stat-box {
+          background: rgba(15, 23, 42, 0.35);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 14px;
+          padding: 0.85rem 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .stat-label {
+          font-size: 0.7rem;
+          color: #c7d2fe;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+          font-size: 1.35rem;
+          font-weight: 900;
+          letter-spacing: -0.01em;
+          margin: 2px 0;
+        }
+
+        .stat-value.text-emerald {
+          color: #34d399;
+        }
+
+        .stat-value.text-indigo {
+          color: #c7d2fe;
+        }
+
+        .stat-sub {
+          font-size: 0.7rem;
           color: #cbd5e1;
         }
 
-        .breakdown-row strong {
-          color: white;
+        .summary-table-breakdown {
+          background: rgba(15, 23, 42, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 16px;
+          padding: 1rem 1.15rem;
+          margin-bottom: 1.5rem;
+          position: relative;
+          z-index: 2;
         }
 
-        .btn-results-cta {
+        .summary-table-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          font-size: 0.82rem;
+        }
+
+        .summary-table-row:last-child {
+          border-bottom: none;
+        }
+
+        .summary-table-row.header {
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #a5b4fc;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding-bottom: 8px;
+        }
+
+        .tier-tag {
+          color: #e2e8f0;
+          font-weight: 600;
+        }
+
+        .tier-rate {
+          background: rgba(250, 204, 21, 0.18);
+          color: #fde047;
+          border: 1px solid rgba(250, 204, 21, 0.35);
+          padding: 1px 6px;
+          border-radius: 6px;
+          font-size: 0.72rem;
+          font-weight: 700;
+        }
+
+        .tier-amount {
+          color: #ffffff;
+          font-weight: 800;
+        }
+
+        .summary-table-row.total {
+          border-top: 1px solid rgba(255, 255, 255, 0.25);
+          margin-top: 4px;
+          padding-top: 8px;
+          font-size: 0.92rem;
+          font-weight: 800;
+          color: #ffffff;
+        }
+
+        .total-amount {
+          font-size: 1.1rem;
+          font-weight: 900;
+          color: #34d399;
+        }
+
+        .btn-summary-cta {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          background: linear-gradient(135deg, #4f46e5, #6366f1);
-          color: white;
+          background: #ffffff;
+          color: #4338ca;
           text-decoration: none;
-          padding: 0.85rem 1.2rem;
-          border-radius: 12px;
-          font-weight: 700;
-          font-size: 0.95rem;
-          transition: transform 0.2s, box-shadow 0.2s;
-          box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+          padding: 0.95rem 1.4rem;
+          border-radius: 14px;
+          font-weight: 800;
+          font-size: 0.92rem;
+          transition: all 0.2s ease;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+          width: 100%;
+          position: relative;
+          z-index: 2;
         }
 
-        .btn-results-cta:hover {
+        .btn-summary-cta:hover {
+          background: #f8fafc;
+          color: #3730a3;
           transform: translateY(-2px);
-          box-shadow: 0 10px 25px rgba(79, 70, 229, 0.45);
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
         }
 
         /* How it works */
@@ -2397,7 +2811,7 @@ const About = () => {
             grid-template-columns: 1fr;
             gap: 2.5rem;
           }
-          .calc-grid {
+          .payout-display-grid {
             grid-template-columns: 1fr;
             gap: 2rem;
           }
@@ -2484,9 +2898,31 @@ const About = () => {
             font-size: 0.78rem;
           }
           .scenario-container,
-          .calculator-box,
+          .purchase-payout-box,
           .how-it-works-box {
-            padding: 1.2rem;
+            padding: 1.25rem;
+          }
+          .payout-box-header {
+            flex-direction: column;
+            gap: 0.85rem;
+          }
+          .level-payout-card {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+          }
+          .level-payout-right {
+            align-items: flex-start;
+            text-align: left;
+            width: 100%;
+            padding-top: 0.5rem;
+            border-top: 1px dashed #e2e8f0;
+          }
+          .summary-order-amount {
+            font-size: 2.15rem;
+          }
+          .summary-stats-grid {
+            grid-template-columns: 1fr;
           }
           .payout-table-wrap {
             overflow-x: auto;
@@ -2495,9 +2931,6 @@ const About = () => {
           .payout-table th, .payout-table td {
             padding: 8px 10px;
             font-size: 0.8rem;
-          }
-          .results-total-amount {
-            font-size: 1.85rem;
           }
           .tiers-flow-grid {
             grid-template-columns: 1fr;

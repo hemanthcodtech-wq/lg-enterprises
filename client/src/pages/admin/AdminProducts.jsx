@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
-import { FiTrash2, FiPlus, FiEdit2 } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
+import { 
+  FiTrash2, FiPlus, FiEdit2, FiSearch, FiRefreshCw, 
+  FiPackage, FiCheckCircle, FiAlertCircle, FiFolder,
+  FiChevronLeft, FiChevronRight, FiX, FiInfo
+} from 'react-icons/fi';
 
 const AdminProducts = () => {
   const { token } = useOutletContext();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Form State
@@ -25,33 +31,21 @@ const AdminProducts = () => {
   // Filter & Pagination State
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [stockFilter, setStockFilter] = useState('All'); // 'All', 'InStock', 'OutOfStock'
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, []);
-
-  // Filter and Paginate Products
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory ? p.category?._id === filterCategory : true;
-    return matchesSearch && matchesCategory;
-  });
-
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const currentProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const fetchProducts = async () => {
+  const fetchProducts = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/products`);
       setProducts(res.data);
+      if (showToast) toast.success('Products refreshed');
     } catch (err) {
       console.error('Failed to fetch products', err);
+      toast.error('Failed to load products');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -63,6 +57,45 @@ const AdminProducts = () => {
       console.error('Failed to fetch categories', err);
     }
   };
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+  }, []);
+
+  // Metrics computation
+  const metrics = useMemo(() => {
+    const total = products.length;
+    const inStock = products.filter(p => (p.stock || 0) > 0).length;
+    const outOfStock = products.filter(p => (p.stock || 0) <= 0).length;
+    const totalCats = categories.length;
+    return { total, inStock, outOfStock, totalCats };
+  }, [products, categories]);
+
+  // Filter products
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = filterCategory ? p.category?._id === filterCategory : true;
+      const matchesStock = 
+        stockFilter === 'All' ? true :
+        stockFilter === 'InStock' ? (p.stock || 0) > 0 :
+        (p.stock || 0) <= 0;
+      return matchesSearch && matchesCategory && matchesStock;
+    });
+  }, [products, searchTerm, filterCategory, stockFilter]);
+
+  // Reset to page 1 on filter or limit change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategory, stockFilter, itemsPerPage]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+  const currentProducts = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredProducts.slice(start, start + itemsPerPage);
+  }, [filteredProducts, currentPage, itemsPerPage]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -94,6 +127,7 @@ const AdminProducts = () => {
             'Content-Type': 'multipart/form-data'
           }
         });
+        toast.success('Product updated successfully');
       } else {
         await axios.post(`${import.meta.env.VITE_API_URL}/products`, formData, {
           headers: { 
@@ -101,14 +135,16 @@ const AdminProducts = () => {
             'Content-Type': 'multipart/form-data'
           }
         });
+        toast.success('Product added successfully');
       }
       
       resetForm();
       fetchProducts();
     } catch (err) {
-      alert(err.response?.data?.error || 'Error saving product');
+      toast.error(err.response?.data?.error || 'Error saving product');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleEdit = (prod) => {
@@ -137,299 +173,365 @@ const AdminProducts = () => {
       await axios.delete(`${import.meta.env.VITE_API_URL}/products/${id}`, {
         headers: { 'x-auth-token': token }
       });
+      toast.success('Product deleted');
       fetchProducts();
     } catch (err) {
-      alert('Error deleting product');
+      toast.error('Error deleting product');
     }
   };
 
   return (
-    <div className="admin-tab-content">
+    <div className="admin-products-page">
       <style>{`
-        .filter-bar {
-          display: flex; gap: 1rem; margin-bottom: 1.5rem;
-          flex-wrap: wrap; align-items: center; justify-content: space-between;
-          background: #ffffff; padding: 1rem; border-radius: 12px;
-          border: 1px solid #f1f5f9; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-          position: relative; z-index: 1;
-        }
-        .filter-group {
-          display: flex; gap: 1rem; align-items: center; flex: 1; min-width: 200px; flex-wrap: wrap;
-        }
-        .filter-input {
-          flex: 1; padding: 0.6rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px;
-          font-size: 0.9rem; outline: none; transition: border-color 0.2s; min-width: 150px;
-        }
-        .filter-input:focus {
-          border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
-        }
-        .pagination {
-          display: flex; justify-content: center; align-items: center; gap: 0.5rem;
-          margin-top: 2.5rem; padding: 1rem 0 2rem; position: relative; z-index: 1;
-        }
-        .page-btn {
-          width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-          border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;
-          cursor: pointer; font-weight: 600; color: #475569; transition: all 0.2s;
-        }
-        .page-btn:hover:not(:disabled) {
-          background: #f8fafc; border-color: #cbd5e1; color: #0f172a;
-        }
-        .page-btn.active {
-          background: #4f46e5; color: #ffffff; border-color: #4f46e5;
-        }
-        .page-btn:disabled {
-          opacity: 0.5; cursor: not-allowed;
-        }
-        .side-panel-overlay {
-          position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-          background: rgba(15, 23, 42, 0.4);
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
-          z-index: 1000;
-          display: flex; justify-content: flex-end;
-        }
-        .side-panel {
-          background: rgba(248, 250, 252, 0.95);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          width: 100%; max-width: 650px; height: 100vh;
-          overflow-y: auto;
-          box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
-          animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          border-left: 1px solid rgba(255, 255, 255, 0.8);
-        }
-        .side-panel-header {
-          padding: 2rem;
-          border-bottom: 1px solid #e2e8f0;
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          position: sticky;
-          top: 0;
-          background: rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(12px);
-          z-index: 10;
-        }
-        .side-panel-body {
-          padding: 2rem;
-          flex: 1;
-        }
-        .side-panel-footer {
-          padding: 1.5rem 2rem;
-          border-top: 1px solid #e2e8f0;
-          background: #ffffff;
-          position: sticky;
-          bottom: 0;
-          display: flex;
-          justify-content: flex-end;
-          gap: 1rem;
-          z-index: 10;
-        }
-        .panel-card {
-          background: #ffffff;
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 1.5rem;
-          margin-bottom: 1.5rem;
-          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
-        }
-        .panel-card-title {
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin-bottom: 1.25rem;
-        }
-        
-        /* Custom Scrollbar */
-        .side-panel::-webkit-scrollbar {
-          width: 8px;
-        }
-        .side-panel::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .side-panel::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border-radius: 4px;
-        }
-        @keyframes slideInRight {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        .panel-close-btn {
-          background: #f1f5f9; border: none; font-size: 1.2rem; width: 32px; height: 32px;
-          border-radius: 8px; display: flex; align-items: center; justify-content: center;
-          cursor: pointer; color: #64748b; line-height: 1; transition: all 0.2s ease;
-        }
-        .panel-close-btn:hover {
-          background: #e2e8f0; color: #0f172a;
-        }
-        .glass-input {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 0.7rem 1rem;
-          width: 100%;
-          font-size: 0.9rem;
-          transition: all 0.2s;
-          box-sizing: border-box;
-          font-family: inherit;
+        /* Exact match to AdminOrders typography and scale */
+        .admin-products-page {
+          padding-bottom: 3rem;
           color: #0f172a;
-        }
-        .glass-input:focus {
-          outline: none;
-          background: #ffffff;
-          border-color: #6366f1;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-        .admin-form-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 1.25rem;
-        }
-        .admin-form-grid .form-group {
-          margin-bottom: 0;
-        }
-        
-        /* File Input Styling */
-        input[type=file]::file-selector-button {
-          background: #f1f5f9;
-          border: 1px solid #cbd5e1;
-          padding: 0.5rem 1rem;
-          border-radius: 8px;
-          color: #475569;
-          cursor: pointer;
-          font-weight: 600;
-          margin-right: 1rem;
-          transition: all 0.2s ease;
-        }
-        input[type=file]::file-selector-button:hover {
-          background: #e2e8f0;
-          color: #1e293b;
-        }
-        .admin-tab-content {
-          position: relative;
-          min-height: 100%;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
-        .glass-btn {
-          display: inline-flex;
+        .header-section {
+          margin-bottom: 1.5rem;
+        }
+        .page-title-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 1rem;
+          margin-bottom: 1.25rem;
+        }
+        .page-title-group h2 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 0.15rem 0;
+          letter-spacing: -0.01em;
+        }
+        .page-title-group p {
+          font-size: 0.8rem;
+          color: #64748b;
+          margin: 0;
+        }
+
+        .header-actions-group {
+          display: flex;
           align-items: center;
-          gap: 0.5rem;
-          background: #4f46e5;
-          color: white;
-          border: 1px solid #4f46e5;
-          padding: 0.65rem 1.25rem;
+          gap: 0.65rem;
+        }
+        .refresh-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 0.8rem;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
           border-radius: 8px;
+          color: #475569;
+          font-size: 0.8rem;
           font-weight: 600;
-          font-size: 0.85rem;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+          font-family: inherit;
         }
-        .glass-btn:hover:not(:disabled) {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+        .refresh-btn:hover {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+          color: #0f172a;
+        }
+        .refresh-btn .spin {
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .add-product-btn-official {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 0.8rem;
+          background: #4f46e5;
+          color: #ffffff;
+          border: 1px solid #4f46e5;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+          font-family: inherit;
+        }
+        .add-product-btn-official:hover {
           background: #4338ca;
           border-color: #4338ca;
         }
-        .glass-btn.outline {
-          background: #ffffff;
-          color: #475569;
-          border: 1px solid #cbd5e1;
-          box-shadow: none;
+
+        /* KPI Metric Cards */
+        .metrics-grid-official {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 1rem;
+          margin-bottom: 1.5rem;
         }
-        .glass-btn.outline:hover:not(:disabled) {
-          background: #f8fafc;
-          color: #0f172a;
-          border-color: #94a3b8;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .glass-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        .table-card {
+        .metric-card-official {
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          overflow: hidden;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-          position: relative;
-          z-index: 1;
+          border-radius: 10px;
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.8rem;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        .admin-table {
+        .metric-card-official:hover {
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+          border-color: #cbd5e1;
+        }
+        .metric-icon-bubble {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.1rem;
+          flex-shrink: 0;
+        }
+        .metric-icon-bubble.blue { background: #eff6ff; color: #2563eb; }
+        .metric-icon-bubble.green { background: #ecfdf5; color: #059669; }
+        .metric-icon-bubble.red { background: #fef2f2; color: #dc2626; }
+        .metric-icon-bubble.purple { background: #faf5ff; color: #7c3aed; }
+
+        .metric-title {
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-bottom: 0.15rem;
+        }
+        .metric-value {
+          font-size: 1.15rem;
+          font-weight: 700;
+          color: #0f172a;
+          letter-spacing: -0.01em;
+          line-height: 1.2;
+        }
+
+        /* Enterprise Table Card */
+        .table-enterprise-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+          overflow: hidden;
+        }
+
+        /* Filter Toolbar */
+        .table-filter-bar {
+          padding: 0.85rem 1.25rem;
+          background: #ffffff;
+          border-bottom: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+        .search-field-wrapper {
+          position: relative;
+          min-width: 240px;
+          flex: 1;
+          max-width: 320px;
+        }
+        .search-field-icon {
+          position: absolute;
+          left: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          font-size: 0.85rem;
+        }
+        .search-field-input {
+          width: 100%;
+          padding: 0.45rem 2rem 0.45rem 2rem;
+          font-size: 0.8rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          color: #0f172a;
+          outline: none;
+          transition: all 0.2s ease;
+          font-family: inherit;
+          box-sizing: border-box;
+        }
+        .search-field-input:focus {
+          border-color: #4f46e5;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .search-clear-btn {
+          position: absolute;
+          right: 0.6rem;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          font-size: 0.8rem;
+          padding: 2px;
+          display: flex;
+          align-items: center;
+        }
+        .search-clear-btn:hover {
+          color: #334155;
+        }
+
+        .filter-controls-group {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+        .filter-pill {
+          padding: 0.35rem 0.75rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          background: #ffffff;
+          color: #64748b;
+          border: 1px solid transparent;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          font-family: inherit;
+        }
+        .filter-pill:hover {
+          background: #f1f5f9;
+          color: #334155;
+        }
+        .filter-pill.active {
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
+          font-weight: 600;
+        }
+        .filter-pill-badge {
+          font-size: 0.65rem;
+          padding: 0.05rem 0.35rem;
+          border-radius: 999px;
+          background: #e2e8f0;
+          color: #475569;
+        }
+        .filter-pill.active .filter-pill-badge {
+          background: rgba(255, 255, 255, 0.2);
+          color: #ffffff;
+        }
+
+        .filter-select-official {
+          padding: 0.4rem 0.65rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: #f8fafc;
+          font-size: 0.75rem;
+          color: #334155;
+          font-weight: 500;
+          outline: none;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        /* Modern Official Table */
+        .official-table-wrapper {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          width: 100%;
+        }
+        .official-table {
           width: 100%;
           border-collapse: separate;
           border-spacing: 0;
           text-align: left;
         }
-        .admin-table th {
+        .official-table th {
           background: #f8fafc;
-          color: #64748b;
-          font-size: 0.7rem;
+          padding: 0.65rem 1rem;
+          font-size: 0.65rem;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          padding: 0.8rem 1rem;
+          color: #64748b;
           border-bottom: 1px solid #e2e8f0;
           white-space: nowrap;
         }
-        .admin-table td {
-          padding: 1rem;
+        .official-table td {
+          padding: 0.75rem 1rem;
           border-bottom: 1px solid #f1f5f9;
-          color: #1e293b;
-          font-size: 0.85rem;
           vertical-align: middle;
+          background: #ffffff;
+          font-size: 0.8rem;
+          transition: background-color 0.15s ease;
         }
-        .admin-table tr:hover td {
-          background: #f8fafc;
-        }
-        .admin-table tr:last-child td {
+        .official-table tr:last-child td {
           border-bottom: none;
         }
-        .table-product-image {
-          width: 48px;
-          height: 48px;
-          border-radius: 8px;
+        .official-table tr:hover td {
+          background: #f8fafc;
+        }
+
+        .prod-image-cell {
+          width: 44px;
+          height: 44px;
+          border-radius: 6px;
           object-fit: cover;
           border: 1px solid #e2e8f0;
           background: #f8fafc;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.25rem;
+          color: #94a3b8;
+          flex-shrink: 0;
         }
-        .table-category-tag {
+
+        .cat-chip-tag {
           display: inline-block;
-          font-size: 0.65rem;
-          font-weight: 700;
+          font-size: 0.68rem;
+          font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #4f46e5;
-          background: #e0e7ff;
+          letter-spacing: 0.04em;
+          color: #0f172a;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
           border-radius: 4px;
-          padding: 0.2rem 0.5rem;
+          padding: 0.15rem 0.45rem;
         }
-        .table-stock-badge {
-          font-size: 0.65rem;
-          font-weight: 700;
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
-          padding: 0.25rem 0.6rem;
-          border-radius: 20px;
+
+        .stock-badge-pill {
+          font-size: 0.68rem;
+          font-weight: 600;
+          padding: 0.2rem 0.55rem;
+          border-radius: 999px;
           display: inline-flex;
           align-items: center;
           gap: 4px;
         }
-        .table-stock-badge.in-stock {
-          background: #d1fae5;
+        .stock-badge-pill.in {
+          background: #ecfdf5;
           color: #065f46;
+          border: 1px solid #a7f3d0;
         }
-        .table-stock-badge.out-of-stock {
-          background: #fee2e2;
+        .stock-badge-pill.out {
+          background: #fef2f2;
           color: #991b1b;
+          border: 1px solid #fecaca;
         }
         .stock-dot {
           width: 5px;
@@ -437,254 +539,444 @@ const AdminProducts = () => {
           border-radius: 50%;
           background: currentColor;
         }
-        .table-btn-action {
+
+        .btn-table-action {
           display: inline-flex;
           align-items: center;
-          justify-content: center;
-          gap: 0.4rem;
-          border: none;
+          gap: 0.35rem;
           border-radius: 6px;
-          padding: 0.4rem 0.6rem;
+          padding: 0.35rem 0.6rem;
           font-size: 0.75rem;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.15s ease;
+          font-family: inherit;
         }
-        .table-btn-delete {
+        .btn-action-edit {
+          background: #f1f5f9;
+          color: #334155;
+          border: 1px solid #cbd5e1;
+        }
+        .btn-action-edit:hover {
+          background: #e2e8f0;
+          color: #0f172a;
+        }
+        .btn-action-delete {
+          background: #fff5f5;
+          color: #dc2626;
+          border: 1px solid #fecaca;
+        }
+        .btn-action-delete:hover {
           background: #fee2e2;
           color: #b91c1c;
         }
-        .table-btn-delete:hover {
-          background: #f87171;
-          color: white;
+
+        /* Pagination Footer */
+        .table-pagination-footer {
+          padding: 0.75rem 1.25rem;
+          border-top: 1px solid #e2e8f0;
+          background: #ffffff;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0.75rem;
         }
-        .table-btn-edit {
-          background: #e0e7ff;
-          color: #4f46e5;
+        .pagination-meta-info {
+          font-size: 0.75rem;
+          color: #64748b;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
         }
-        .table-btn-edit:hover {
-          background: #6366f1;
-          color: white;
+        .rows-select {
+          padding: 0.15rem 0.4rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          background: #f8fafc;
+          font-size: 0.75rem;
+          color: #334155;
+          cursor: pointer;
+          outline: none;
+          font-family: inherit;
+        }
+        .pagination-controls-row {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+        }
+        .pagination-nav-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .pagination-nav-btn:hover:not(:disabled) {
+          background: #f1f5f9;
+          color: #0f172a;
+          border-color: #cbd5e1;
+        }
+        .pagination-nav-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .page-pill-btn {
+          min-width: 32px;
+          height: 32px;
+          padding: 0 0.5rem;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          border: 1px solid transparent;
+          background: transparent;
+          color: #475569;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+        }
+        .page-pill-btn:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+        }
+        .page-pill-btn.active {
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
+        }
+
+        /* Slide-over Drawer (Add/Edit) */
+        .drawer-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(15, 23, 42, 0.4);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          z-index: 1000;
+          display: flex;
+          justify-content: flex-end;
+        }
+        .drawer-panel {
+          background: #ffffff;
+          width: 100%;
+          max-width: 600px;
+          height: 100vh;
+          overflow-y: auto;
+          box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+          animation: drawerSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          display: flex;
+          flex-direction: column;
+        }
+        @keyframes drawerSlide {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        .drawer-header {
+          padding: 1.25rem 1.5rem;
+          border-bottom: 1px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #ffffff;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+        }
+        .drawer-header h3 {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+        .drawer-header p {
+          font-size: 0.75rem;
+          color: #64748b;
+          margin: 0.15rem 0 0 0;
+        }
+        .drawer-close-btn {
+          background: #f1f5f9;
+          border: none;
+          font-size: 1.1rem;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #64748b;
+          transition: all 0.15s ease;
+        }
+        .drawer-close-btn:hover {
+          background: #e2e8f0;
+          color: #0f172a;
+        }
+        .drawer-body {
+          padding: 1.5rem;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+        .drawer-footer {
+          padding: 1rem 1.5rem;
+          border-top: 1px solid #e2e8f0;
+          background: #f8fafc;
+          position: sticky;
+          bottom: 0;
+          display: flex;
+          justify-content: flex-end;
+          gap: 0.75rem;
+          z-index: 10;
+        }
+        .drawer-btn-cancel {
+          padding: 0.45rem 1rem;
+          background: #ffffff;
+          color: #475569;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          font-family: inherit;
+        }
+        .drawer-btn-submit {
+          padding: 0.45rem 1.2rem;
+          background: #4f46e5;
+          color: #ffffff;
+          border: 1px solid #4f46e5;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          font-family: inherit;
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+        }
+        .drawer-btn-submit:hover:not(:disabled) {
+          background: #4338ca;
+          border-color: #4338ca;
+        }
+        .drawer-btn-submit:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .drawer-field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+        }
+        .drawer-field-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #334155;
+        }
+        .drawer-field-input {
+          width: 100%;
+          padding: 0.5rem 0.75rem;
+          font-size: 0.8rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          color: #0f172a;
+          outline: none;
+          font-family: inherit;
+          box-sizing: border-box;
+          transition: all 0.2s ease;
+        }
+        .drawer-field-input:focus {
+          border-color: #4f46e5;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .aspect-ratio-notice {
+          padding: 0.5rem 0.75rem;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          border-radius: 8px;
+          font-size: 0.72rem;
+          color: #1e40af;
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          line-height: 1.4;
+          margin-top: 0.35rem;
         }
       `}</style>
 
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem', marginTop: '0.5rem', position: 'relative', zIndex: 1 }}>
-        <div>
-          <h2 style={{ fontSize: '1.8rem', color: '#0f172a', margin: '0 0 0.25rem 0', fontWeight: '800', letterSpacing: '-0.5px' }}>Product Catalog</h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Manage your inventory, pricing, and live listings</p>
-        </div>
-        <button className="glass-btn" onClick={() => { resetForm(); setShowAddForm(true); }}>
-          <FiPlus style={{ fontSize: '1.15rem' }} /> Add Product
-        </button>
-      </div>
-
-      {showAddForm && (
-        <div className="side-panel-overlay" onClick={resetForm}>
-          <div className="side-panel" onClick={e => e.stopPropagation()}>
-            <div className="side-panel-header">
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.1)', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {editingId ? <FiEdit2 size={20} style={{ strokeWidth: '3px' }} /> : <FiPlus size={20} style={{ strokeWidth: '3px' }} />}
-                </div>
-                <div>
-                  <h3 style={{ margin: '0 0 0.3rem 0', fontSize: '1.25rem', color: '#0f172a', fontWeight: '800', letterSpacing: '-0.02em' }}>
-                    {editingId ? 'Edit Product' : 'Add New Product'}
-                  </h3>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
-                    {editingId ? 'Update details for this product' : 'Fill in the details to add a product to your catalog'}
-                  </p>
-                </div>
-              </div>
-              <button className="panel-close-btn" onClick={resetForm}>&times;</button>
-            </div>
-            
-            <div className="side-panel-body">
-              <form id="add-product-form" onSubmit={handleSubmit} className="admin-form">
-                
-                <div className="panel-card">
-                  <div className="admin-form-grid">
-                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                      <label style={{ fontWeight: '600', color: '#475569' }}>Product Name</label>
-                      <input type="text" className="glass-input" value={name} onChange={e => {
-                        setName(e.target.value);
-                        setSlug(e.target.value.toLowerCase().replace(/ /g, '-'));
-                      }} required />
-                    </div>
-                    
-                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                      <label style={{ fontWeight: '600', color: '#475569' }}>Slug</label>
-                      <input type="text" className="glass-input" value={slug} onChange={e => setSlug(e.target.value)} required />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="panel-card">
-                  <h4 className="panel-card-title">Pricing</h4>
-                  <div className="admin-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                    <div className="form-group">
-                      <label style={{ fontWeight: '600', color: '#475569' }}>MRP / Original Price (₹)</label>
-                      <input type="number" min="0" className="glass-input" placeholder="e.g. 79999" value={originalPrice} onChange={e => setOriginalPrice(e.target.value)} />
-                      <small style={{ color: '#94a3b8' }}>Optional: standard retail price</small>
-                    </div>
-
-                    <div className="form-group">
-                      <label style={{ fontWeight: '600', color: '#475569' }}>Selling Price (₹) *</label>
-                      <input type="number" min="0" className="glass-input" placeholder="e.g. 69999" value={price} onChange={e => setPrice(e.target.value)} required />
-                      <small style={{ color: '#94a3b8' }}>
-                        {originalPrice && Number(originalPrice) > Number(price) ? (
-                          <span style={{ color: '#16a34a', fontWeight: '700' }}>
-                            🎉 {Math.round(((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100)}% OFF
-                          </span>
-                        ) : 'Price customers pay'}
-                      </small>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="panel-card">
-                  <h4 className="panel-card-title">Inventory & Category</h4>
-                  <div className="admin-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                    <div className="form-group">
-                      <label style={{ fontWeight: '600', color: '#475569' }}>Stock Quantity *</label>
-                      <input type="number" min="0" className="glass-input" placeholder="e.g. 50" value={stock} onChange={e => setStock(e.target.value)} required />
-                    </div>
-
-                    <div className="form-group">
-                      <label style={{ fontWeight: '600', color: '#475569' }}>Category *</label>
-                      <select className="glass-input" value={category} onChange={e => setCategory(e.target.value)} required>
-                        <option value="">Select a Category</option>
-                        {categories.map(c => (
-                          <option key={c._id} value={c._id}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="panel-card">
-                  <h4 className="panel-card-title">Tags & Badges</h4>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ fontWeight: '600', color: '#475569', display: 'block', marginBottom: '0.5rem' }}>Select Tags</label>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {['Deal of the Day', 'Trending', 'Top Seller', 'Limited'].map(tag => (
-                        <label key={tag} style={{ 
-                          padding: '0.5rem 1rem', 
-                          background: tags.includes(tag) ? '#4f46e5' : '#f1f5f9', 
-                          color: tags.includes(tag) ? 'white' : '#475569',
-                          borderRadius: '20px', 
-                          fontSize: '0.85rem', 
-                          fontWeight: 600, 
-                          cursor: 'pointer',
-                          border: `1px solid ${tags.includes(tag) ? '#4f46e5' : '#e2e8f0'}`,
-                          transition: 'all 0.2s'
-                        }}>
-                          <input 
-                            type="checkbox" 
-                            style={{ display: 'none' }}
-                            checked={tags.includes(tag)}
-                            onChange={(e) => {
-                              if (e.target.checked) setTags([...tags, tag]);
-                              else setTags(tags.filter(t => t !== tag));
-                            }}
-                          />
-                          {tag}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="panel-card">
-                  <h4 className="panel-card-title">Description</h4>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <textarea className="glass-input" rows="4" placeholder="Product description..." value={description} onChange={e => setDescription(e.target.value)}></textarea>
-                  </div>
-                </div>
-
-                <div className="panel-card">
-                  <h4 className="panel-card-title">Images</h4>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <input type="file" className="glass-input" style={{ padding: '0.6rem' }} multiple accept="image/*" onChange={e => setImages(e.target.files)} />
-                    <small style={{ color: '#64748b', display: 'block', marginTop: '0.5rem' }}>Select one or more images (Cloudinary)</small>
-                  </div>
-                </div>
-
-              </form>
-            </div>
-
-            <div className="side-panel-footer">
-              <button type="button" className="glass-btn outline" onClick={resetForm}>
-                Cancel
-              </button>
-              <button type="submit" form="add-product-form" className="glass-btn" disabled={loading}>
-                {loading ? 'Saving...' : (editingId ? '✓ Save Changes' : '✓ Add Product')}
-              </button>
-            </div>
+      {/* Header section */}
+      <div className="header-section">
+        <div className="page-title-row">
+          <div className="page-title-group">
+            <h2>Product Catalog</h2>
+            <p>Manage product inventory, pricing tiers, descriptions, and storefront visibility.</p>
+          </div>
+          <div className="header-actions-group">
+            <button 
+              className="refresh-btn" 
+              onClick={() => fetchProducts(true)} 
+              disabled={refreshing}
+              title="Refresh product list"
+            >
+              <FiRefreshCw className={refreshing ? 'spin' : ''} />
+              <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+            <button 
+              className="add-product-btn-official" 
+              onClick={() => { resetForm(); setShowAddForm(true); }}
+            >
+              <FiPlus />
+              <span>Add Product</span>
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
-      <div className="filter-bar">
-        <div className="filter-group">
-          <input 
-            type="text" 
-            placeholder="Search products by name..." 
-            className="filter-input"
-            value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-          />
-          <select 
-            className="filter-input" 
-            style={{ maxWidth: '200px' }}
-            value={filterCategory}
-            onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="">All Categories</option>
-            {categories.map(c => (
-              <option key={c._id} value={c._id}>{c.name}</option>
-            ))}
-          </select>
+      {/* KPI Summary Cards */}
+      <div className="metrics-grid-official">
+        <div className="metric-card-official">
+          <div className="metric-icon-bubble blue">
+            <FiPackage />
+          </div>
+          <div>
+            <div className="metric-title">Total Products</div>
+            <div className="metric-value">{metrics.total}</div>
+          </div>
         </div>
-        <div style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>
-          Showing {filteredProducts.length} product(s)
+        <div className="metric-card-official">
+          <div className="metric-icon-bubble green">
+            <FiCheckCircle />
+          </div>
+          <div>
+            <div className="metric-title">In Stock</div>
+            <div className="metric-value">{metrics.inStock}</div>
+          </div>
+        </div>
+        <div className="metric-card-official">
+          <div className="metric-icon-bubble red">
+            <FiAlertCircle />
+          </div>
+          <div>
+            <div className="metric-title">Out of Stock</div>
+            <div className="metric-value">{metrics.outOfStock}</div>
+          </div>
+        </div>
+        <div className="metric-card-official">
+          <div className="metric-icon-bubble purple">
+            <FiFolder />
+          </div>
+          <div>
+            <div className="metric-title">Categories</div>
+            <div className="metric-value">{metrics.totalCats}</div>
+          </div>
         </div>
       </div>
 
-      <div className="table-card">
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
+      {/* Enterprise Products Table Card */}
+      <div className="table-enterprise-card">
+        {/* Table Filters Toolbar */}
+        <div className="table-filter-bar">
+          <div className="search-field-wrapper">
+            <FiSearch className="search-field-icon" />
+            <input 
+              type="text" 
+              placeholder="Search products by title..." 
+              className="search-field-input"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            />
+            {searchTerm && (
+              <button className="search-clear-btn" onClick={() => setSearchTerm('')}>
+                <FiX />
+              </button>
+            )}
+          </div>
+
+          <div className="filter-controls-group">
+            <button 
+              className={`filter-pill ${stockFilter === 'All' ? 'active' : ''}`}
+              onClick={() => { setStockFilter('All'); setCurrentPage(1); }}
+            >
+              All <span className="filter-pill-badge">{products.length}</span>
+            </button>
+            <button 
+              className={`filter-pill ${stockFilter === 'InStock' ? 'active' : ''}`}
+              onClick={() => { setStockFilter('InStock'); setCurrentPage(1); }}
+            >
+              In Stock <span className="filter-pill-badge">{metrics.inStock}</span>
+            </button>
+            <button 
+              className={`filter-pill ${stockFilter === 'OutOfStock' ? 'active' : ''}`}
+              onClick={() => { setStockFilter('OutOfStock'); setCurrentPage(1); }}
+            >
+              Out of Stock <span className="filter-pill-badge">{metrics.outOfStock}</span>
+            </button>
+
+            <select 
+              className="filter-select-official" 
+              value={filterCategory}
+              onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="">All Categories</option>
+              {categories.map(c => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Table Content */}
+        <div className="official-table-wrapper">
+          <table className="official-table">
             <thead>
               <tr>
                 <th>Product</th>
                 <th>Category</th>
                 <th>MRP (₹)</th>
                 <th>Selling Price (₹)</th>
-                <th>Stock</th>
-                <th>Actions</th>
+                <th>Stock Units</th>
+                <th style={{ textAlign: 'right', width: '130px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {currentProducts.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ padding: '4rem', textAlign: 'center' }}>
-                    <p style={{ color: '#475569', fontSize: '1.1rem', margin: 0, fontWeight: '500' }}>No products match your criteria.</p>
+                  <td colSpan="6" style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📦</div>
+                    <p style={{ margin: 0, fontWeight: '600', fontSize: '0.9rem', color: '#334155' }}>No products match your criteria</p>
+                    <small style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Try clearing your search keyword or changing the category filter</small>
                   </td>
                 </tr>
               ) : (
                 currentProducts.map(prod => (
                   <tr key={prod._id}>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         {prod.images && prod.images.length > 0 ? (
-                          <img src={prod.images[0]} alt={prod.name} className="table-product-image" />
+                          <img src={prod.images[0]} alt={prod.name} className="prod-image-cell" />
                         ) : (
-                          <div className="table-product-image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', color: '#cbd5e1' }}>📦</div>
+                          <div className="prod-image-cell">📦</div>
                         )}
                         <div>
-                          <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '0.2rem' }}>{prod.name}</div>
+                          <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.82rem', marginBottom: '0.15rem' }}>
+                            {prod.name}
+                          </div>
                           {prod.originalPrice && prod.originalPrice > prod.price && (
-                            <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: '700' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#16a34a', fontWeight: 700 }}>
                               {Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}% OFF
                             </div>
                           )}
@@ -692,39 +984,39 @@ const AdminProducts = () => {
                       </div>
                     </td>
                     <td>
-                      <span className="table-category-tag">
+                      <span className="cat-chip-tag">
                         {prod.category?.name || 'General'}
                       </span>
                     </td>
                     <td>
                       {prod.originalPrice ? (
-                        <span style={{ color: '#94a3b8', textDecoration: 'line-through', fontWeight: '500' }}>
-                          {prod.originalPrice.toLocaleString('en-IN')}
+                        <span style={{ color: '#94a3b8', textDecoration: 'line-through', fontWeight: 500, fontSize: '0.78rem' }}>
+                          ₹{prod.originalPrice.toLocaleString('en-IN')}
                         </span>
                       ) : '-'}
                     </td>
                     <td>
-                      <span style={{ fontWeight: '700', color: '#0f172a' }}>
-                        {prod.price?.toLocaleString('en-IN')}
+                      <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>
+                        ₹{prod.price?.toLocaleString('en-IN')}
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', alignItems: 'flex-start' }}>
-                        <span className={`table-stock-badge ${prod.stock > 0 ? 'in-stock' : 'out-of-stock'}`}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'flex-start' }}>
+                        <span className={`stock-badge-pill ${prod.stock > 0 ? 'in' : 'out'}`}>
                           <span className="stock-dot"></span>
                           {prod.stock > 0 ? 'IN STOCK' : 'OUT OF STOCK'}
                         </span>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>
-                          {prod.stock} units
+                        <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>
+                          {prod.stock || 0} units
                         </span>
                       </div>
                     </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={() => handleEdit(prod)} className="table-btn-action table-btn-edit">
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+                        <button onClick={() => handleEdit(prod)} className="btn-table-action btn-action-edit">
                           <FiEdit2 /> Edit
                         </button>
-                        <button onClick={() => handleDelete(prod._id)} className="table-btn-action table-btn-delete">
+                        <button onClick={() => handleDelete(prod._id)} className="btn-table-action btn-action-delete">
                           <FiTrash2 /> Delete
                         </button>
                       </div>
@@ -735,37 +1027,201 @@ const AdminProducts = () => {
             </tbody>
           </table>
         </div>
-      </div>
 
-        {totalPages > 1 && (
-          <div className="pagination">
+        {/* Table Pagination Footer */}
+        <div className="table-pagination-footer">
+          <div className="pagination-meta-info">
+            <span>
+              Showing {filteredProducts.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length} products
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span>Rows per page:</span>
+              <select 
+                className="rows-select" 
+                value={itemsPerPage} 
+                onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+              >
+                <option value={8}>8</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="pagination-controls-row">
             <button 
-              className="page-btn" 
+              className="pagination-nav-btn" 
               disabled={currentPage === 1} 
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              title="Previous page"
             >
-              &lt;
+              <FiChevronLeft />
             </button>
             
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button 
-                key={page} 
-                className={`page-btn ${currentPage === page ? 'active' : ''}`}
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </button>
-            ))}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+              .map((page, idx, arr) => {
+                const prev = arr[idx - 1];
+                return (
+                  <React.Fragment key={page}>
+                    {prev && page - prev > 1 && (
+                      <span style={{ padding: '0 0.25rem', color: '#94a3b8', fontSize: '0.8rem' }}>…</span>
+                    )}
+                    <button 
+                      className={`page-pill-btn ${currentPage === page ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
 
             <button 
-              className="page-btn" 
+              className="pagination-nav-btn" 
               disabled={currentPage === totalPages} 
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              title="Next page"
             >
-              &gt;
+              <FiChevronRight />
             </button>
           </div>
-        )}
+        </div>
+      </div>
+
+      {/* Side-over Drawer Modal for Add/Edit Product */}
+      {showAddForm && (
+        <div className="drawer-overlay" onClick={resetForm}>
+          <div className="drawer-panel" onClick={e => e.stopPropagation()}>
+            <div className="drawer-header">
+              <div>
+                <h3>{editingId ? 'Edit Product' : 'Add New Product'}</h3>
+                <p>{editingId ? 'Update product specifications and pricing' : 'Create a new catalog item'}</p>
+              </div>
+              <button className="drawer-close-btn" onClick={resetForm}>
+                <FiX />
+              </button>
+            </div>
+
+            <form id="product-form-official" onSubmit={handleSubmit} className="drawer-body">
+              <div className="drawer-field-group">
+                <label className="drawer-field-label">Product Name *</label>
+                <input 
+                  type="text" 
+                  className="drawer-field-input" 
+                  value={name} 
+                  onChange={e => {
+                    setName(e.target.value);
+                    setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
+                  }} 
+                  placeholder="e.g. 55-inch 4K OLED Smart TV" 
+                  required 
+                />
+              </div>
+
+              <div className="drawer-field-group">
+                <label className="drawer-field-label">Slug Identifier *</label>
+                <input 
+                  type="text" 
+                  className="drawer-field-input" 
+                  value={slug} 
+                  onChange={e => setSlug(e.target.value)} 
+                  placeholder="e.g. 55-inch-4k-oled-smart-tv" 
+                  required 
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="drawer-field-group">
+                  <label className="drawer-field-label">Selling Price (₹) *</label>
+                  <input 
+                    type="number" 
+                    className="drawer-field-input" 
+                    value={price} 
+                    onChange={e => setPrice(e.target.value)} 
+                    placeholder="e.g. 45000" 
+                    required 
+                  />
+                </div>
+                <div className="drawer-field-group">
+                  <label className="drawer-field-label">MRP / Original Price (₹)</label>
+                  <input 
+                    type="number" 
+                    className="drawer-field-input" 
+                    value={originalPrice} 
+                    onChange={e => setOriginalPrice(e.target.value)} 
+                    placeholder="e.g. 59990" 
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="drawer-field-group">
+                  <label className="drawer-field-label">Stock Quantity *</label>
+                  <input 
+                    type="number" 
+                    className="drawer-field-input" 
+                    value={stock} 
+                    onChange={e => setStock(e.target.value)} 
+                    placeholder="e.g. 25" 
+                    required 
+                  />
+                </div>
+                <div className="drawer-field-group">
+                  <label className="drawer-field-label">Category *</label>
+                  <select 
+                    className="drawer-field-input" 
+                    value={category} 
+                    onChange={e => setCategory(e.target.value)} 
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(c => (
+                      <option key={c._id} value={c._id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="drawer-field-group">
+                <label className="drawer-field-label">Product Description</label>
+                <textarea 
+                  className="drawer-field-input" 
+                  rows={3} 
+                  value={description} 
+                  onChange={e => setDescription(e.target.value)} 
+                  placeholder="Provide detailed specifications, features, and warranty details..."
+                />
+              </div>
+
+              <div className="drawer-field-group">
+                <label className="drawer-field-label">Product Images (Cloudinary)</label>
+                <input 
+                  type="file" 
+                  className="drawer-field-input" 
+                  multiple 
+                  onChange={e => setImages(e.target.files)} 
+                  accept="image/*"
+                />
+                <div className="aspect-ratio-notice">
+                  <FiInfo style={{ fontSize: '0.95rem', flexShrink: 0, marginTop: '2px' }} />
+                  <span><strong>Recommended Ratio:</strong> 1:1 (Square, e.g. 800×800 px or 1000×1000 px) with clean white or transparent background for catalog cards.</span>
+                </div>
+              </div>
+            </form>
+
+            <div className="drawer-footer">
+              <button type="button" className="drawer-btn-cancel" onClick={resetForm}>
+                Cancel
+              </button>
+              <button type="submit" form="product-form-official" className="drawer-btn-submit" disabled={loading}>
+                {loading ? 'Saving...' : (editingId ? 'Save Changes' : 'Publish Product')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

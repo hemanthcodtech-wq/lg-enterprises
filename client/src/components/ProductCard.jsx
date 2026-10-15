@@ -25,8 +25,11 @@ const ProductCard = ({ product, isLoading }) => {
     );
   }
 
+  const isOutOfStock = product.stock !== undefined && product.stock <= 0;
+
   const handleAdd = (e) => {
     e.stopPropagation();
+    if (isOutOfStock) return;
     if (!user) {
       navigate('/login');
       return;
@@ -48,14 +51,18 @@ const ProductCard = ({ product, isLoading }) => {
   return (
     <div className="product-card" onClick={() => navigate(`/product/${product.id}`)}>
       <div className="pcard-img">
-        {product.discount && <span className="pcard-badge">{product.discount}% OFF</span>}
+        {isOutOfStock ? (
+          <span className="pcard-badge" style={{ background: '#ef4444', color: 'white' }}>OUT OF STOCK</span>
+        ) : product.discount ? (
+          <span className="pcard-badge">{product.discount}% OFF</span>
+        ) : null}
         <button className="pcard-wish" onClick={handleWishlist} style={{ color: inWishlist ? '#ef4444' : 'var(--text-gray)', fill: inWishlist ? '#ef4444' : 'none' }}>
           <FiHeart style={{ fill: inWishlist ? '#ef4444' : 'none' }} />
         </button>
         <img
           src={product.image}
           alt={product.title}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', transition: 'transform 0.4s ease' }}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', transition: 'transform 0.4s ease', filter: isOutOfStock ? 'grayscale(0.6)' : 'none' }}
           className="pcard-img-el"
           onError={e => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/300x200?text=Product'; }}
         />
@@ -73,8 +80,13 @@ const ProductCard = ({ product, isLoading }) => {
           {product.oldPrice && <span className="pcard-price-old">₹{product.oldPrice}</span>}
         </div>
         
-        <button className="pcard-btn" onClick={handleAdd}>
-          <FiShoppingCart /> Add to Cart
+        <button 
+          className="pcard-btn" 
+          onClick={handleAdd}
+          disabled={isOutOfStock}
+          style={isOutOfStock ? { background: '#94a3b8', cursor: 'not-allowed', opacity: 0.75 } : {}}
+        >
+          <FiShoppingCart /> {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
         </button>
       </div>
     </div>

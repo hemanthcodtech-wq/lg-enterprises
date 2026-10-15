@@ -6,15 +6,9 @@ import { FiTrash2, FiMinus, FiPlus, FiArrowLeft, FiShoppingBag, FiLock, FiChevro
 import axios from 'axios';
 import toast from 'react-hot-toast';
 const Cart = () => {
-  const { cart, addToCart, removeFromCart, clearCart } = useCart();
+  const { cart, addToCart, updateQty, removeFromCart, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
-
-  const handleDecrease = (item) => {
-    if (item.qty > 1) {
-      // Logic for decrease...
-    }
-  };
 
   // Helper to parse string prices like "34,999"
   const getPrice = (price) => Number(price.toString().replace(/,/g, ''));
@@ -189,11 +183,36 @@ const Cart = () => {
                   <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>₹{item.price}</div>
                 </div>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
-                    <span style={{ padding: '0.4rem 1rem', borderRight: '1px solid var(--border)', fontWeight: 600 }}>Qty: {item.qty}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                      <button 
+                        onClick={() => updateQty(item.id, item.qty - 1)} 
+                        style={{ padding: '0.3rem 0.7rem', background: 'var(--bg-page)', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                        title="Decrease quantity"
+                      >-</button>
+                      <span style={{ padding: '0.3rem 0.8rem', fontWeight: 600, fontSize: '0.9rem', minWidth: '32px', textAlign: 'center' }}>{item.qty}</span>
+                      <button 
+                        onClick={() => updateQty(item.id, item.qty + 1)} 
+                        disabled={item.stock !== undefined && item.qty >= item.stock}
+                        style={{ 
+                          padding: '0.3rem 0.7rem', 
+                          background: 'var(--bg-page)', 
+                          fontWeight: 700, 
+                          border: 'none', 
+                          cursor: (item.stock !== undefined && item.qty >= item.stock) ? 'not-allowed' : 'pointer',
+                          opacity: (item.stock !== undefined && item.qty >= item.stock) ? 0.4 : 1
+                        }}
+                        title={item.stock !== undefined && item.qty >= item.stock ? `Only ${item.stock} in stock` : "Increase quantity"}
+                      >+</button>
+                    </div>
+                    {item.stock !== undefined && item.stock <= 5 && (
+                      <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
+                        (Max {item.stock})
+                      </span>
+                    )}
                   </div>
-                  <button onClick={() => removeFromCart(item.id)} style={{ color: '#d32f2f', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.9rem', fontWeight: 600, background: 'none' }}>
+                  <button onClick={() => removeFromCart(item.id)} style={{ color: '#d32f2f', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.9rem', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
                     <FiTrash2 /> Remove
                   </button>
                 </div>
@@ -242,44 +261,64 @@ const Cart = () => {
                 {showPromos ? <FiChevronUp color="#64748b" /> : <FiChevronDown color="#64748b" />}
               </div>
 
-              {showPromos && activePromos.map(promo => (
-                <div 
-                  key={promo._id} 
-                  onClick={() => {
-                    setPromoCode(promo.code);
-                    setShowPromos(false);
-                    toast.success(`Code ${promo.code} applied! Click Apply button.`);
-                  }}
-                  style={{ 
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: '#fafafa', 
-                    border: '1px solid #eaeaea', 
-                    padding: '0.8rem 1rem', 
-                    borderRadius: '8px', 
-                    cursor: 'pointer', 
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.borderColor = '#4f46e5';
-                    e.currentTarget.style.background = '#f5f7ff';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.borderColor = '#eaeaea';
-                    e.currentTarget.style.background = '#fafafa';
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600, color: '#111', fontSize: '0.95rem', letterSpacing: '0.5px' }}>{promo.code}</div>
-                    <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
-                      Save {promo.discountType === 'percentage' ? `${promo.discountValue}%` : `₹${promo.discountValue}`}
+              {showPromos && activePromos.map(promo => {
+                const isEligible = !promo.minOrderAmount || totalAmount >= promo.minOrderAmount;
+                const shortFall = promo.minOrderAmount ? Math.max(0, promo.minOrderAmount - totalAmount) : 0;
+                return (
+                  <div 
+                    key={promo._id} 
+                    onClick={() => {
+                      setPromoCode(promo.code);
+                      setShowPromos(false);
+                      if (!isEligible) {
+                        toast.error(`Cart total is ₹${totalAmount}. Add ₹${shortFall} more to unlock code ${promo.code} (Min order: ₹${promo.minOrderAmount})`);
+                      } else {
+                        toast.success(`Code ${promo.code} selected! Click Apply to calculate discount.`);
+                      }
+                    }}
+                    style={{ 
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: isEligible ? '#fafafa' : '#fff7ed', 
+                      border: `1px solid ${isEligible ? '#eaeaea' : '#fed7aa'}`, 
+                      padding: '0.8rem 1rem', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer', 
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.borderColor = '#4f46e5';
+                      e.currentTarget.style.background = '#f5f7ff';
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.borderColor = isEligible ? '#eaeaea' : '#fed7aa';
+                      e.currentTarget.style.background = isEligible ? '#fafafa' : '#fff7ed';
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, color: '#111', fontSize: '0.95rem', letterSpacing: '0.5px' }}>{promo.code}</span>
+                        {promo.minOrderAmount > 0 && (
+                          <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: isEligible ? '#e0e7ff' : '#ffedd5', color: isEligible ? '#4338ca' : '#c2410c' }}>
+                            Min. ₹{promo.minOrderAmount}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '3px' }}>
+                        Save {promo.discountType === 'percentage' ? `${promo.discountValue}%` : `₹${promo.discountValue}`}
+                        {!isEligible && (
+                          <span style={{ color: '#ea580c', display: 'block', fontSize: '0.75rem', fontWeight: 600, marginTop: '2px' }}>
+                            ⚠️ Add ₹{shortFall} more to qualify
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div style={{ color: isEligible ? '#4f46e5' : '#ea580c', fontSize: '0.85rem', fontWeight: 700 }}>
+                      {isEligible ? 'Apply' : 'Unlock'}
                     </div>
                   </div>
-                  
-                  <div style={{ color: '#4f46e5', fontSize: '0.85rem', fontWeight: 600 }}>
-                    Apply
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {activePromos.length === 0 && <div style={{ marginBottom: '1.5rem' }}></div>}

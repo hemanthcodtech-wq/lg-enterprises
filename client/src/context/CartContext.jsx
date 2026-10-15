@@ -21,11 +21,28 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('lg_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
-  const addToCart = (product) => {
+  const addToCart = (product, quantity = 1) => {
     setCart(prev => {
       const exists = prev.find(i => i.id === product.id);
-      if (exists) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { ...product, qty: 1 }];
+      const maxStock = product.stock !== undefined ? product.stock : 9999;
+      if (maxStock <= 0) return prev;
+      
+      if (exists) {
+        const newQty = Math.min(maxStock, exists.qty + quantity);
+        return prev.map(i => i.id === product.id ? { ...i, qty: newQty, stock: product.stock ?? i.stock } : i);
+      }
+      return [...prev, { ...product, qty: Math.min(maxStock, quantity) }];
+    });
+  };
+
+  const updateQty = (id, newQty) => {
+    setCart(prev => {
+      if (newQty <= 0) return prev.filter(i => i.id !== id);
+      return prev.map(i => {
+        if (i.id !== id) return i;
+        const maxStock = i.stock !== undefined ? i.stock : 9999;
+        return { ...i, qty: Math.min(maxStock, newQty) };
+      });
     });
   };
 
@@ -44,7 +61,7 @@ export const CartProvider = ({ children }) => {
   const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, clearWishlist, cartCount, wishlist, toggleWishlist }}>
+    <CartContext.Provider value={{ cart, addToCart, updateQty, removeFromCart, clearCart, clearWishlist, cartCount, wishlist, toggleWishlist }}>
       {children}
     </CartContext.Provider>
   );

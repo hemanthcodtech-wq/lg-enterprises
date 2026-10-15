@@ -46,9 +46,30 @@ router.post('/', authUser, async (req, res) => {
       return res.status(400).json({ error: 'Shipping address is required' });
     }
 
+    // Verify product stock availability first before placing order
+    for (const item of items) {
+      const pId = item.product?._id || item.product;
+      if (pId) {
+        const prod = await Product.findById(pId);
+        if (!prod) {
+          return res.status(404).json({ error: 'One or more products were not found in the catalog' });
+        }
+        if (prod.stock < item.quantity) {
+          return res.status(400).json({
+            error: `Insufficient stock for "${prod.name}". Only ${prod.stock} unit(s) remaining.`
+          });
+        }
+      }
+    }
+
     if (promoId) {
       const promo = await Promo.findById(promoId);
       if (promo) {
+        if (promo.minOrderAmount && promo.minOrderAmount > 0 && totalAmount < promo.minOrderAmount) {
+          return res.status(400).json({
+            error: `Minimum order amount of ₹${promo.minOrderAmount} required for this promo code`
+          });
+        }
         promo.currentUses += 1;
         await promo.save();
       }
@@ -85,10 +106,15 @@ router.post('/', authUser, async (req, res) => {
 
     // Deduct stock for each item in the order
     for (const item of items) {
-      if (item.product) {
-        await Product.findByIdAndUpdate(item.product, {
+      const pId = item.product?._id || item.product;
+      if (pId) {
+        const updatedProd = await Product.findByIdAndUpdate(pId, {
           $inc: { stock: -item.quantity }
-        });
+        }, { new: true });
+        if (updatedProd && updatedProd.stock < 0) {
+          updatedProd.stock = 0;
+          await updatedProd.save();
+        }
       }
     }
 
@@ -203,6 +229,12 @@ router.post('/validate-promo', authUser, async (req, res) => {
       return res.status(400).json({ error: 'Promo code usage limit reached' });
     }
 
+    if (promo.minOrderAmount && promo.minOrderAmount > 0 && Number(cartTotal) < promo.minOrderAmount) {
+      return res.status(400).json({ 
+        error: `Minimum order amount of ₹${promo.minOrderAmount} required for code ${promo.code}. (Your current total is ₹${cartTotal})` 
+      });
+    }
+
     let discount = 0;
     if (promo.discountType === 'percentage') {
       discount = (cartTotal * promo.discountValue) / 100;
@@ -219,6 +251,7 @@ router.post('/validate-promo', authUser, async (req, res) => {
       discount, 
       promoId: promo._id,
       code: promo.code,
+      minOrderAmount: promo.minOrderAmount || 0,
       message: 'Promo code applied successfully' 
     });
   } catch (err) {
@@ -257,6 +290,14 @@ router.put('/:id/status', authUser, async (req, res) => {
         return res.status(400).json({ error: 'Order cannot be cancelled at this stage' });
       }
       order.status = 'Cancelled';
+
+      // Restore stock when order is cancelled
+      for (const item of order.items) {
+        const pId = item.product?._id || item.product;
+        if (pId) {
+          await Product.findByIdAndUpdate(pId, { $inc: { stock: item.quantity } });
+        }
+      }
     } else if (action === 'return') {
       if (order.status !== 'Delivered') {
         return res.status(400).json({ error: 'Only delivered orders can be returned' });

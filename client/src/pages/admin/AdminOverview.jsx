@@ -227,16 +227,16 @@ const AdminOverview = () => {
           display: inline-flex;
           align-items: center;
           gap: 0.4rem;
-          background: #0f172a;
+          background: #4f46e5;
           color: #ffffff;
-          border: none;
+          border: 1px solid #4f46e5;
           border-radius: 8px;
           padding: 0.45rem 0.8rem;
           font-size: 0.8rem;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: 0 2px 4px rgba(15, 23, 42, 0.1);
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
         }
         .btn-refresh-stats:hover:not(:disabled) {
           background: #4338ca;
@@ -418,9 +418,9 @@ const AdminOverview = () => {
           color: #0f172a;
         }
         .page-pill-btn.active {
-          background: #0f172a;
+          background: #4f46e5;
           color: #ffffff;
-          border-color: #0f172a;
+          border-color: #4f46e5;
         }
       `}</style>
 

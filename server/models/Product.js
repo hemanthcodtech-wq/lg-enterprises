@@ -21,7 +21,8 @@ const ProductSchema = new mongoose.Schema({
   tags: [{ type: String }], // Array to store tags like 'Deal of the Day', 'Trending Now', etc.
   reviews: [ReviewSchema],
   rating: { type: Number, default: 0 },
-  numReviews: { type: Number, default: 0 }
+  numReviews: { type: Number, default: 0 },
+  views: { type: Number, default: 0 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Product', ProductSchema);

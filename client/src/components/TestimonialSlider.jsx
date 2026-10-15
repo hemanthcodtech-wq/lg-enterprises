@@ -456,18 +456,18 @@ const TestimonialSlider = () => {
       `}</style>
       
       <div className="testimonial-header">
-        <span className="testimonial-badge">Testimonials</span>
-        <h2>Customer Experiences</h2>
-        <p>Real stories and reviews from our valued clients</p>
+        <span className="testimonial-badge">Customer Feedbacks</span>
+        <h2>What Our Customers Say</h2>
+        <p>Real feedback and experiences from our valued customers</p>
       </div>
       
       <div className="testimonial-slider-container">
         {displayList.length > 1 && (
           <div className="slider-controls-3d">
-            <button className="slider-btn-3d" onClick={prev} aria-label="Previous testimonial">
+            <button className="slider-btn-3d" onClick={prev} aria-label="Previous feedback">
               <FiChevronLeft size={24} />
             </button>
-            <button className="slider-btn-3d" onClick={next} aria-label="Next testimonial">
+            <button className="slider-btn-3d" onClick={next} aria-label="Next feedback">
               <FiChevronRight size={24} />
             </button>
           </div>

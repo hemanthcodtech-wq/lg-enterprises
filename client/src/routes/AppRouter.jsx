@@ -35,6 +35,7 @@ import AdminBrands from '../pages/admin/AdminBrands';
 import AdminSettings from '../pages/admin/AdminSettings';
 import AdminTestimonials from '../pages/admin/AdminTestimonials';
 import AdminReviews from '../pages/admin/AdminReviews';
+import AdminInventoryAnalysis from '../pages/admin/AdminInventoryAnalysis';
 import ScrollToTop from '../components/ScrollToTop';
 
 const AppRouter = () => (
@@ -46,6 +47,8 @@ const AppRouter = () => (
         <Route index element={<AdminOverview />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="products" element={<AdminProducts />} />
+        <Route path="inventory" element={<AdminInventoryAnalysis />} />
+        <Route path="inventory-analysis" element={<AdminInventoryAnalysis />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="users/:id" element={<AdminUserDetails />} />
         <Route path="orders" element={<AdminOrders />} />
@@ -56,6 +59,7 @@ const AppRouter = () => (
         <Route path="brands" element={<AdminBrands />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="testimonials" element={<AdminTestimonials />} />
+        <Route path="feedbacks" element={<AdminTestimonials />} />
         <Route path="reviews" element={<AdminReviews />} />
       </Route>
 

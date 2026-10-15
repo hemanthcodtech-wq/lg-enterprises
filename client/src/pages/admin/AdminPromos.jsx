@@ -1,34 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
-import { FiTag, FiPercent, FiPlus, FiTrash2, FiGift, FiSearch, FiCheckCircle } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
+import { 
+  FiTag, FiPlus, FiTrash2, FiGift, FiSearch, 
+  FiRefreshCw, FiX, FiCheckCircle, FiChevronLeft, FiChevronRight 
+} from 'react-icons/fi';
 
 const AdminPromos = () => {
   const { token } = useOutletContext();
   const [promos, setPromos] = useState([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All'); // 'All', 'Active', 'Inactive'
+  const [typeFilter, setTypeFilter] = useState('All'); // 'All', 'percentage', 'fixed'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Form State
   const [code, setCode] = useState('');
   const [discountType, setDiscountType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState('');
+  const [minOrderAmount, setMinOrderAmount] = useState('');
   const [maxUses, setMaxUses] = useState('');
 
-  useEffect(() => {
-    fetchPromos();
-  }, [token]);
-
-  const fetchPromos = async () => {
+  const fetchPromos = async (showToast = false) => {
+    if (showToast) setRefreshing(true);
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/promos`, {
         headers: { 'x-auth-token': token }
       });
       setPromos(res.data);
+      if (showToast) toast.success('Promo codes refreshed');
     } catch (err) {
       console.error('Failed to fetch promos', err);
+      toast.error('Failed to load promo codes');
+    } finally {
+      setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    fetchPromos();
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,17 +55,20 @@ const AdminPromos = () => {
           code, 
           discountType, 
           discountValue: Number(discountValue), 
+          minOrderAmount: minOrderAmount ? Number(minOrderAmount) : 0,
           maxUses: maxUses ? Number(maxUses) : null,
           isActive: true
         },
         { headers: { 'x-auth-token': token } }
       );
-      setCode(''); setDiscountValue(''); setMaxUses('');
+      toast.success('Promo code created successfully');
+      setCode(''); setDiscountValue(''); setMinOrderAmount(''); setMaxUses('');
       fetchPromos();
     } catch (err) {
-      alert(err.response?.data?.error || 'Error creating promo code');
+      toast.error(err.response?.data?.error || 'Error creating promo code');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDelete = async (id) => {
@@ -59,274 +77,593 @@ const AdminPromos = () => {
       await axios.delete(`${import.meta.env.VITE_API_URL}/admin/promos/${id}`, {
         headers: { 'x-auth-token': token }
       });
+      toast.success('Promo code deleted');
       fetchPromos();
     } catch (err) {
-      alert('Error deleting promo code');
+      toast.error('Error deleting promo code');
     }
   };
 
-  const filteredPromos = promos.filter(p => 
-    p.code.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filter promos
+  const filteredPromos = useMemo(() => {
+    return promos.filter(p => {
+      const term = search.toLowerCase();
+      const matchesSearch = p.code.toLowerCase().includes(term);
+      const matchesStatus = 
+        statusFilter === 'All' ? true :
+        statusFilter === 'Active' ? p.isActive : !p.isActive;
+      const matchesType = 
+        typeFilter === 'All' ? true :
+        p.discountType === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [promos, search, statusFilter, typeFilter]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredPromos.length / itemsPerPage) || 1;
+  const currentPromos = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredPromos.slice(start, start + itemsPerPage);
+  }, [filteredPromos, currentPage, itemsPerPage]);
 
   return (
-    <div className="admin-tab-content">
+    <div className="admin-promos-page">
       <style>{`
-        .admin-tab-content {
-          position: relative;
-          min-height: 100%;
+        /* Exact match to AdminOrders typography and scale */
+        .admin-promos-page {
+          padding-bottom: 3rem;
+          color: #0f172a;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
-        .glass-card {
+        .header-section {
+          margin-bottom: 1.5rem;
+        }
+        .page-title-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 1rem;
+          margin-bottom: 1.25rem;
+        }
+        .page-title-group h2 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 0.15rem 0;
+          letter-spacing: -0.01em;
+        }
+        .page-title-group p {
+          font-size: 0.8rem;
+          color: #64748b;
+          margin: 0;
+        }
+
+        .header-actions-group {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+        }
+        .refresh-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 0.8rem;
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-          position: relative;
-          overflow: hidden;
+          border-radius: 8px;
+          color: #475569;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+          font-family: inherit;
+        }
+        .refresh-btn:hover {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+          color: #0f172a;
+        }
+        .refresh-btn .spin {
+          animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
-        .promo-split-grid {
+        .badge-count-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.35rem 0.75rem;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #334155;
+        }
+        .badge-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #10b981;
+        }
+
+        /* 2-Column Split Layout */
+        .promo-split-layout {
           display: grid;
-          grid-template-columns: 380px 1fr;
-          gap: 2rem;
-          position: relative;
-          z-index: 1;
+          grid-template-columns: 360px 1fr;
+          gap: 1.5rem;
+          align-items: start;
         }
         @media (max-width: 950px) {
-          .promo-split-grid {
+          .promo-split-layout {
             grid-template-columns: 1fr;
           }
         }
 
-        .glass-input {
-          background: #f8fafc;
+        /* Enterprise Card Container */
+        .table-enterprise-card {
+          background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 0.7rem 1rem;
-          width: 100%;
-          outline: none;
-          font-family: inherit;
-          font-size: 0.9rem;
+          border-radius: 14px;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+          overflow: hidden;
+        }
+
+        .card-header-bar {
+          padding: 0.85rem 1.25rem;
+          border-bottom: 1px solid #f1f5f9;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .card-title-group h3 {
+          font-size: 0.95rem;
+          font-weight: 700;
           color: #0f172a;
-          transition: all 0.25s ease;
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+        .card-title-group p {
+          font-size: 0.75rem;
+          color: #64748b;
+          margin: 0.15rem 0 0 0;
+        }
+
+        /* Form Controls */
+        .form-body-padded {
+          padding: 1.25rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+        .field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.35rem;
+        }
+        .field-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #334155;
+        }
+        .official-input {
+          width: 100%;
+          padding: 0.45rem 0.75rem;
+          font-size: 0.8rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          color: #0f172a;
+          font-family: inherit;
+          transition: all 0.2s ease;
           box-sizing: border-box;
         }
-        .glass-input:focus {
-          border-color: #6366f1;
+        .official-input:focus {
+          outline: none;
           background: #ffffff;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
-        .btn-indigo-submit {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          background: #4f46e5;
-          color: #ffffff;
-          border: none;
-          border-radius: 8px;
-          padding: 0.75rem 1.5rem;
-          font-size: 0.9rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          width: 100%;
-        }
-        .btn-indigo-submit:hover:not(:disabled) {
-          background: #4338ca;
-        }
-        .btn-indigo-submit:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .btn-action-delete {
+        .submit-btn-official {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 0.4rem;
-          background: #fee2e2;
-          color: #b91c1c;
-          border: none;
-          border-radius: 6px;
-          padding: 0.4rem 0.6rem;
-          font-size: 0.75rem;
+          padding: 0.55rem 1rem;
+          background: #4f46e5;
+          color: #ffffff;
+          border: 1px solid #4f46e5;
+          border-radius: 8px;
+          font-size: 0.8rem;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+          font-family: inherit;
+          width: 100%;
         }
-        .btn-action-delete:hover {
-          background: #f87171;
-          color: white;
+        .submit-btn-official:hover:not(:disabled) {
+          background: #4338ca;
+          border-color: #4338ca;
+        }
+        .submit-btn-official:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
-        .promo-table {
+        /* Filter Toolbar */
+        .table-filter-bar {
+          padding: 0.75rem 1.25rem;
+          background: #ffffff;
+          border-bottom: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+        .search-field-wrapper {
+          position: relative;
+          min-width: 180px;
+          flex: 1;
+          max-width: 240px;
+        }
+        .search-field-icon {
+          position: absolute;
+          left: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          font-size: 0.85rem;
+        }
+        .search-field-input {
+          width: 100%;
+          padding: 0.45rem 2rem 0.45rem 2rem;
+          font-size: 0.8rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          color: #0f172a;
+          outline: none;
+          transition: all 0.2s ease;
+          font-family: inherit;
+          box-sizing: border-box;
+        }
+        .search-field-input:focus {
+          border-color: #4f46e5;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .search-clear-btn {
+          position: absolute;
+          right: 0.6rem;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          font-size: 0.8rem;
+          padding: 2px;
+          display: flex;
+          align-items: center;
+        }
+
+        .filter-controls-group {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          flex-wrap: wrap;
+        }
+        .filter-pill {
+          padding: 0.35rem 0.7rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          background: #ffffff;
+          color: #64748b;
+          border: 1px solid transparent;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          font-family: inherit;
+        }
+        .filter-pill:hover {
+          background: #f1f5f9;
+          color: #334155;
+        }
+        .filter-pill.active {
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
+          font-weight: 600;
+        }
+
+        .filter-select-official {
+          padding: 0.4rem 0.65rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: #f8fafc;
+          font-size: 0.75rem;
+          color: #334155;
+          font-weight: 500;
+          outline: none;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        /* Modern Official Table */
+        .official-table-wrapper {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          width: 100%;
+        }
+        .official-table {
           width: 100%;
           border-collapse: separate;
           border-spacing: 0;
           text-align: left;
         }
-        .promo-table th {
+        .official-table th {
           background: #f8fafc;
-          color: #64748b;
-          font-size: 0.7rem;
+          padding: 0.65rem 1rem;
+          font-size: 0.65rem;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          padding: 0.8rem 1rem;
+          color: #64748b;
           border-bottom: 1px solid #e2e8f0;
           white-space: nowrap;
         }
-        .promo-table td {
-          padding: 1rem;
+        .official-table td {
+          padding: 0.75rem 1rem;
           border-bottom: 1px solid #f1f5f9;
-          color: #1e293b;
-          font-size: 0.85rem;
           vertical-align: middle;
+          background: #ffffff;
+          font-size: 0.8rem;
+          transition: background-color 0.15s ease;
         }
-        .promo-table tr:hover td {
-          background: #f8fafc;
-        }
-        .promo-table tr:last-child td {
+        .official-table tr:last-child td {
           border-bottom: none;
         }
-
-        .promo-code-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.4rem;
-          background: rgba(79, 70, 229, 0.08);
-          color: #4f46e5;
-          border: 1.5px dashed rgba(79, 70, 229, 0.35);
-          border-radius: 8px;
-          padding: 0.35rem 0.75rem;
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-          font-size: 0.88rem;
-          font-weight: 800;
-          letter-spacing: 1px;
+        .official-table tr:hover td {
+          background: #f8fafc;
         }
 
-        .discount-pill {
+        .promo-code-tag {
           display: inline-flex;
           align-items: center;
-          font-size: 0.75rem;
-          font-weight: 800;
-          padding: 0.25rem 0.65rem;
+          gap: 0.35rem;
+          background: #f8fafc;
+          color: #0f172a;
+          border: 1px solid #cbd5e1;
           border-radius: 6px;
+          padding: 0.2rem 0.55rem;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          font-size: 0.78rem;
+          font-weight: 700;
+          letter-spacing: 0.5px;
         }
-        .discount-pill.pct {
-          background: rgba(16, 185, 129, 0.12);
+
+        .discount-badge-pill {
+          display: inline-flex;
+          align-items: center;
+          font-size: 0.7rem;
+          font-weight: 600;
+          padding: 0.2rem 0.55rem;
+          border-radius: 999px;
+        }
+        .discount-badge-pill.pct {
+          background: #ecfdf5;
           color: #047857;
-          border: 1px solid rgba(16, 185, 129, 0.28);
+          border: 1px solid #a7f3d0;
         }
-        .discount-pill.fixed {
-          background: rgba(245, 158, 11, 0.12);
+        .discount-badge-pill.fixed {
+          background: #fffbeb;
           color: #b45309;
-          border: 1px solid rgba(245, 158, 11, 0.28);
+          border: 1px solid #fde68a;
         }
 
-        .active-pill {
+        .status-badge-chip {
           display: inline-flex;
           align-items: center;
-          gap: 5px;
-          font-size: 0.72rem;
-          font-weight: 700;
-          padding: 0.25rem 0.65rem;
-          border-radius: 20px;
-          background: rgba(16, 185, 129, 0.12);
+          gap: 4px;
+          font-size: 0.7rem;
+          font-weight: 600;
+          padding: 0.2rem 0.55rem;
+          border-radius: 999px;
+        }
+        .status-badge-chip.active {
+          background: #ecfdf5;
           color: #047857;
-          border: 1px solid rgba(16, 185, 129, 0.28);
+          border: 1px solid #a7f3d0;
         }
-        .inactive-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 0.72rem;
-          font-weight: 700;
-          padding: 0.25rem 0.65rem;
-          border-radius: 20px;
-          background: rgba(239, 68, 68, 0.12);
-          color: #b91c1c;
-          border: 1px solid rgba(239, 68, 68, 0.28);
+        .status-badge-chip.inactive {
+          background: #f8fafc;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
         }
 
-        .cat-icon-chip {
+        .btn-table-delete {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.35rem 0.65rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          border: 1px solid #fecaca;
+          background: #fff5f5;
+          color: #dc2626;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          font-family: inherit;
+        }
+        .btn-table-delete:hover {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+
+        /* Pagination Footer */
+        .table-pagination-footer {
+          padding: 0.75rem 1.25rem;
+          border-top: 1px solid #e2e8f0;
+          background: #ffffff;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+        .pagination-meta-info {
+          font-size: 0.75rem;
+          color: #64748b;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 1.25rem;
+        }
+        .rows-select {
+          padding: 0.15rem 0.4rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          background: #f8fafc;
+          font-size: 0.75rem;
+          color: #334155;
+          cursor: pointer;
+          outline: none;
+          font-family: inherit;
+        }
+        .pagination-controls-row {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+        }
+        .pagination-nav-btn {
           width: 32px;
           height: 32px;
           border-radius: 8px;
-          background: #f1f5f9;
-          color: #64748b;
-          display: inline-flex;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1rem;
-          border: 1px solid #e2e8f0;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .pagination-nav-btn:hover:not(:disabled) {
+          background: #f1f5f9;
+          color: #0f172a;
+          border-color: #cbd5e1;
+        }
+        .pagination-nav-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .page-pill-btn {
+          min-width: 32px;
+          height: 32px;
+          padding: 0 0.5rem;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          border: 1px solid transparent;
+          background: transparent;
+          color: #475569;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+        }
+        .page-pill-btn:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+        }
+        .page-pill-btn.active {
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
         }
       `}</style>
 
-      {/* Header section */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', marginTop: '0.5rem', position: 'relative', zIndex: 1, flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.8rem', color: '#0f172a', margin: '0 0 0.25rem 0', fontWeight: '800', letterSpacing: '-0.5px' }}>Promo Codes</h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Create promotional voucher discounts and redemption limits</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.45rem 1rem', background: 'rgba(79, 70, 229, 0.1)', border: '1px solid rgba(79, 70, 229, 0.25)', borderRadius: '20px', backdropFilter: 'blur(10px)' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4f46e5', boxShadow: '0 0 8px #4f46e5' }}></span>
-          <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#4f46e5', letterSpacing: '0.3px' }}>
-            {promos.length} PROMOS ACTIVE
-          </span>
+      {/* Top Header & Page Actions */}
+      <div className="header-section">
+        <div className="page-title-row">
+          <div className="page-title-group">
+            <h2>Promo Codes</h2>
+            <p>Create and configure promotional discount vouchers, minimum cart thresholds, and usage caps.</p>
+          </div>
+          <div className="header-actions-group">
+            <div className="badge-count-pill">
+              <span className="badge-dot"></span>
+              <span>{promos.length} PROMOS ACTIVE</span>
+            </div>
+            <button 
+              className="refresh-btn" 
+              onClick={() => fetchPromos(true)} 
+              disabled={refreshing}
+              title="Refresh promo vouchers"
+            >
+              <FiRefreshCw className={refreshing ? 'spin' : ''} />
+              <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="promo-split-grid">
-        {/* Left Form: Create Promo */}
-        <div className="glass-card" style={{ padding: '2rem', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', position: 'relative', zIndex: 1 }}>
-            <div className="cat-icon-chip">
-              <FiGift />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: '800' }}>New Promo Code</h3>
-              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>Configure discount voucher rules</p>
+      {/* 2-Column Split: Form & Promos Table */}
+      <div className="promo-split-layout">
+        {/* Left Card: Create Promo */}
+        <div className="table-enterprise-card">
+          <div className="card-header-bar">
+            <div className="card-title-group">
+              <h3>New Promo Code</h3>
+              <p>Configure discount voucher rules</p>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'relative', zIndex: 1 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
-                Promo Voucher Code *
-              </label>
+          <form onSubmit={handleSubmit} className="form-body-padded">
+            <div className="field-group">
+              <label className="field-label">Voucher Code *</label>
               <input 
                 type="text" 
-                className="glass-input" 
+                className="official-input" 
                 placeholder="e.g. SUMMER50" 
                 value={code} 
                 onChange={e => setCode(e.target.value.toUpperCase())} 
                 required 
-                style={{ textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700' }}
+                style={{ textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}
               />
             </div>
             
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
-                Discount Type *
-              </label>
-              <select className="glass-input" value={discountType} onChange={e => setDiscountType(e.target.value)}>
+            <div className="field-group">
+              <label className="field-label">Discount Type *</label>
+              <select className="official-input" value={discountType} onChange={e => setDiscountType(e.target.value)}>
                 <option value="percentage">Percentage (%)</option>
                 <option value="fixed">Fixed Amount (₹)</option>
               </select>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
+            <div className="field-group">
+              <label className="field-label">
                 Discount Value ({discountType === 'percentage' ? '%' : '₹'}) *
               </label>
               <input 
                 type="number" 
                 min="1" 
-                className="glass-input" 
+                className="official-input" 
                 placeholder={discountType === 'percentage' ? 'e.g. 20' : 'e.g. 500'} 
                 value={discountValue} 
                 onChange={e => setDiscountValue(e.target.value)} 
@@ -334,102 +671,205 @@ const AdminPromos = () => {
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#475569', marginBottom: '0.45rem' }}>
-                Maximum Uses
-              </label>
+            <div className="field-group">
+              <label className="field-label">Minimum Order Amount (₹)</label>
               <input 
                 type="number" 
-                min="1" 
-                className="glass-input" 
-                placeholder="e.g. 100 (Blank for unlimited)" 
-                value={maxUses} 
-                onChange={e => setMaxUses(e.target.value)} 
+                min="0" 
+                className="official-input" 
+                placeholder="e.g. 1000 (0 for any order)" 
+                value={minOrderAmount} 
+                onChange={e => setMinOrderAmount(e.target.value)} 
               />
-              <small style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.3rem', display: 'block' }}>
-                Leave empty for unlimited customer redemptions
+              <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>
+                Cart subtotal must equal or exceed this amount to apply
               </small>
             </div>
 
-            <button type="submit" className="btn-indigo-submit" disabled={loading} style={{ marginTop: '0.5rem' }}>
-              <FiPlus style={{ fontSize: '1.15rem' }} />
-              {loading ? 'Creating...' : 'Create Promo Code'}
+            <div className="field-group">
+              <label className="field-label">Maximum Redemptions</label>
+              <input 
+                type="number" 
+                min="1" 
+                className="official-input" 
+                placeholder="e.g. 100 (Leave blank for unlimited)" 
+                value={maxUses} 
+                onChange={e => setMaxUses(e.target.value)} 
+              />
+              <small style={{ color: '#94a3b8', fontSize: '0.72rem' }}>
+                Optional cap on total allowable customer uses
+              </small>
+            </div>
+
+            <button type="submit" className="submit-btn-official" disabled={loading}>
+              <FiPlus />
+              <span>{loading ? 'Creating...' : 'Create Promo Code'}</span>
             </button>
           </form>
         </div>
 
-        {/* Right Table: Promos List */}
-        <div className="glass-card">
-          <div style={{ padding: '1.5rem 1.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(226, 232, 240, 0.8)', flexWrap: 'wrap', gap: '1rem', position: 'relative', zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <FiTag style={{ color: '#4f46e5', fontSize: '1.2rem' }} />
-              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: '800' }}>Active Vouchers</h3>
-            </div>
-            <div style={{ width: '220px' }}>
+        {/* Right Card: Promos Table with Search, Filter Pills & Pagination */}
+        <div className="table-enterprise-card">
+          <div className="table-filter-bar">
+            <div className="search-field-wrapper">
+              <FiSearch className="search-field-icon" />
               <input 
                 type="text" 
-                className="glass-input" 
-                style={{ padding: '0.55rem 0.9rem', fontSize: '0.85rem' }}
+                className="search-field-input" 
                 placeholder="Search promo..." 
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
               />
+              {search && (
+                <button className="search-clear-btn" onClick={() => setSearch('')}>
+                  <FiX />
+                </button>
+              )}
+            </div>
+
+            <div className="filter-controls-group">
+              <button 
+                className={`filter-pill ${statusFilter === 'All' ? 'active' : ''}`}
+                onClick={() => { setStatusFilter('All'); setCurrentPage(1); }}
+              >
+                All ({promos.length})
+              </button>
+              <button 
+                className={`filter-pill ${statusFilter === 'Active' ? 'active' : ''}`}
+                onClick={() => { setStatusFilter('Active'); setCurrentPage(1); }}
+              >
+                Active ({promos.filter(p => p.isActive).length})
+              </button>
+              <button 
+                className={`filter-pill ${statusFilter === 'Inactive' ? 'active' : ''}`}
+                onClick={() => { setStatusFilter('Inactive'); setCurrentPage(1); }}
+              >
+                Inactive ({promos.filter(p => !p.isActive).length})
+              </button>
+
+              <select 
+                className="filter-select-official"
+                value={typeFilter}
+                onChange={e => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="All">All Types</option>
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed (₹)</option>
+              </select>
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto', position: 'relative', zIndex: 1 }}>
-            <table className="promo-table">
+          <div className="official-table-wrapper">
+            <table className="official-table">
               <thead>
                 <tr>
-                  <th style={{ width: '30%' }}>Voucher Code</th>
-                  <th style={{ width: '22%' }}>Discount</th>
-                  <th style={{ width: '20%' }}>Usage</th>
-                  <th style={{ width: '15%' }}>Status</th>
-                  <th style={{ width: '13%', textAlign: 'right' }}>Actions</th>
+                  <th style={{ width: '25%' }}>Voucher Code</th>
+                  <th style={{ width: '20%' }}>Discount</th>
+                  <th style={{ width: '18%' }}>Min. Order</th>
+                  <th style={{ width: '15%' }}>Usage</th>
+                  <th style={{ width: '12%' }}>Status</th>
+                  <th style={{ width: '10%', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredPromos.map(p => (
-                  <tr key={p._id}>
-                    <td>
-                      <span className="promo-code-badge">
-                        <FiTag style={{ fontSize: '0.8rem' }} /> {p.code}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`discount-pill ${p.discountType === 'percentage' ? 'pct' : 'fixed'}`}>
-                        {p.discountType === 'percentage' ? `${p.discountValue}% OFF` : `₹${p.discountValue?.toLocaleString('en-IN')} OFF`}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#334155' }}>
-                        {p.currentUses || 0} <span style={{ color: '#94a3b8', fontWeight: '500' }}>/ {p.maxUses ? p.maxUses : '∞'}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={p.isActive ? 'active-pill' : 'inactive-pill'}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }}></span>
-                        {p.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button onClick={() => handleDelete(p._id)} className="btn-action-delete">
-                        <FiTrash2 style={{ fontSize: '0.9rem' }} /> Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {filteredPromos.length === 0 && (
+                {currentPromos.length === 0 ? (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#64748b' }}>
-                      <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🏷️</div>
-                      <p style={{ margin: 0, fontWeight: '600', fontSize: '1rem', color: '#475569' }}>No promo codes found</p>
-                      <small style={{ color: '#94a3b8' }}>Try adjusting your search or create a new code on the left</small>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#64748b' }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🏷️</div>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: '#334155' }}>No promo codes found</p>
+                      <small style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Create a new promo code on the left to offer customer discounts</small>
                     </td>
                   </tr>
+                ) : (
+                  currentPromos.map(p => (
+                    <tr key={p._id}>
+                      <td>
+                        <span className="promo-code-tag">
+                          <FiTag style={{ fontSize: '0.75rem' }} /> {p.code}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`discount-badge-pill ${p.discountType === 'percentage' ? 'pct' : 'fixed'}`}>
+                          {p.discountType === 'percentage' ? `${p.discountValue}% OFF` : `₹${p.discountValue?.toLocaleString('en-IN')} OFF`}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 600, color: p.minOrderAmount > 0 ? '#0f172a' : '#64748b', fontSize: '0.8rem' }}>
+                          {p.minOrderAmount > 0 ? `₹${p.minOrderAmount.toLocaleString('en-IN')}+` : 'None (₹0)'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155' }}>
+                          {p.currentUses || 0} <span style={{ color: '#94a3b8', fontWeight: 400 }}>/ {p.maxUses ? p.maxUses : '∞'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`status-badge-chip ${p.isActive ? 'active' : 'inactive'}`}>
+                          {p.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button onClick={() => handleDelete(p._id)} className="btn-table-delete">
+                          <FiTrash2 /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Footer */}
+          <div className="table-pagination-footer">
+            <div className="pagination-meta-info">
+              <span>
+                Showing {filteredPromos.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredPromos.length)} of {filteredPromos.length} codes
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span>Rows:</span>
+                <select 
+                  className="rows-select" 
+                  value={itemsPerPage} 
+                  onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                >
+                  <option value={5}>5</option>
+                  <option value={8}>8</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="pagination-controls-row">
+              <button 
+                className="pagination-nav-btn" 
+                disabled={currentPage === 1} 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                title="Previous page"
+              >
+                <FiChevronLeft />
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button 
+                  key={page} 
+                  className={`page-pill-btn ${currentPage === page ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button 
+                className="pagination-nav-btn" 
+                disabled={currentPage === totalPages} 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                title="Next page"
+              >
+                <FiChevronRight />
+              </button>
+            </div>
           </div>
         </div>
       </div>

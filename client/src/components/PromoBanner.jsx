@@ -95,7 +95,7 @@ const PromoBanner = () => {
         {[...promos, ...promos, ...promos, ...promos, ...promos, ...promos].map((p, i) => (
           <div key={i} className="promo-item">
             <span className="promo-icon">✦</span> 
-            Special Offer: Use code <span className="promo-code-highlight">{p.code}</span> to get {p.discountType === 'percentage' ? `${p.discountValue}% OFF` : `₹${p.discountValue} OFF`} your order!
+            Special Offer: Use code <span className="promo-code-highlight">{p.code}</span> to get {p.discountType === 'percentage' ? `${p.discountValue}% OFF` : `₹${p.discountValue} OFF`} {p.minOrderAmount > 0 ? `on orders ₹${p.minOrderAmount} & above` : 'your order'}!
           </div>
         ))}
       </div>

@@ -30,6 +30,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/carousel', carouselRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/testimonials', testimonialRoutes);
+app.use('/api/feedbacks', testimonialRoutes);
 
 const path = require('path');
 const fs = require('fs');

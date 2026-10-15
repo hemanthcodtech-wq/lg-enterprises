@@ -344,12 +344,48 @@ router.put('/orders/:id/status', authAdmin, async (req, res) => {
         comm.commissionAmount = 0;
         await comm.save();
       }
+
+      // Restore stock for items in the cancelled/returned order
+      for (const item of order.items) {
+        const pId = item.product?._id || item.product;
+        if (pId) {
+          await Product.findByIdAndUpdate(pId, { $inc: { stock: item.quantity } });
+        }
+      }
     }
 
     res.json(order);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Order Alerts for Sidebar & Top Bar (Admin Only)
+router.get('/orders/alerts', authAdmin, async (req, res) => {
+  try {
+    const pendingCount = await Order.countDocuments({ status: 'Pending' });
+    const totalOrders = await Order.countDocuments();
+    
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const newOrdersToday = await Order.countDocuments({ createdAt: { $gte: startOfToday } });
+    
+    const recentAlerts = await Order.find()
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .select('_id totalAmount status createdAt user items');
+    
+    res.json({
+      pendingCount,
+      totalOrders,
+      newOrdersToday,
+      recentAlerts
+    });
+  } catch (err) {
+    console.error('Error fetching order alerts:', err);
+    res.status(500).json({ error: 'Failed to fetch order alerts' });
   }
 });
 
@@ -373,11 +409,18 @@ const Promo = require('../models/Promo');
 // Add Promo Code (Admin Only)
 router.post('/promos', authAdmin, async (req, res) => {
   try {
-    const { code, discountType, discountValue, isActive, maxUses } = req.body;
+    const { code, discountType, discountValue, isActive, maxUses, minOrderAmount } = req.body;
     let promo = await Promo.findOne({ code: code.toUpperCase() });
     if (promo) return res.status(400).json({ error: 'Promo code already exists' });
     
-    promo = new Promo({ code, discountType, discountValue, isActive, maxUses });
+    promo = new Promo({ 
+      code, 
+      discountType, 
+      discountValue, 
+      isActive, 
+      maxUses,
+      minOrderAmount: Number(minOrderAmount) || 0
+    });
     await promo.save();
     res.status(201).json(promo);
   } catch (err) {
@@ -494,6 +537,372 @@ router.put('/reviews/:productId/:reviewId/approve', authAdmin, async (req, res) 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+const Setting = require('../models/Setting');
+
+// Get Store Settings (Admin)
+router.get('/settings', authAdmin, async (req, res) => {
+  try {
+    let settings = await Setting.findOne();
+    if (!settings) {
+      settings = new Setting();
+      await settings.save();
+    }
+    const adminUser = await User.findById(req.user.id).select('name email');
+    res.json({
+      settings,
+      admin: adminUser ? { name: adminUser.name, email: adminUser.email } : null
+    });
+  } catch (err) {
+    console.error('Error fetching settings:', err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// Update Store Settings (Admin)
+router.put('/settings', authAdmin, async (req, res) => {
+  try {
+    let settings = await Setting.findOne();
+    if (!settings) {
+      settings = new Setting();
+    }
+    const allowedFields = [
+      'storeName', 'supportEmail', 'supportPhone', 'storeAddress', 
+      'currency', 'timezone', 'enablePromos', 'enableFreeShipping', 
+      'freeShippingMin', 'taxRate', 'lowStockAlert', 'maintenanceMode', 'orderEmailAlerts'
+    ];
+    allowedFields.forEach(f => {
+      if (req.body[f] !== undefined) {
+        settings[f] = req.body[f];
+      }
+    });
+    await settings.save();
+    res.json({ message: 'Settings updated successfully', settings });
+  } catch (err) {
+    console.error('Error updating settings:', err);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// Change Admin Password / Profile (Admin)
+router.put('/change-password', authAdmin, async (req, res) => {
+  try {
+    const { currentPassword, newPassword, adminName, adminEmail } = req.body;
+    const admin = await User.findById(req.user.id);
+    if (!admin) return res.status(404).json({ error: 'Admin account not found' });
+
+    // Update profile info if provided
+    if (adminName && adminName.trim()) admin.name = adminName.trim();
+    if (adminEmail && adminEmail.trim() && adminEmail.toLowerCase() !== admin.email) {
+      const existing = await User.findOne({ email: adminEmail.toLowerCase(), _id: { $ne: admin._id } });
+      if (existing) return res.status(400).json({ error: 'Email address already in use by another account' });
+      admin.email = adminEmail.toLowerCase();
+    }
+
+    // Update password if provided
+    if (newPassword && newPassword.trim()) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required to change your password' });
+      }
+      const isMatch = await bcrypt.compare(currentPassword, admin.password);
+      if (!isMatch) {
+        return res.status(400).json({ error: 'Current password does not match our records' });
+      }
+      if (newPassword.trim().length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+      }
+      const salt = await bcrypt.genSalt(10);
+      admin.password = await bcrypt.hash(newPassword.trim(), salt);
+    }
+
+    await admin.save();
+    res.json({ 
+      message: 'Admin security settings updated successfully', 
+      admin: { name: admin.name, email: admin.email, role: admin.role } 
+    });
+  } catch (err) {
+    console.error('Error changing admin credentials:', err);
+    res.status(500).json({ error: 'Failed to update admin security settings' });
+  }
+});
+
+// Comprehensive Inventory & Category Sales Analysis (Admin Only)
+router.get('/inventory-analysis', authAdmin, async (req, res) => {
+  try {
+    const { timeRange } = req.query; // 'all', '7d', '30d', '90d'
+    
+    let dateFilter = { status: { $nin: ['Cancelled'] } };
+    if (timeRange && timeRange !== 'all') {
+      const now = new Date();
+      let days = 30;
+      if (timeRange === '7d') days = 7;
+      if (timeRange === '30d') days = 30;
+      if (timeRange === '90d') days = 90;
+      const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      dateFilter.createdAt = { $gte: startDate };
+    }
+
+    const [allProducts, allCategories, orders] = await Promise.all([
+      Product.find().populate('category', 'name slug image bannerImage status'),
+      Category.find(),
+      Order.find(dateFilter)
+    ]);
+
+    // Aggregate sales by product ID
+    const salesByProduct = {};
+    orders.forEach(order => {
+      if (Array.isArray(order.items)) {
+        order.items.forEach(item => {
+          const prodId = item.product?._id ? item.product._id.toString() : (item.product ? item.product.toString() : null);
+          if (prodId) {
+            if (!salesByProduct[prodId]) {
+              salesByProduct[prodId] = {
+                unitsSold: 0,
+                revenue: 0,
+                orderCount: 0
+              };
+            }
+            const qty = Number(item.quantity) || 1;
+            const price = Number(item.price) || 0;
+            salesByProduct[prodId].unitsSold += qty;
+            salesByProduct[prodId].revenue += (qty * price);
+            salesByProduct[prodId].orderCount += 1;
+          }
+        });
+      }
+    });
+
+    let totalInventoryUnits = 0;
+    let totalInventoryValue = 0; // Total capital tied in warehouse
+    let totalUnitsSold = 0;
+    let totalRevenue = 0;
+    let totalDeadStockValue = 0; // Capital tied in products with 0 sales
+
+    // Process all products
+    const productStats = allProducts.map(p => {
+      const pId = p._id.toString();
+      const sales = salesByProduct[pId] || { unitsSold: 0, revenue: 0, orderCount: 0 };
+      const currentStock = Number(p.stock) || 0;
+      const price = Number(p.price) || 0;
+      const originalPrice = Number(p.originalPrice) || Math.round(price * 1.2);
+      const tiedCapital = currentStock * price;
+      const views = Number(p.views) || 0;
+      const rating = Number(p.rating) || 0;
+      const numReviews = Number(p.numReviews) || (p.reviews ? p.reviews.length : 0);
+
+      totalInventoryUnits += currentStock;
+      totalInventoryValue += tiedCapital;
+      totalUnitsSold += sales.unitsSold;
+      totalRevenue += sales.revenue;
+
+      if (sales.unitsSold === 0 && currentStock > 0) {
+        totalDeadStockValue += tiedCapital;
+      }
+
+      // Stock status categorization
+      let stockStatus = 'healthy';
+      if (currentStock <= 0) {
+        stockStatus = 'out_of_stock';
+      } else if (currentStock <= 5) {
+        stockStatus = 'low_stock';
+      } else if (sales.unitsSold === 0) {
+        stockStatus = 'dead_stock';
+      }
+
+      // Customer attraction score: combines real views, verified customer reviews, star rating, and unit sales
+      const attractionScore = (views * 1) + (numReviews * 8) + (Math.round(rating * 10)) + (sales.unitsSold * 2);
+      const conversionRate = views > 0 ? Number(((sales.unitsSold / views) * 100).toFixed(1)) : 0;
+
+      const catName = p.category?.name || 'Uncategorized';
+      const catId = p.category?._id ? p.category._id.toString() : 'uncategorized';
+      const catSlug = p.category?.slug || 'uncategorized';
+
+      return {
+        id: p._id,
+        name: p.name,
+        slug: p.slug,
+        image: p.images?.[0] || 'https://via.placeholder.com/150',
+        price,
+        originalPrice,
+        stock: currentStock,
+        tiedCapital,
+        unitsSold: sales.unitsSold,
+        revenue: sales.revenue,
+        orderCount: sales.orderCount,
+        views,
+        rating,
+        numReviews,
+        attractionScore,
+        conversionRate,
+        stockStatus,
+        createdAt: p.createdAt,
+        category: {
+          id: catId,
+          name: catName,
+          slug: catSlug
+        }
+      };
+    });
+
+    // Process category breakdowns
+    const categoryStatsMap = {};
+    allCategories.forEach(c => {
+      const cId = c._id.toString();
+      categoryStatsMap[cId] = {
+        id: c._id,
+        name: c.name,
+        slug: c.slug,
+        status: c.status || 'active',
+        image: c.image || c.bannerImage || '',
+        totalProducts: 0,
+        totalStock: 0,
+        totalSold: 0,
+        totalRevenue: 0,
+        tiedCapital: 0,
+        views: 0,
+        products: []
+      };
+    });
+
+    categoryStatsMap['uncategorized'] = {
+      id: 'uncategorized',
+      name: 'Uncategorized',
+      slug: 'uncategorized',
+      status: 'active',
+      image: '',
+      totalProducts: 0,
+      totalStock: 0,
+      totalSold: 0,
+      totalRevenue: 0,
+      tiedCapital: 0,
+      views: 0,
+      products: []
+    };
+
+    productStats.forEach(p => {
+      const cId = p.category.id;
+      if (!categoryStatsMap[cId]) {
+        categoryStatsMap[cId] = {
+          id: cId,
+          name: p.category.name,
+          slug: p.category.slug,
+          status: 'active',
+          image: '',
+          totalProducts: 0,
+          totalStock: 0,
+          totalSold: 0,
+          totalRevenue: 0,
+          tiedCapital: 0,
+          views: 0,
+          products: []
+        };
+      }
+      const cat = categoryStatsMap[cId];
+      cat.totalProducts += 1;
+      cat.totalStock += p.stock;
+      cat.totalSold += p.unitsSold;
+      cat.totalRevenue += p.revenue;
+      cat.tiedCapital += p.tiedCapital;
+      cat.views += p.views;
+      cat.products.push(p);
+    });
+
+    if (categoryStatsMap['uncategorized'].totalProducts === 0) {
+      delete categoryStatsMap['uncategorized'];
+    }
+
+    const categoryList = Object.values(categoryStatsMap).map(c => {
+      const sortedProds = [...c.products].sort((a, b) => b.unitsSold - a.unitsSold);
+      const topProduct = sortedProds.length > 0 && sortedProds[0].unitsSold > 0 ? sortedProds[0] : null;
+      const revenueShare = totalRevenue > 0 ? Number(((c.totalRevenue / totalRevenue) * 100).toFixed(1)) : 0;
+      const deadStockCount = c.products.filter(p => p.unitsSold === 0 && p.stock > 0).length;
+
+      return {
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        status: c.status,
+        image: c.image,
+        totalProducts: c.totalProducts,
+        totalStock: c.totalStock,
+        totalSold: c.totalSold,
+        totalRevenue: c.totalRevenue,
+        revenueShare,
+        tiedCapital: c.tiedCapital,
+        views: c.views,
+        deadStockCount,
+        topProduct: topProduct ? {
+          id: topProduct.id,
+          name: topProduct.name,
+          image: topProduct.image,
+          unitsSold: topProduct.unitsSold,
+          revenue: topProduct.revenue
+        } : null
+      };
+    });
+
+    // Categories sorted by revenue descending
+    const topCategories = [...categoryList].sort((a, b) => b.totalRevenue - a.totalRevenue || b.totalSold - a.totalSold);
+
+    // Bestseller Products (Ordered & High Velocity)
+    const topSellingProducts = [...productStats]
+      .filter(p => p.unitsSold > 0)
+      .sort((a, b) => b.unitsSold - a.unitsSold || b.revenue - a.revenue)
+      .slice(0, 10);
+
+    // Dead Stock: Products with 0 orders
+    const neverOrderedProducts = [...productStats]
+      .filter(p => p.unitsSold === 0)
+      .sort((a, b) => b.tiedCapital - a.tiedCapital);
+
+    // Products where customers are most attracted (Views + Rating + Reviews)
+    const mostAttractedProducts = [...productStats]
+      .sort((a, b) => b.attractionScore - a.attractionScore || b.views - a.views)
+      .slice(0, 10);
+
+    // High Interest but Low Conversion (Candidates for promos or price drops!)
+    const highInterestLowConversion = [...productStats]
+      .filter(p => (p.views >= 3 || p.numReviews > 0) && p.unitsSold <= 1)
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 8);
+
+    // Urgent Restock Needed (Low Stock with existing demand)
+    const lowStockAlerts = [...productStats]
+      .filter(p => p.stock <= 5 && p.stock > 0)
+      .sort((a, b) => b.unitsSold - a.unitsSold);
+
+    // Completely Sold Out
+    const outOfStockAlerts = [...productStats]
+      .filter(p => p.stock <= 0)
+      .sort((a, b) => b.unitsSold - a.unitsSold);
+
+    res.json({
+      summary: {
+        totalProducts: allProducts.length,
+        totalInventoryUnits,
+        totalInventoryValue,
+        totalUnitsSold,
+        totalRevenue,
+        totalOrders: orders.length,
+        totalDeadStockValue,
+        neverOrderedCount: neverOrderedProducts.length,
+        outOfStockCount: outOfStockAlerts.length,
+        lowStockCount: lowStockAlerts.length
+      },
+      topCategories,
+      topSellingProducts,
+      neverOrderedProducts,
+      mostAttractedProducts,
+      highInterestLowConversion,
+      lowStockAlerts,
+      outOfStockAlerts,
+      allProducts: productStats
+    });
+  } catch (err) {
+    console.error('Error computing inventory analysis:', err);
+    res.status(500).json({ error: 'Failed to compute inventory analysis' });
   }
 });
 

@@ -53,8 +53,24 @@ const CategoryBar = () => {
             key={c._id}
             className={`cat-link ${activeCategory === c.slug ? 'active' : ''}`}
             onClick={() => handleCategoryClick(c.slug)}
+            style={{ position: 'relative' }}
           >
-            <span>{iconMap[c.slug] || <FiBox className="cat-icon" />}</span>{c.name}
+            <span>{iconMap[c.slug] || <FiBox className="cat-icon" />}</span>
+            {c.name}
+            {c.status === 'coming_soon' && (
+              <span style={{ 
+                fontSize: '0.65rem', 
+                fontWeight: 700, 
+                background: '#fef3c7', 
+                color: '#b45309', 
+                padding: '1px 5px', 
+                borderRadius: '4px',
+                marginLeft: '4px',
+                border: '1px solid #fde68a'
+              }}>
+                Soon
+              </span>
+            )}
           </div>
         ))}
       </div>

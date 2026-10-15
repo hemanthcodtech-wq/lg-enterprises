@@ -307,7 +307,7 @@ const AdminLogin = () => {
           box-shadow: 0 0 0 3px var(--primary-alpha);
         }
         .btn-premium {
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          background: #4f46e5;
           color: white;
           padding: 1rem;
           border: none;
@@ -318,7 +318,7 @@ const AdminLogin = () => {
           cursor: pointer;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           width: 100%;
-          box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+          box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.39);
           position: relative;
           overflow: hidden;
           letter-spacing: 0.5px;
@@ -337,12 +337,13 @@ const AdminLogin = () => {
           left: 100%;
         }
         .btn-premium:hover {
+          background: #4338ca;
           transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+          box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45);
         }
         .btn-premium:active {
           transform: translateY(1px);
-          box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+          box-shadow: 0 2px 10px rgba(79, 70, 229, 0.3);
         }
         .btn-premium:disabled {
           background: #94a3b8;

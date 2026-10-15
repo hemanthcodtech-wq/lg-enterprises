@@ -5,9 +5,15 @@ import toast from 'react-hot-toast';
 import { 
   FiSearch, FiDownload, FiChevronLeft, FiChevronRight,
   FiRefreshCw, FiCopy, FiCheck, FiShoppingBag, FiClock,
-  FiX, FiArrowUpRight, FiLayers
+  FiX, FiArrowUpRight, FiLayers, FiTrendingUp, FiCheckCircle,
+  FiAlertCircle, FiActivity, FiBarChart2, FiPieChart, FiChevronDown,
+  FiChevronUp, FiDollarSign, FiPackage, FiZap
 } from 'react-icons/fi';
 import { FaRupeeSign } from 'react-icons/fa';
+import { 
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, 
+  PieChart, Pie, Cell, CartesianGrid, Legend 
+} from 'recharts';
 
 const AdminOrders = () => {
   const { token } = useOutletContext();
@@ -17,6 +23,7 @@ const AdminOrders = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [showAnalytics, setShowAnalytics] = useState(true);
   
   // Filters & Pagination
   const [searchTerm, setSearchTerm] = useState('');
@@ -102,6 +109,95 @@ const AdminOrders = () => {
     const deliveredOrders = orders.filter(o => o.status === 'Delivered').length;
 
     return { totalOrders, totalRevenue, totalCommission, pendingOrders, deliveredOrders };
+  }, [orders]);
+
+  // Order Intelligence & Velocity Analysis
+  const orderAnalytics = useMemo(() => {
+    if (!orders || orders.length === 0) {
+      return {
+        aov: 0,
+        deliveryRate: 0,
+        deliveredCount: 0,
+        cancellationRate: 0,
+        cancelledCount: 0,
+        paymentSuccessRate: 0,
+        paidCount: 0,
+        statusDistribution: [],
+        dailyTrend: [],
+        highValueOrders: []
+      };
+    }
+
+    const total = orders.length;
+    const totalRev = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const aov = total > 0 ? Math.round(totalRev / total) : 0;
+
+    const deliveredCount = orders.filter(o => o.status === 'Delivered').length;
+    const cancelledCount = orders.filter(o => o.status === 'Cancelled' || o.status === 'Returned').length;
+    const deliveryRate = total > 0 ? Math.round((deliveredCount / total) * 100) : 0;
+    const cancellationRate = total > 0 ? Math.round((cancelledCount / total) * 100) : 0;
+
+    const paidCount = orders.filter(o => o.paymentStatus === 'Completed').length;
+    const paymentSuccessRate = total > 0 ? Math.round((paidCount / total) * 100) : 0;
+
+    // Status breakdown with palette
+    const statusPalette = {
+      Delivered: '#10b981',
+      Shipped: '#2563eb',
+      Processing: '#8b5cf6',
+      Pending: '#f59e0b',
+      Cancelled: '#ef4444',
+      Returned: '#dc2626'
+    };
+
+    const statusCounts = {};
+    orders.forEach(o => {
+      const s = o.status || 'Pending';
+      statusCounts[s] = (statusCounts[s] || 0) + 1;
+    });
+
+    const statusDistribution = Object.entries(statusCounts).map(([status, count]) => ({
+      name: status,
+      value: count,
+      percentage: Math.round((count / total) * 100),
+      color: statusPalette[status] || '#64748b'
+    }));
+
+    // Daily Timeline Trend (Revenue & Order Volume)
+    const dateMap = {};
+    orders.forEach(o => {
+      if (!o.createdAt) return;
+      const d = new Date(o.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      if (!dateMap[key]) {
+        dateMap[key] = { key, label, orders: 0, revenue: 0, time: d.getTime() };
+      }
+      dateMap[key].orders += 1;
+      dateMap[key].revenue += (o.totalAmount || 0);
+    });
+
+    const dailyTrend = Object.values(dateMap)
+      .sort((a, b) => a.time - b.time)
+      .slice(-10);
+
+    // Top 3 High-Value Orders (Whale orders)
+    const highValueOrders = [...orders]
+      .sort((a, b) => (b.totalAmount || 0) - (a.totalAmount || 0))
+      .slice(0, 3);
+
+    return {
+      aov,
+      deliveryRate,
+      deliveredCount,
+      cancellationRate,
+      cancelledCount,
+      paymentSuccessRate,
+      paidCount,
+      statusDistribution,
+      dailyTrend,
+      highValueOrders
+    };
   }, [orders]);
 
   const filteredOrders = useMemo(() => {
@@ -282,19 +378,20 @@ const AdminOrders = () => {
           align-items: center;
           gap: 0.4rem;
           padding: 0.45rem 0.8rem;
-          background: #0f172a;
+          background: #4f46e5;
           color: #ffffff;
-          border: 1px solid #0f172a;
+          border: 1px solid #4f46e5;
           border-radius: 8px;
           font-size: 0.8rem;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: 0 2px 4px rgba(15, 23, 42, 0.1);
+          box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
         }
         .export-btn-official:hover {
-          background: #1e293b;
-          box-shadow: 0 4px 8px rgba(15, 23, 42, 0.15);
+          background: #4338ca;
+          border-color: #4338ca;
+          box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
         }
 
         /* KPI Metric Cards */
@@ -475,10 +572,10 @@ const AdminOrders = () => {
           color: #334155;
         }
         .filter-pill.active {
-          background: #f8fafc;
-          color: #0f172a;
-          border-color: #e2e8f0;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+          background: #4f46e5;
+          color: #ffffff;
+          border-color: #4f46e5;
+          box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2);
           font-weight: 600;
         }
         .filter-pill-badge {
@@ -489,8 +586,8 @@ const AdminOrders = () => {
           color: #475569;
         }
         .filter-pill.active .filter-pill-badge {
-          background: #e2e8f0;
-          color: #0f172a;
+          background: rgba(255, 255, 255, 0.2);
+          color: #ffffff;
         }
 
         /* Modern Official Table */
@@ -838,9 +935,9 @@ const AdminOrders = () => {
           color: #0f172a;
         }
         .page-pill-btn.active {
-          background: #0f172a;
+          background: #4f46e5;
           color: #ffffff;
-          border-color: #0f172a;
+          border-color: #4f46e5;
         }
 
         @media (max-width: 768px) {
@@ -871,6 +968,107 @@ const AdminOrders = () => {
             justify-content: center;
           }
         }
+
+        /* Order Analytics Styles */
+        .analytics-toggle-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.45rem 0.8rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          color: #334155;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: inherit;
+        }
+        .analytics-toggle-btn:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+          border-color: #cbd5e1;
+        }
+        .analytics-panel-wrapper {
+          margin-bottom: 1.5rem;
+          animation: fadeIn 0.25s ease;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .analytics-kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 0.85rem;
+          margin-bottom: 1rem;
+        }
+        .analytics-kpi-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 0.85rem 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+          transition: border-color 0.2s ease;
+        }
+        .analytics-kpi-card:hover {
+          border-color: #cbd5e1;
+        }
+        .analytics-charts-grid {
+          display: grid;
+          grid-template-columns: 1.55fr 1fr;
+          gap: 1rem;
+        }
+        @media (max-width: 960px) {
+          .analytics-charts-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+        .analytics-chart-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          padding: 1.15rem 1.25rem;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+        }
+        .analytics-chart-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 1rem;
+        }
+        .analytics-chart-title {
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 0.15rem 0;
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+        .analytics-chart-subtitle {
+          font-size: 0.75rem;
+          color: #64748b;
+          margin: 0;
+        }
+        .whale-order-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #f8fafc;
+          border: 1px solid #f1f5f9;
+          border-radius: 8px;
+          padding: 0.55rem 0.75rem;
+          font-size: 0.75rem;
+          transition: background-color 0.15s ease;
+        }
+        .whale-order-row:hover {
+          background: #f1f5f9;
+        }
       `}</style>
 
       {/* Top Header & Page Actions */}
@@ -881,6 +1079,15 @@ const AdminOrders = () => {
             <p>Manage customer orders, track shipping logistics, and review affiliate commissions.</p>
           </div>
           <div className="header-actions-group">
+            <button 
+              className="analytics-toggle-btn"
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              title="Toggle Order Intelligence Analytics"
+            >
+              <FiBarChart2 size={15} style={{ color: '#2563eb' }} />
+              <span>{showAnalytics ? 'Hide Analytics' : 'Order Analytics'}</span>
+              {showAnalytics ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
+            </button>
             <button 
               className="refresh-btn" 
               onClick={() => fetchOrders(true)} 
@@ -939,6 +1146,223 @@ const AdminOrders = () => {
             </div>
           </div>
         </div>
+
+        {/* ─── Order Analytics & Velocity Insights Section ─── */}
+        {showAnalytics && (
+          <div className="analytics-panel-wrapper">
+            
+            {/* 4 Secondary Analytical Metrics */}
+            <div className="analytics-kpi-grid">
+              
+              <div className="analytics-kpi-card">
+                <div className="metric-icon-bubble blue" style={{ width: '32px', height: '32px', fontSize: '0.95rem' }}>
+                  <FiTrendingUp />
+                </div>
+                <div className="metric-details">
+                  <span className="metric-title">Avg Order Value (AOV)</span>
+                  <span className="metric-value" style={{ fontSize: '1rem' }}>₹{orderAnalytics.aov.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              <div className="analytics-kpi-card">
+                <div className="metric-icon-bubble green" style={{ width: '32px', height: '32px', fontSize: '0.95rem' }}>
+                  <FiCheckCircle />
+                </div>
+                <div className="metric-details">
+                  <span className="metric-title">Fulfillment Success</span>
+                  <span className="metric-value" style={{ fontSize: '1rem', color: '#059669' }}>
+                    {orderAnalytics.deliveryRate}% <span style={{ fontSize: '0.7rem', fontWeight: 500, color: '#64748b' }}>({orderAnalytics.deliveredCount} delivered)</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="analytics-kpi-card">
+                <div className="metric-icon-bubble emerald" style={{ width: '32px', height: '32px', fontSize: '0.95rem' }}>
+                  <FiActivity />
+                </div>
+                <div className="metric-details">
+                  <span className="metric-title">Payment Settlement</span>
+                  <span className="metric-value" style={{ fontSize: '1rem', color: '#16a34a' }}>
+                    {orderAnalytics.paymentSuccessRate}% <span style={{ fontSize: '0.7rem', fontWeight: 500, color: '#64748b' }}>({orderAnalytics.paidCount} paid)</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="analytics-kpi-card">
+                <div className="metric-icon-bubble red" style={{ width: '32px', height: '32px', fontSize: '0.95rem' }}>
+                  <FiAlertCircle />
+                </div>
+                <div className="metric-details">
+                  <span className="metric-title">Return / Void Rate</span>
+                  <span className="metric-value" style={{ fontSize: '1rem', color: '#dc2626' }}>
+                    {orderAnalytics.cancellationRate}% <span style={{ fontSize: '0.7rem', fontWeight: 500, color: '#64748b' }}>({orderAnalytics.cancelledCount} cancelled)</span>
+                  </span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Visual Analytics Dual Charts */}
+            <div className="analytics-charts-grid">
+              
+              {/* Chart 1: Daily Revenue & Order Volume Velocity */}
+              <div className="analytics-chart-card">
+                <div className="analytics-chart-header">
+                  <div>
+                    <h4 className="analytics-chart-title">
+                      <FiActivity style={{ color: '#2563eb' }} size={15} /> Order Velocity & Revenue Trend
+                    </h4>
+                    <p className="analytics-chart-subtitle">
+                      Daily order counts and gross sales revenue over time
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#2563eb', background: '#eff6ff', padding: '0.2rem 0.55rem', borderRadius: '6px' }}>
+                    Recent Activity
+                  </span>
+                </div>
+
+                <div style={{ width: '100%', height: 210 }}>
+                  {orderAnalytics.dailyTrend.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={orderAnalytics.dailyTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="orderRevGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25}/>
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="label" stroke="#94a3b8" tick={{ fontSize: 11, fontWeight: 500 }} />
+                        <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} tickFormatter={v => `₹${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                        <RechartsTooltip 
+                          formatter={(val, name) => [
+                            name === 'revenue' ? `₹${Number(val).toLocaleString('en-IN')}` : `${val} orders`,
+                            name === 'revenue' ? 'Sales Revenue' : 'Orders'
+                          ]}
+                          contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.75rem', padding: '0.5rem 0.8rem' }}
+                        />
+                        <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} fillOpacity={1} fill="url(#orderRevGradient)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
+                      No timeline data recorded yet
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Chart 2: Order Status Distribution & Top Value Spotlight */}
+              <div className="analytics-chart-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div className="analytics-chart-header">
+                    <div>
+                      <h4 className="analytics-chart-title">
+                        <FiPieChart style={{ color: '#8b5cf6' }} size={15} /> Order Lifecycle Distribution
+                      </h4>
+                      <p className="analytics-chart-subtitle">
+                        Fulfillment status breakdown across catalog
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ width: '100%', height: 135, position: 'relative' }}>
+                    {orderAnalytics.statusDistribution.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={orderAnalytics.statusDistribution}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={36}
+                            outerRadius={56}
+                            paddingAngle={3}
+                          >
+                            {orderAnalytics.statusDistribution.map((entry, index) => (
+                              <Cell key={`status-pie-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip 
+                            formatter={(val, name, item) => [`${val} orders (${item.payload.percentage}%)`, name]}
+                            contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.75rem' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>
+                        No status data
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status Pills with Quick Filter Trigger */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', justifyContent: 'center', marginTop: '0.35rem' }}>
+                    {orderAnalytics.statusDistribution.map(item => (
+                      <button
+                        key={item.name}
+                        onClick={() => { setStatusFilter(item.name); setCurrentPage(1); }}
+                        style={{
+                          background: '#f8fafc',
+                          border: `1px solid ${statusFilter === item.name ? item.color : '#e2e8f0'}`,
+                          borderRadius: '6px',
+                          padding: '0.15rem 0.45rem',
+                          fontSize: '0.68rem',
+                          color: '#334155',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          cursor: 'pointer'
+                        }}
+                        title={`Filter by ${item.name}`}
+                      >
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.color }}></span>
+                        <span>{item.name}:</span>
+                        <strong>{item.value}</strong>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Top Ticket Orders Spotlight */}
+                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem', marginTop: '0.75rem' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <FiZap size={12} style={{ color: '#f59e0b' }} /> High-Value Order Spotlight
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    {orderAnalytics.highValueOrders.map((o) => (
+                      <div key={o._id} className="whale-order-row">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                            {o.user?.name || 'Customer'}
+                          </span>
+                          <span style={{ color: '#94a3b8' }}>·</span>
+                          <span style={{ color: '#64748b' }}>{o.items?.length || 1} items</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 700, color: '#059669' }}>
+                            ₹{Number(o.totalAmount || 0).toLocaleString('en-IN')}
+                          </span>
+                          <button
+                            onClick={() => navigate(`/admin/dashboard/orders/${o._id}`)}
+                            style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                            title="View details"
+                          >
+                            <FiArrowUpRight size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
       </div>
 
       {/* Enterprise Table Container */}

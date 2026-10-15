@@ -90,7 +90,8 @@ const Home = () => {
           discount: p.originalPrice ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0,
           tags: p.tags || [],
           rating: 4.5,
-          reviews: Math.floor(Math.random() * 200) + 10
+          reviews: Math.floor(Math.random() * 200) + 10,
+          stock: p.stock !== undefined ? p.stock : 10
         }));
         setDbProducts(formatted);
       })
@@ -131,13 +132,19 @@ const Home = () => {
       {/* ─── Category Banner (when a category is selected) ─── */}
       {categoryFilter && apiCategories.find(c => c.slug === categoryFilter) && (() => {
         const catData = apiCategories.find(c => c.slug === categoryFilter);
+        const isComingSoon = catData.status === 'coming_soon';
         return (
           <div className="category-banner-bar" style={{
             backgroundImage: `url(${catData.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80'})`,
           }}>
             <div className="category-banner-overlay">
+              {isComingSoon && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f59e0b', color: '#fff', padding: '4px 14px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 800, marginBottom: '8px', letterSpacing: '0.5px' }}>
+                  🚀 COMING SOON
+                </div>
+              )}
               <h2>{catData.name}</h2>
-              <p>{catData.description || 'Explore our wide range of products'}</p>
+              <p>{isComingSoon ? 'This category will launch soon! Check back shortly for brand new products.' : (catData.description || 'Explore our wide range of products')}</p>
             </div>
           </div>
         );
@@ -187,9 +194,29 @@ const Home = () => {
             <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
               <div className="cat-img-tiles">
                 {apiCategories.map((c, i) => (
-                  <div key={i} className="cat-img-tile" onClick={() => navigate(`/?category=${c.slug}`)}>
+                  <div key={i} className="cat-img-tile" onClick={() => navigate(`/?category=${c.slug}`)} style={{ position: 'relative' }}>
                     <div className="cat-img-bg" style={{ backgroundImage: `url(${c.image || 'https://via.placeholder.com/300'})` }}>
                       <div className="cat-img-overlay"></div>
+                      {c.status === 'coming_soon' && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                          color: '#ffffff',
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                          zIndex: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}>
+                          <span>🚀</span> Soon
+                        </div>
+                      )}
                     </div>
                     <div className="cat-img-label">{c.name}</div>
                   </div>
@@ -292,13 +319,19 @@ const Home = () => {
           <div className="section-title-row" style={{ flexWrap:'wrap', gap:'0.5rem', marginBottom:'1rem' }}>
             <h2 className="section-title">👑 Featured Products</h2>
             <div className="featured-tabs">
-              {['All', ...apiCategories.map(c => c.name)].map(t => (
-                <button
-                  key={t}
-                  className={`featured-tab${activeTab === t ? ' active' : ''}`}
-                  onClick={() => setActiveTab(t)}
-                >{t}</button>
-              ))}
+              {['All', ...apiCategories.map(c => c.name)].map(t => {
+                const catObj = apiCategories.find(c => c.name === t);
+                const isSoon = catObj?.status === 'coming_soon';
+                return (
+                  <button
+                    key={t}
+                    className={`featured-tab${activeTab === t ? ' active' : ''}`}
+                    onClick={() => setActiveTab(t)}
+                  >
+                    {t} {isSoon && <span style={{ fontSize: '0.75rem', marginLeft: '4px' }}>🚀</span>}
+                  </button>
+                );
+              })}
             </div>
             <button className="view-all-btn" onClick={() => navigate('/products')}>View All <FiChevronRight /></button>
           </div>
@@ -307,22 +340,72 @@ const Home = () => {
         {(categoryFilter || searchFilter) && (
           <div className="section-title-row" style={{ marginBottom:'1rem' }}>
             <h2 className="section-title">
-              {searchFilter ? `Search results for "${searchFilter}"` : CATEGORY_DATA[categoryFilter]?.label}
-              <span style={{ fontSize:'0.9rem', fontWeight:500, color:'var(--text-muted)', marginLeft:'0.8rem' }}>({visibleProducts.length} products)</span>
+              {searchFilter ? `Search results for "${searchFilter}"` : (apiCategories.find(c => c.slug === categoryFilter)?.name || CATEGORY_DATA[categoryFilter]?.label)}
+              <span style={{ fontSize:'0.9rem', fontWeight:500, color:'var(--text-muted)', marginLeft:'0.8rem' }}>
+                {apiCategories.find(c => c.slug === categoryFilter)?.status === 'coming_soon' ? '(Launching Soon)' : `(${visibleProducts.length} products)`}
+              </span>
             </h2>
             <button className="view-all-btn" onClick={() => navigate('/')}>← Back to All</button>
           </div>
         )}
 
-        {visibleProducts.length > 0 ? (
-          <div className="products-grid">
-            {visibleProducts.slice(0, 10).map(p => <ProductCard key={p.id} product={p} />)}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <p>😕 No products found</p>
-            <button className="btn-primary" onClick={() => navigate('/')}>Browse All Products</button>
-          </div>
+        {categoryFilter && apiCategories.find(c => c.slug === categoryFilter)?.status === 'coming_soon' ? (() => {
+          const catData = apiCategories.find(c => c.slug === categoryFilter);
+          return (
+            <div className="category-launch-showcase" style={{
+              background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)',
+              border: '2px dashed #f59e0b',
+              borderRadius: '24px',
+              padding: '4rem 2rem',
+              textAlign: 'center',
+              maxWidth: '850px',
+              margin: '2rem auto',
+              boxShadow: '0 12px 36px rgba(245, 158, 11, 0.08)'
+            }}>
+              <div style={{
+                width: '130px', height: '130px',
+                margin: '0 auto 1.5rem auto',
+                borderRadius: '24px',
+                overflow: 'hidden',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
+                border: '4px solid #ffffff'
+              }}>
+                <img 
+                  src={catData?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80'} 
+                  alt={catData?.name} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              </div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(245, 158, 11, 0.15)', color: '#b45309', padding: '6px 18px', borderRadius: '30px', fontWeight: 800, fontSize: '0.85rem', marginBottom: '1.2rem', border: '1px solid rgba(245, 158, 11, 0.35)', letterSpacing: '0.5px' }}>
+                <span>🚀</span> THIS CATEGORY WILL LAUNCH SOON
+              </div>
+              <h2 style={{ fontSize: '2.4rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem', letterSpacing: '-0.5px' }}>
+                {catData?.name} Collection Launching Soon!
+              </h2>
+              <p style={{ color: '#64748b', fontSize: '1.1rem', maxWidth: '620px', margin: '0 auto 2.2rem auto', lineHeight: 1.6 }}>
+                {catData?.description ? catData.description : `We are assembling an exciting selection of genuine ${catData?.name.toLowerCase()} products for you.`} This category will launch soon with exclusive deals and launch promotions!
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <button className="btn-primary" onClick={() => navigate('/')} style={{ padding: '0.85rem 2.2rem', borderRadius: '30px', fontWeight: 700 }}>
+                  Explore Other Categories
+                </button>
+                <button className="btn-outline-primary" onClick={() => navigate('/products')} style={{ padding: '0.85rem 2.2rem', borderRadius: '30px', fontWeight: 700 }}>
+                  Browse Available Products
+                </button>
+              </div>
+            </div>
+          );
+        })() : (
+          visibleProducts.length > 0 ? (
+            <div className="products-grid">
+              {visibleProducts.slice(0, 10).map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <p>😕 No products found</p>
+              <button className="btn-primary" onClick={() => navigate('/')}>Browse All Products</button>
+            </div>
+          )
         )}
       </div>
 
@@ -385,7 +468,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* ─── Testimonial Slider (Positioned at bottom on top of Footer) ─── */}
+      {/* ─── Customer Feedback Slider (Positioned at bottom on top of Footer) ─── */}
       <TestimonialSlider />
 
     </div>

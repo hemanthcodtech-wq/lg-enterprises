@@ -31,7 +31,8 @@ const ProductDetail = () => {
           discount: p.originalPrice ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0,
           reviews: p.reviews ? p.reviews.filter(r => r.isApproved) : [],
           rating: p.rating || 0,
-          numReviews: p.numReviews || 0
+          numReviews: p.numReviews || 0,
+          stock: p.stock !== undefined ? p.stock : 10
         });
         setLoading(false);
       })
@@ -58,17 +59,15 @@ const ProductDetail = () => {
     );
   }
 
+  const isOutOfStock = product.stock <= 0;
+
   const handleAddToCart = () => {
     if (!user) {
       navigate('/login');
       return;
     }
-    // addToCart usually expects item object. If our context doesn't handle qty natively on add, we can just call it multiple times or update context later.
-    // For now we add it once (the context handles incrementing). Wait, if user sets qty to 3, adding once is buggy.
-    // Assuming context handles basic add.
-    for (let i=0; i<qty; i++) {
-      addToCart(product);
-    }
+    if (isOutOfStock) return;
+    addToCart(product, qty);
   };
 
   const handleWishlist = () => {
@@ -101,11 +100,26 @@ const ProductDetail = () => {
 
         {/* Right: Details */}
         <div>
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ textTransform: 'capitalize', background: 'var(--primary-alpha)', color: 'var(--primary)', padding: '0.2rem 0.8rem', borderRadius: 'var(--radius-pill)', fontSize: '0.85rem', fontWeight: 600 }}>
               {product.category}
             </span>
-            {product.discount && <span style={{ background: '#fef3c7', color: '#b45309', padding: '0.2rem 0.8rem', borderRadius: 'var(--radius-pill)', fontSize: '0.85rem', fontWeight: 600 }}>{product.discount}% OFF</span>}
+            {product.discount > 0 && <span style={{ background: '#fef3c7', color: '#b45309', padding: '0.2rem 0.8rem', borderRadius: 'var(--radius-pill)', fontSize: '0.85rem', fontWeight: 600 }}>{product.discount}% OFF</span>}
+            
+            {/* Stock status indicator badge */}
+            {product.stock > 5 ? (
+              <span style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '0.2rem 0.8rem', borderRadius: 'var(--radius-pill)', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                <FiCheck /> In Stock ({product.stock} available)
+              </span>
+            ) : product.stock > 0 ? (
+              <span style={{ background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a', padding: '0.2rem 0.8rem', borderRadius: 'var(--radius-pill)', fontSize: '0.85rem', fontWeight: 700 }}>
+                ⚡ Only {product.stock} left in stock - order soon!
+              </span>
+            ) : (
+              <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '0.2rem 0.8rem', borderRadius: 'var(--radius-pill)', fontSize: '0.85rem', fontWeight: 700 }}>
+                ✕ Out of Stock
+              </span>
+            )}
           </div>
           
           <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-dark)', lineHeight: 1.2 }}>{product.title}</h1>
@@ -126,17 +140,40 @@ const ProductDetail = () => {
             {product.description || `This premium quality ${product.title.toLowerCase()} is exactly what you need. It features top-tier durability, excellent design, and comes with a full guarantee from LG Enterprises. Grab it while stocks last!`}
           </p>
 
-          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '3rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', border: '2px solid var(--border)', borderRadius: 'var(--radius-pill)', overflow: 'hidden' }}>
-              <button onClick={() => setQty(Math.max(1, qty-1))} style={{ padding: '0.8rem 1.2rem', background: 'var(--bg-page)', fontSize: '1.2rem', fontWeight: 600 }}>-</button>
-              <span style={{ padding: '0 1.5rem', fontWeight: 700, fontSize: '1.2rem' }}>{qty}</span>
-              <button onClick={() => setQty(qty+1)} style={{ padding: '0.8rem 1.2rem', background: 'var(--bg-page)', fontSize: '1.2rem', fontWeight: 600 }}>+</button>
+          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '3rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', border: '2px solid var(--border)', borderRadius: 'var(--radius-pill)', overflow: 'hidden', opacity: isOutOfStock ? 0.4 : 1 }}>
+              <button 
+                onClick={() => setQty(Math.max(1, qty - 1))} 
+                disabled={isOutOfStock}
+                style={{ padding: '0.8rem 1.2rem', background: 'var(--bg-page)', fontSize: '1.2rem', fontWeight: 600, border: 'none', cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}>-</button>
+              <span style={{ padding: '0 1.5rem', fontWeight: 700, fontSize: '1.2rem', minWidth: '40px', textAlign: 'center' }}>{qty}</span>
+              <button 
+                onClick={() => setQty(Math.min(product.stock, qty + 1))} 
+                disabled={isOutOfStock || qty >= product.stock}
+                style={{ padding: '0.8rem 1.2rem', background: 'var(--bg-page)', fontSize: '1.2rem', fontWeight: 600, border: 'none', cursor: (isOutOfStock || qty >= product.stock) ? 'not-allowed' : 'pointer' }}>+</button>
             </div>
             
-            <button onClick={handleAddToCart} className="btn-primary" style={{ flex: 1, padding: '0', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderRadius: 'var(--radius-pill)' }}>
-              <FiShoppingCart /> Add to Cart
+            <button 
+              onClick={handleAddToCart} 
+              disabled={isOutOfStock}
+              className="btn-primary" 
+              style={{ 
+                flex: 1, 
+                padding: '0 2rem', 
+                minHeight: '52px',
+                fontSize: '1.1rem', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '0.5rem', 
+                borderRadius: 'var(--radius-pill)',
+                opacity: isOutOfStock ? 0.5 : 1,
+                cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                background: isOutOfStock ? '#94a3b8' : undefined
+              }}>
+              <FiShoppingCart /> {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
             </button>
-            <button onClick={handleWishlist} style={{ padding: '0 1.5rem', borderRadius: 'var(--radius-pill)', border: `2px solid ${inWishlist ? '#ef4444' : 'var(--border)'}`, background: inWishlist ? '#fee2e2' : 'white', color: inWishlist ? '#ef4444' : 'var(--text-gray)', fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}>
+            <button onClick={handleWishlist} style={{ padding: '0 1.5rem', borderRadius: 'var(--radius-pill)', border: `2px solid ${inWishlist ? '#ef4444' : 'var(--border)'}`, background: inWishlist ? '#fee2e2' : 'white', color: inWishlist ? '#ef4444' : 'var(--text-gray)', fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)', cursor: 'pointer' }}>
               <FiHeart style={{ fill: inWishlist ? '#ef4444' : 'none' }} />
             </button>
           </div>
