@@ -4,7 +4,7 @@ import {
   FiShoppingBag, FiTruck, FiShield, FiUsers, FiAward, FiCheckCircle,
   FiTrendingUp, FiGift, FiCopy, FiArrowRight, FiDollarSign, FiChevronDown,
   FiChevronUp, FiPercent, FiPackage, FiPhoneCall, FiMapPin, FiLayers,
-  FiStar, FiRefreshCw, FiZap, FiHelpCircle
+  FiStar, FiRefreshCw, FiZap, FiHelpCircle, FiExternalLink
 } from 'react-icons/fi';
 import {
   FaTv, FaCouch, FaBasketShopping, FaShirt, FaBlender,
@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fa6';
 import { FaRupeeSign } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 // Typewriter phrases
 const typewriterPhrases = [
@@ -232,6 +233,7 @@ const faqsList = [
 
 const About = () => {
   const { user } = useAuth();
+  const { settings } = useSettings();
 
   // Typewriter effect state
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
@@ -484,7 +486,7 @@ const About = () => {
                 </div>
 
                 <div className="showcase-card-footer">
-                  <span>🏪 Physical Store: LG Complex, Main Road, Bhimavaram</span>
+                  <span>🏪 Physical Store: {settings.storeAddress}</span>
                 </div>
 
               </div>
@@ -521,17 +523,17 @@ const About = () => {
             <div className="story-text-col">
               <div className="section-pill">Our Heritage & Mission</div>
               <h2 className="section-heading">
-                Bhimavaram's Most Trusted <span>All-in-One Megastore</span>
+                {settings.locationCity || 'Bhimavaram'}'s Most Trusted <span>All-in-One Megastore</span>
               </h2>
               <p className="story-paragraph">
-                Established in <strong>2009 in Bhimavaram, Andhra Pradesh</strong>, LG Enterprises was founded 
+                Established in <strong>2009 in {settings.locationCity || 'Bhimavaram, Andhra Pradesh'}</strong>, {settings.storeName || 'LG Enterprises'} was founded 
                 on an uncompromising promise: delivering top-grade products with genuine manufacturer warranties 
                 and wholesale-friendly pricing under one grand umbrella.
               </p>
               <p className="story-paragraph">
                 What began as a renowned local electronics and appliance store has transformed into a dynamic 
                 omnichannel e-commerce platform. Today, whether you need 4K OLED Smart TVs, handcrafted teak dining tables, 
-                everyday staples for your kitchen, or wholesale orders for corporate setups — LG Enterprises brings it 
+                everyday staples for your kitchen, or wholesale orders for corporate setups — {settings.storeName || 'LG Enterprises'} brings it 
                 to your doorstep with fast, reliable courier delivery.
               </p>
 
@@ -554,7 +556,7 @@ const About = () => {
                   <FiCheckCircle className="check-icon" />
                   <div>
                     <strong>Physical Showroom + Pan-India Shipping</strong>
-                    <p>Touch, feel, and inspect furniture and appliances at our Bhimavaram store, or order seamlessly online.</p>
+                    <p>Touch, feel, and inspect furniture and appliances at our {settings.locationCity || 'Bhimavaram'} store, or order seamlessly online.</p>
                   </div>
                 </div>
               </div>
@@ -570,20 +572,33 @@ const About = () => {
                     <FiMapPin />
                   </div>
                   <h3>Visit Our Flagship Store</h3>
-                  <p>LG Complex, Main Road, Bhimavaram, Andhra Pradesh – 534201</p>
+                  <p style={{ whiteSpace: 'pre-line' }}>{settings.storeAddress}</p>
                   <div className="store-meta-grid">
                     <div>
-                      <span>Mon - Sat</span>
-                      <strong>9:00 AM - 8:30 PM</strong>
+                      <span>Schedule</span>
+                      <strong>{settings.supportTiming || '9:00 AM - 8:30 PM'}</strong>
                     </div>
                     <div>
                       <span>Direct Helpline</span>
-                      <strong>+91 98765 43210</strong>
+                      <strong>{settings.supportPhone}</strong>
                     </div>
                   </div>
-                  <Link to="/contact" className="store-link-btn">
-                    Get Directions & In-Store Inquiry <FiArrowRight />
-                  </Link>
+                  <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+                    <Link to="/contact" className="store-link-btn" style={{ flex: 1, minWidth: '160px', textAlign: 'center' }}>
+                      Contact & Support <FiArrowRight />
+                    </Link>
+                    {settings.mapPinUrl && (
+                      <a 
+                        href={settings.mapPinUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="store-link-btn" 
+                        style={{ background: '#ffffff', color: '#4f46e5', border: '1px solid #4f46e5', flex: 1, minWidth: '160px', textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                      >
+                        <FiExternalLink /> View on Map
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

@@ -974,11 +974,11 @@ const Profile = () => {
                           <td style={{ padding: '14px 16px', color: '#64748b', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.details}</td>
                           <td style={{ padding: '14px 16px' }}>
                             <span style={{ 
-                              background: w.status === 'Approved' ? '#dcfce7' : w.status === 'Rejected' ? '#fee2e2' : '#fef9c3', 
-                              color: w.status === 'Approved' ? '#16a34a' : w.status === 'Rejected' ? '#ef4444' : '#ca8a04', 
+                              background: (w.status === 'Paid' || w.status === 'Completed' || w.status === 'Approved') ? '#dcfce7' : w.status === 'Rejected' ? '#fee2e2' : '#fef9c3', 
+                              color: (w.status === 'Paid' || w.status === 'Completed' || w.status === 'Approved') ? '#16a34a' : w.status === 'Rejected' ? '#ef4444' : '#ca8a04', 
                               padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 700 
                             }}>
-                              {w.status}
+                              {w.status === 'Completed' ? 'Paid' : w.status}
                             </span>
                           </td>
                           <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '0.85rem' }}>{w.adminNote || '-'}</td>

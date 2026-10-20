@@ -34,6 +34,45 @@ app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/feedbacks', testimonialRoutes);
 app.use('/api/return-gifts', returnGiftRoutes);
 
+const Setting = require('./models/Setting');
+
+// Public settings route for store contact, location, social links
+app.get('/api/settings', async (req, res) => {
+  try {
+    let settings = await Setting.findOne();
+    if (!settings) {
+      settings = new Setting();
+      await settings.save();
+    }
+    res.json({
+      success: true,
+      settings: {
+        storeName: settings.storeName,
+        supportEmail: settings.supportEmail,
+        supportPhone: settings.supportPhone,
+        storeAddress: settings.storeAddress,
+        locationCity: settings.locationCity,
+        mapPinUrl: settings.mapPinUrl,
+        mapEmbedIframe: settings.mapEmbedIframe,
+        whatsappNumber: settings.whatsappNumber,
+        supportTiming: settings.supportTiming,
+        socialFacebook: settings.socialFacebook,
+        socialTwitter: settings.socialTwitter,
+        socialInstagram: settings.socialInstagram,
+        socialYoutube: settings.socialYoutube,
+        socialLinkedin: settings.socialLinkedin,
+        socialWhatsapp: settings.socialWhatsapp,
+        currency: settings.currency,
+        enableFreeShipping: settings.enableFreeShipping,
+        freeShippingMin: settings.freeShippingMin
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching public settings:', err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
 const path = require('path');
 const fs = require('fs');
 

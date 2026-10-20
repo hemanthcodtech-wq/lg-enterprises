@@ -7,7 +7,9 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [orderAlerts, setOrderAlerts] = useState({ pendingCount: 0, totalOrders: 0, newOrdersToday: 0, recentAlerts: [] });
   const [giftAlerts, setGiftAlerts] = useState({ pendingDispatchCount: 0, totalQualified: 0, dispatchedCount: 0, deliveredCount: 0, recentAlerts: [] });
-  const [alertTab, setAlertTab] = useState('all'); // 'all' | 'orders' | 'gifts'
+  const [withdrawalAlerts, setWithdrawalAlerts] = useState({ pendingCount: 0, totalWithdrawals: 0, recentAlerts: [] });
+  const [userAlerts, setUserAlerts] = useState({ totalUsers: 0, totalReferred: 0, newTodayCount: 0, recentAlerts: [] });
+  const [alertTab, setAlertTab] = useState('all'); // 'all' | 'users' | 'withdrawals' | 'orders' | 'gifts'
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,22 +71,52 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchWithdrawalAlerts = async () => {
+    const storedToken = localStorage.getItem('adminToken');
+    if (!storedToken) return;
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/withdrawals/alerts`, {
+        headers: { 'x-auth-token': storedToken }
+      });
+      setWithdrawalAlerts(res.data);
+    } catch (err) {
+      console.error('Error fetching withdrawal alerts:', err);
+    }
+  };
+
+  const fetchUserAlerts = async () => {
+    const storedToken = localStorage.getItem('adminToken');
+    if (!storedToken) return;
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/users/alerts`, {
+        headers: { 'x-auth-token': storedToken }
+      });
+      setUserAlerts(res.data);
+    } catch (err) {
+      console.error('Error fetching user alerts:', err);
+    }
+  };
+
   useEffect(() => {
     if (localStorage.getItem('adminToken')) {
       fetchStats();
       fetchOrderAlerts();
       fetchGiftAlerts();
+      fetchWithdrawalAlerts();
+      fetchUserAlerts();
     }
     const interval = setInterval(() => {
       if (localStorage.getItem('adminToken')) {
         fetchOrderAlerts();
         fetchGiftAlerts();
+        fetchWithdrawalAlerts();
+        fetchUserAlerts();
       }
-    }, 20000); // Poll every 20 seconds for new orders & gift offers
+    }, 20000); // Poll every 20 seconds for new orders, gift offers, withdrawals & users
     return () => clearInterval(interval);
   }, [location.pathname]);
 
-  const totalPendingAlerts = (orderAlerts.pendingCount || 0) + (giftAlerts.pendingDispatchCount || 0);
+  const totalPendingAlerts = (orderAlerts.pendingCount || 0) + (giftAlerts.pendingDispatchCount || 0) + (withdrawalAlerts.pendingCount || 0) + (userAlerts.newTodayCount || 0);
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -160,7 +192,15 @@ const AdminDashboard = () => {
             )}
           </NavLink>
           <NavLink to="/admin/dashboard/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
-            <FiUsers className="nav-icon" /> {!isCollapsed && <span>Users</span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+              <FiUsers className="nav-icon" /> 
+              {!isCollapsed && <span>Users</span>}
+            </div>
+            {userAlerts.newTodayCount > 0 && (
+              <span className="sidebar-alert-badge" style={{ background: '#3b82f6' }} title={`${userAlerts.newTodayCount} new user(s) enrolled today`}>
+                {userAlerts.newTodayCount}
+              </span>
+            )}
           </NavLink>
           <NavLink to="/admin/dashboard/return-gifts" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
@@ -170,6 +210,17 @@ const AdminDashboard = () => {
             {giftAlerts.pendingDispatchCount > 0 && (
               <span className="sidebar-alert-badge gift-badge" title={`${giftAlerts.pendingDispatchCount} gift claim(s) need dispatch`}>
                 {giftAlerts.pendingDispatchCount}
+              </span>
+            )}
+          </NavLink>
+          <NavLink to="/admin/dashboard/withdrawals" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+              <FiDollarSign className="nav-icon" /> 
+              {!isCollapsed && <span>Withdrawals</span>}
+            </div>
+            {withdrawalAlerts.pendingCount > 0 && (
+              <span className="sidebar-alert-badge" style={{ background: '#10b981' }} title={`${withdrawalAlerts.pendingCount} pending withdrawal payout(s)`}>
+                {withdrawalAlerts.pendingCount}
               </span>
             )}
           </NavLink>
@@ -210,6 +261,7 @@ const AdminDashboard = () => {
               {location.pathname.includes('inventory') && 'Inventory & Sales Analysis'}
               {location.pathname.includes('users') && 'Customer Data'}
               {location.pathname.includes('orders') && 'Order History'}
+              {location.pathname.includes('withdrawals') && 'Wallet Withdrawal Requests'}
               {(location.pathname.includes('return-gifts') || location.pathname.includes('gift-offers')) && 'Gift Offers & Campaigns'}
               {location.pathname.includes('promos') && 'Manage Promo Codes'}
               {location.pathname.includes('carousel') && 'Manage Carousel'}
@@ -256,7 +308,7 @@ const AdminDashboard = () => {
                       </span>
                     </div>
 
-                    {/* Filter Tabs: All, Orders, Gift Offers */}
+                    {/* Filter Tabs: All, Users, Withdrawals, Orders, Gift Offers */}
                     <div className="bell-tabs-bar">
                       <button
                         type="button"
@@ -264,6 +316,20 @@ const AdminDashboard = () => {
                         onClick={() => setAlertTab('all')}
                       >
                         All ({totalPendingAlerts})
+                      </button>
+                      <button
+                        type="button"
+                        className={`bell-tab-btn ${alertTab === 'users' ? 'active' : ''}`}
+                        onClick={() => setAlertTab('users')}
+                      >
+                        Users ({userAlerts.newTodayCount})
+                      </button>
+                      <button
+                        type="button"
+                        className={`bell-tab-btn ${alertTab === 'withdrawals' ? 'active' : ''}`}
+                        onClick={() => setAlertTab('withdrawals')}
+                      >
+                        Payouts ({withdrawalAlerts.pendingCount})
                       </button>
                       <button
                         type="button"
@@ -277,11 +343,115 @@ const AdminDashboard = () => {
                         className={`bell-tab-btn ${alertTab === 'gifts' ? 'active' : ''}`}
                         onClick={() => setAlertTab('gifts')}
                       >
-                        Gift Offers ({giftAlerts.pendingDispatchCount})
+                        Gifts ({giftAlerts.pendingDispatchCount})
                       </button>
                     </div>
 
                     <div className="bell-card-body">
+                      {/* New Registered & Referred User Alerts */}
+                      {(alertTab === 'all' || alertTab === 'users') && userAlerts.recentAlerts && userAlerts.recentAlerts.length > 0 && (
+                        <>
+                          {alertTab === 'all' && (
+                            <div className="bell-section-heading" style={{ background: '#eff6ff', color: '#1e40af' }}>
+                              <span>👤 New Enrolled & Referred Users</span>
+                              <span className="bell-sub-count" style={{ color: '#2563eb', fontWeight: 700 }}>{userAlerts.newTodayCount} joined today</span>
+                            </div>
+                          )}
+                          {userAlerts.recentAlerts.map(u => (
+                            <div 
+                              key={u._id} 
+                              className="bell-order-row"
+                              style={{ background: u.referredBy ? '#f0fdf4' : '#ffffff' }}
+                              onClick={() => {
+                                setShowNotificationDropdown(false);
+                                navigate(`/admin/dashboard/users/${u._id}`);
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
+                                    {u.name}
+                                  </span>
+                                  {u.referredBy ? (
+                                    <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }}>
+                                      Referred
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '1px 6px', borderRadius: '4px', background: '#f1f5f9', color: '#475569' }}>
+                                      Direct
+                                    </span>
+                                  )}
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 700 }}>
+                                  View User →
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                {u.email}
+                              </div>
+                              {u.referredBy && (
+                                <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 600, marginTop: '2px' }}>
+                                  Referred by: {u.referredBy.name} ({u.referredBy.referralCode})
+                                </div>
+                              )}
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>Code: {u.referralCode || 'N/A'}</span>
+                                <span>{new Date(u.createdAt).toLocaleDateString()} at {new Date(u.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {/* Withdrawal Requests Alerts */}
+                      {(alertTab === 'all' || alertTab === 'withdrawals') && withdrawalAlerts.recentAlerts && withdrawalAlerts.recentAlerts.length > 0 && (
+                        <>
+                          {alertTab === 'all' && (
+                            <div className="bell-section-heading" style={{ background: '#ecfdf5', color: '#065f46' }}>
+                              <span>💸 Payout / Withdrawal Requests</span>
+                              <span className="bell-sub-count" style={{ color: '#047857', fontWeight: 700 }}>{withdrawalAlerts.pendingCount} pending</span>
+                            </div>
+                          )}
+                          {withdrawalAlerts.recentAlerts.map(w => (
+                            <div 
+                              key={w._id} 
+                              className="bell-order-row"
+                              style={{ background: w.status === 'Pending' ? '#fffbeb' : '#ffffff' }}
+                              onClick={() => {
+                                setShowNotificationDropdown(false);
+                                navigate('/admin/dashboard/withdrawals');
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                                <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
+                                  ₹{w.amount?.toFixed(2)} via {w.method}
+                                </span>
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  background: w.status === 'Pending' ? '#fef3c7' : (w.status === 'Paid' || w.status === 'Completed' || w.status === 'Approved') ? '#dcfce7' : '#fee2e2',
+                                  color: w.status === 'Pending' ? '#b45309' : (w.status === 'Paid' || w.status === 'Completed' || w.status === 'Approved') ? '#15803d' : '#b91c1c'
+                                }}>
+                                  {w.status === 'Paid' || w.status === 'Completed' || w.status === 'Approved' ? 'Paid' : w.status}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{w.user?.name || 'Affiliate User'}</span>
+                                <span style={{ color: '#059669', fontWeight: 700 }}>Pay Now →</span>
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px', fontFamily: 'monospace' }}>
+                                Details: {w.details}
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px' }}>
+                                {new Date(w.createdAt).toLocaleDateString()} at {new Date(w.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      )}
+
                       {/* Qualified Gift Offer Alerts */}
                       {(alertTab === 'all' || alertTab === 'gifts') && giftAlerts.recentAlerts && giftAlerts.recentAlerts.length > 0 && (
                         <>
@@ -383,16 +553,40 @@ const AdminDashboard = () => {
                       )}
 
                       {/* Empty state */}
-                      {((alertTab === 'orders' && (!orderAlerts.recentAlerts || orderAlerts.recentAlerts.length === 0)) ||
+                      {((alertTab === 'users' && (!userAlerts.recentAlerts || userAlerts.recentAlerts.length === 0)) ||
+                        (alertTab === 'withdrawals' && (!withdrawalAlerts.recentAlerts || withdrawalAlerts.recentAlerts.length === 0)) ||
+                        (alertTab === 'orders' && (!orderAlerts.recentAlerts || orderAlerts.recentAlerts.length === 0)) ||
                         (alertTab === 'gifts' && (!giftAlerts.recentAlerts || giftAlerts.recentAlerts.length === 0)) ||
-                        (alertTab === 'all' && (!orderAlerts.recentAlerts || orderAlerts.recentAlerts.length === 0) && (!giftAlerts.recentAlerts || giftAlerts.recentAlerts.length === 0))) && (
+                        (alertTab === 'all' && (!userAlerts.recentAlerts || userAlerts.recentAlerts.length === 0) && (!withdrawalAlerts.recentAlerts || withdrawalAlerts.recentAlerts.length === 0) && (!orderAlerts.recentAlerts || orderAlerts.recentAlerts.length === 0) && (!giftAlerts.recentAlerts || giftAlerts.recentAlerts.length === 0))) && (
                         <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
                           No notifications found
                         </div>
                       )}
                     </div>
 
-                    <div className="bell-card-footer" style={{ display: 'flex', gap: '8px' }}>
+                    <div className="bell-card-footer" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setShowNotificationDropdown(false);
+                          navigate('/admin/dashboard/users');
+                        }}
+                        className="bell-view-all-btn"
+                        style={{ flex: 1, minWidth: '75px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
+                      >
+                        Users ({userAlerts.totalUsers || 0})
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setShowNotificationDropdown(false);
+                          navigate('/admin/dashboard/withdrawals');
+                        }}
+                        className="bell-view-all-btn"
+                        style={{ flex: 1, minWidth: '75px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}
+                      >
+                        Payouts ({withdrawalAlerts.pendingCount || 0})
+                      </button>
                       <button 
                         type="button"
                         onClick={() => {
@@ -400,7 +594,7 @@ const AdminDashboard = () => {
                           navigate('/admin/dashboard/orders');
                         }}
                         className="bell-view-all-btn"
-                        style={{ flex: 1, background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
+                        style={{ flex: 1, minWidth: '75px', background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
                       >
                         Orders ({orderAlerts.totalOrders || 0})
                       </button>
@@ -411,9 +605,9 @@ const AdminDashboard = () => {
                           navigate('/admin/dashboard/return-gifts?tab=claims');
                         }}
                         className="bell-view-all-btn"
-                        style={{ flex: 1, background: '#4f46e5', color: '#fff' }}
+                        style={{ flex: 1, minWidth: '75px', background: '#4f46e5', color: '#fff' }}
                       >
-                        Gift Claims ({giftAlerts.totalQualified || 0})
+                        Gifts ({giftAlerts.totalQualified || 0})
                       </button>
                     </div>
                   </div>
@@ -456,6 +650,16 @@ const AdminDashboard = () => {
             {giftAlerts.pendingDispatchCount > 0 && (
               <span className="sidebar-alert-badge gift-badge">
                 {giftAlerts.pendingDispatchCount}
+              </span>
+            )}
+          </NavLink>
+          <NavLink to="/admin/dashboard/withdrawals" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+              <FiDollarSign className="popup-icon" /> Withdrawals
+            </div>
+            {withdrawalAlerts.pendingCount > 0 && (
+              <span className="sidebar-alert-badge" style={{ background: '#10b981' }}>
+                {withdrawalAlerts.pendingCount}
               </span>
             )}
           </NavLink>

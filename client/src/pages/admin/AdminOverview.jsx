@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useOutletContext, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
   FiUsers, FiShoppingBag, FiBox, 
@@ -545,6 +545,28 @@ const AdminOverview = () => {
             <p>₹{Number(currentStats.netRevenue || 0).toLocaleString('en-IN')}</p>
           </div>
         </div>
+
+        {/* Pending Withdrawals Card */}
+        <Link 
+          to="/admin/dashboard/withdrawals" 
+          className="glass-card stat-card-glass" 
+          style={{ textDecoration: 'none', border: (currentStats.pendingWithdrawalsCount || 0) > 0 ? '1px solid #fde68a' : '1px solid #e2e8f0', background: (currentStats.pendingWithdrawalsCount || 0) > 0 ? '#fffdf5' : '#ffffff' }}
+        >
+          <div className="stat-icon-box" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+            <FaRupeeSign />
+          </div>
+          <div className="stat-data">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <h3 style={{ margin: 0 }}>Pending Payouts</h3>
+              {(currentStats.pendingWithdrawalsCount || 0) > 0 && (
+                <span style={{ background: '#fef3c7', color: '#b45309', fontSize: '0.65rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px' }}>Action</span>
+              )}
+            </div>
+            <p style={{ color: (currentStats.pendingWithdrawalsCount || 0) > 0 ? '#d97706' : '#0f172a' }}>
+              {currentStats.pendingWithdrawalsCount ?? 0} Requests
+            </p>
+          </div>
+        </Link>
 
       </div>
 

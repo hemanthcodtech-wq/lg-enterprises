@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import {
   FiPhone, FiMail, FiMapPin, FiClock, FiSend, FiCheckCircle,
   FiMessageCircle, FiPackage, FiGift, FiShield, FiHelpCircle,
-  FiChevronDown, FiChevronUp, FiArrowRight, FiZap, FiTruck, FiRefreshCw
+  FiChevronDown, FiChevronUp, FiArrowRight, FiZap, FiTruck, FiRefreshCw,
+  FiExternalLink
 } from 'react-icons/fi';
 import {
   FaWhatsapp, FaStore, FaHandshakeAngle, FaBoxesStacked, FaCoins
 } from 'react-icons/fa6';
+import { useSettings } from '../context/SettingsContext';
 
 // Typewriter phrases for Contact page
 const typewriterPhrases = [
@@ -75,6 +77,11 @@ const contactFaqs = [
 ];
 
 const Contact = () => {
+  const { settings } = useSettings();
+  // Clean phone numbers
+  const cleanPhone = (settings.supportPhone || '+91 98765 43210').replace(/[^0-9+]/g, '');
+  const cleanWhatsapp = (settings.whatsappNumber || '+91 98765 43210').replace(/[^0-9]/g, '');
+
   // Typewriter effect state
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [currentText, setCurrentText] = useState('');
@@ -171,22 +178,22 @@ const Contact = () => {
 
               <p className="contact-hero-subtitle">
                 Have questions about ongoing deliveries, warranty claims, bulk wholesale quotes, 
-                or your <strong>5-tier referral wallet earnings</strong>? Connect directly with our Bhimavaram support desk 
+                or your <strong>5-tier referral wallet earnings</strong>? Connect directly with our <strong>{settings.locationCity || 'Bhimavaram'}</strong> support desk 
                 via WhatsApp, phone, or send an inquiry below for guaranteed fast turnaround.
               </p>
 
               {/* Direct Action Buttons */}
               <div className="contact-hero-actions">
                 <a 
-                  href="https://wa.me/919876543210" 
+                  href={settings.socialWhatsapp || `https://wa.me/${cleanWhatsapp}`} 
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="btn-contact-whatsapp"
                 >
                   <FaWhatsapp className="btn-icon" /> Chat on WhatsApp
                 </a>
-                <a href="tel:+919876543210" className="btn-contact-call">
-                  <FiPhone className="btn-icon" /> Call +91 98765 43210
+                <a href={`tel:${cleanPhone}`} className="btn-contact-call">
+                  <FiPhone className="btn-icon" /> Call {settings.supportPhone}
                 </a>
                 <a href="#contact-form" className="btn-contact-form-jump">
                   <FiSend className="btn-icon" /> Send Message
@@ -285,10 +292,16 @@ const Contact = () => {
                 <div className="launcher-store-banner">
                   <div className="store-banner-pin"><FiMapPin /></div>
                   <div className="store-banner-details">
-                    <strong>Bhimavaram Flagship Showroom</strong>
-                    <p>LG Complex, Main Road, Bhimavaram, AP – 534201</p>
+                    <strong>{settings.locationCity || 'Bhimavaram'} Flagship Showroom</strong>
+                    <p>{settings.storeAddress}</p>
                   </div>
-                  <a href="#store-map" className="store-banner-link">View Details</a>
+                  {settings.mapPinUrl ? (
+                    <a href={settings.mapPinUrl} target="_blank" rel="noopener noreferrer" className="store-banner-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      Pinpoint <FiExternalLink />
+                    </a>
+                  ) : (
+                    <a href="#store-map" className="store-banner-link">View Details</a>
+                  )}
                 </div>
 
               </div>
@@ -300,7 +313,7 @@ const Contact = () => {
           <div className="contact-stats-ribbon">
             {[
               { value: "< 2 Hours", label: "Average Response Time", icon: <FiClock /> },
-              { value: "Mon - Sat", label: "9:00 AM - 8:30 PM Showroom", icon: <FaStore /> },
+              { value: "Mon - Sat", label: `${settings.supportTiming || '9:00 AM - 8:30 PM'} Showroom`, icon: <FaStore /> },
               { value: "10,000+", label: "Products Under Warranty", icon: <FiPackage /> },
               { value: "5 Tiers", label: "Referral Program Support", icon: <FiGift /> }
             ].map((stat, i) => (
@@ -330,7 +343,7 @@ const Contact = () => {
                 We're Always <span>Ready to Connect</span>
               </h2>
               <p className="story-paragraph">
-                Reach out to us via any of our official channels or step right into our Bhimavaram retail megastore.
+                Reach out to us via any of our official channels or step right into our {settings.locationCity || 'Bhimavaram'} retail megastore.
               </p>
 
               <div className="info-cards-stack" id="store-map">
@@ -340,10 +353,19 @@ const Contact = () => {
                   <div className="info-icon-box">
                     <FiMapPin />
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <h4>Physical Showroom Address</h4>
-                    <p>LG Complex, Main Road, Bhimavaram, Andhra Pradesh – 534201</p>
-                    <span className="info-subtext">Walk-in demos for electronics, appliances & furniture</span>
+                    <p style={{ whiteSpace: 'pre-line' }}>{settings.storeAddress}</p>
+                    {settings.mapPinUrl && (
+                      <a 
+                        href={settings.mapPinUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.45rem', fontSize: '0.8rem', color: '#4f46e5', fontWeight: 600, textDecoration: 'none' }}
+                      >
+                        <FiExternalLink /> Open Location Pinpoint on Google Maps
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -354,8 +376,13 @@ const Contact = () => {
                   </div>
                   <div>
                     <h4>Phone & WhatsApp Helpline</h4>
-                    <p>+91 98765 43210 / +91 98765 43211</p>
-                    <span className="info-subtext">Available Mon – Sat: 9:00 AM – 8:30 PM (IST)</span>
+                    <p>
+                      <a href={`tel:${cleanPhone}`} style={{ color: 'inherit', textDecoration: 'none' }}>{settings.supportPhone}</a>
+                      {settings.whatsappNumber && settings.whatsappNumber !== settings.supportPhone && (
+                        <span> / <a href={settings.socialWhatsapp || `https://wa.me/${cleanWhatsapp}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{settings.whatsappNumber}</a></span>
+                      )}
+                    </p>
+                    <span className="info-subtext">Available {settings.supportTiming || 'Mon – Sat: 9:00 AM – 8:30 PM (IST)'}</span>
                   </div>
                 </div>
 
@@ -366,7 +393,9 @@ const Contact = () => {
                   </div>
                   <div>
                     <h4>Official Email Inboxes</h4>
-                    <p>support@lgenterprises.com</p>
+                    <p>
+                      <a href={`mailto:${settings.supportEmail}`} style={{ color: 'inherit', textDecoration: 'none' }}>{settings.supportEmail}</a>
+                    </p>
                     <span className="info-subtext">24/7 ticket logging with guaranteed fast turnaround</span>
                   </div>
                 </div>
@@ -378,10 +407,31 @@ const Contact = () => {
                   </div>
                   <div>
                     <h4>Business Operating Hours</h4>
-                    <p>Monday – Saturday: 9:00 AM – 8:30 PM</p>
-                    <span className="info-subtext">Sunday: 10:00 AM – 6:00 PM</span>
+                    <p>{settings.supportTiming || 'Monday – Saturday: 9:00 AM – 8:30 PM'}</p>
+                    <span className="info-subtext">Online Store open 24/7 with immediate automated dispatch</span>
                   </div>
                 </div>
+
+                {/* Live Google Map Embed if provided */}
+                {settings.mapEmbedIframe && (
+                  <div className="info-item-card" style={{ padding: '0.5rem', display: 'block', overflow: 'hidden' }}>
+                    <div style={{ padding: '0.5rem 0.5rem 0.75rem 0.5rem', fontWeight: 600, fontSize: '0.82rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <FiMapPin style={{ color: '#4f46e5' }} /> Interactive Store Pinpoint
+                    </div>
+                    {settings.mapEmbedIframe.includes('<iframe') ? (
+                      <div dangerouslySetInnerHTML={{ __html: settings.mapEmbedIframe }} style={{ width: '100%', minHeight: '220px', borderRadius: '8px', overflow: 'hidden' }} />
+                    ) : (
+                      <iframe 
+                        title="Store Location" 
+                        src={settings.mapEmbedIframe} 
+                        width="100%" 
+                        height="220" 
+                        style={{ border: 0, borderRadius: '8px' }} 
+                        loading="lazy"
+                      />
+                    )}
+                  </div>
+                )}
 
               </div>
 

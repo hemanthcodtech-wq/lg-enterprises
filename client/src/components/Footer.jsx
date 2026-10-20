@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
   FiPhone, FiMail, FiMapPin, FiFacebook, FiTwitter, 
-  FiInstagram, FiYoutube, FiChevronRight 
+  FiInstagram, FiYoutube, FiChevronRight, FiLinkedin 
 } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
+import { useSettings } from '../context/SettingsContext';
 
 const defaultCategories = [
   { name: 'Electronics', slug: 'electronics' },
@@ -16,6 +18,7 @@ const defaultCategories = [
 
 const Footer = () => {
   const [categories, setCategories] = useState([]);
+  const { settings } = useSettings();
 
   useEffect(() => {
     axios.get(`${import.meta.env.VITE_API_URL}/categories`)
@@ -33,54 +36,87 @@ const Footer = () => {
 
   const displayCategories = categories.length > 0 ? categories.slice(0, 5) : defaultCategories;
 
+  // Clean phone for tel: link
+  const cleanPhone = (settings.supportPhone || '+91 98765 43210').replace(/[^0-9+]/g, '');
+
   return (
     <footer className="footer">
       <div className="footer-top">
         {/* Brand */}
         <div>
           <Link to="/" onClick={scrollToTop} style={{ display: 'inline-block' }}>
-            <img src="/logo.png" alt="LG Enterprises" className="footer-brand-logo" />
+            <img src="/logo.png" alt={settings.storeName || "LG Enterprises"} className="footer-brand-logo" />
           </Link>
           <p className="footer-desc">
             Your one-stop destination for Electronics, Furniture, Grocery, Clothing & more. Quality products at the best prices — delivered to your door.
           </p>
           <div className="footer-social">
-            <a 
-              href="https://facebook.com" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="social-icon"
-              aria-label="Facebook"
-            >
-              <FiFacebook />
-            </a>
-            <a 
-              href="https://twitter.com" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="social-icon"
-              aria-label="Twitter"
-            >
-              <FiTwitter />
-            </a>
-            <a 
-              href="https://instagram.com" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="social-icon"
-              aria-label="Instagram"
-            >
-              <FiInstagram />
-            </a>
-            <a 
-              href="https://youtube.com" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="social-icon"
-              aria-label="YouTube"
-            >
-              <FiYoutube />
-            </a>
+            {settings.socialFacebook && (
+              <a 
+                href={settings.socialFacebook} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon"
+                aria-label="Facebook"
+              >
+                <FiFacebook />
+              </a>
+            )}
+            {settings.socialTwitter && (
+              <a 
+                href={settings.socialTwitter} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon"
+                aria-label="Twitter"
+              >
+                <FiTwitter />
+              </a>
+            )}
+            {settings.socialInstagram && (
+              <a 
+                href={settings.socialInstagram} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon"
+                aria-label="Instagram"
+              >
+                <FiInstagram />
+              </a>
+            )}
+            {settings.socialYoutube && (
+              <a 
+                href={settings.socialYoutube} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon"
+                aria-label="YouTube"
+              >
+                <FiYoutube />
+              </a>
+            )}
+            {settings.socialWhatsapp && (
+              <a 
+                href={settings.socialWhatsapp} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon"
+                aria-label="WhatsApp"
+              >
+                <FaWhatsapp />
+              </a>
+            )}
+            {settings.socialLinkedin && (
+              <a 
+                href={settings.socialLinkedin} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="social-icon"
+                aria-label="LinkedIn"
+              >
+                <FiLinkedin />
+              </a>
+            )}
           </div>
         </div>
 
@@ -168,17 +204,32 @@ const Footer = () => {
         {/* Contact Info */}
         <div>
           <h4 className="footer-col-title">Contact Info</h4>
-          <Link to="/contact" onClick={scrollToTop} className="footer-contact-item" style={{ textDecoration: 'none' }}>
-            <FiMapPin />
-            <p style={{ margin: 0 }}>LG Complex, Main Road,<br/>Bhimavaram, AP – 534201</p>
-          </Link>
-          <a href="tel:+919876543210" className="footer-contact-item" style={{ textDecoration: 'none' }}>
-            <FiPhone />
-            <p style={{ margin: 0 }}>+91 9876543210</p>
+          {settings.mapPinUrl ? (
+            <a 
+              href={settings.mapPinUrl} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="footer-contact-item" 
+              style={{ textDecoration: 'none' }}
+              title="Open Google Maps Location Pinpoint"
+            >
+              <FiMapPin style={{ flexShrink: 0, marginTop: '3px' }} />
+              <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{settings.storeAddress}</p>
+            </a>
+          ) : (
+            <Link to="/contact" onClick={scrollToTop} className="footer-contact-item" style={{ textDecoration: 'none' }}>
+              <FiMapPin style={{ flexShrink: 0, marginTop: '3px' }} />
+              <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{settings.storeAddress}</p>
+            </Link>
+          )}
+
+          <a href={`tel:${cleanPhone}`} className="footer-contact-item" style={{ textDecoration: 'none' }}>
+            <FiPhone style={{ flexShrink: 0 }} />
+            <p style={{ margin: 0 }}>{settings.supportPhone}</p>
           </a>
-          <a href="mailto:support@lgenterprises.com" className="footer-contact-item" style={{ textDecoration: 'none' }}>
-            <FiMail />
-            <p style={{ margin: 0 }}>support@lgenterprises.com</p>
+          <a href={`mailto:${settings.supportEmail}`} className="footer-contact-item" style={{ textDecoration: 'none' }}>
+            <FiMail style={{ flexShrink: 0 }} />
+            <p style={{ margin: 0 }}>{settings.supportEmail}</p>
           </a>
         </div>
       </div>
@@ -187,7 +238,7 @@ const Footer = () => {
 
       <div className="footer-bottom">
         <div className="footer-bottom-left">
-          &copy; {new Date().getFullYear()} LG Enterprises. All Rights Reserved.
+          &copy; {new Date().getFullYear()} {settings.storeName || 'LG Enterprises'}. All Rights Reserved.
         </div>
         <div className="footer-bottom-right">
           <span>Secure Payments:</span>

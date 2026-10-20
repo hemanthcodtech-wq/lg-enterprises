@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { SettingsProvider } from './context/SettingsContext';
 import AppRouter from './routes/AppRouter';
 import { Toaster } from 'react-hot-toast';
 
@@ -27,10 +28,12 @@ function App() {
 
   return (
     <AuthProvider>
-      <CartProvider>
-        <Toaster position="top-center" toastOptions={{ duration: 3000, style: { background: '#333', color: '#fff' } }} />
-        <AppRouter />
-      </CartProvider>
+      <SettingsProvider>
+        <CartProvider>
+          <Toaster position="top-center" toastOptions={{ duration: 3000, style: { background: '#333', color: '#fff' } }} />
+          <AppRouter />
+        </CartProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }

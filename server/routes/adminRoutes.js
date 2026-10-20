@@ -198,6 +198,8 @@ router.get('/dashboard-stats', authAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(startDate ? 0 : 6); // fetch all if filtered, else 6
 
+    const pendingWithdrawalsCount = await Withdrawal.countDocuments({ status: 'Pending' });
+
     res.json({
       usersCount,
       ordersCount,
@@ -210,7 +212,8 @@ router.get('/dashboard-stats', authAdmin, async (req, res) => {
       salesData,
       monthlySalesData,
       lowStockProducts,
-      recentOrders
+      recentOrders,
+      pendingWithdrawalsCount
     });
   } catch (err) {
     console.error('Dashboard stats error:', err);
@@ -451,10 +454,61 @@ router.delete('/promos/:id', authAdmin, async (req, res) => {
   }
 });
 
+// Get New Referred / Registered Users Alerts (Admin)
+router.get('/users/alerts', authAdmin, async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments({ role: { $ne: 'admin' } });
+    const totalReferred = await User.countDocuments({ role: { $ne: 'admin' }, referredBy: { $exists: true, $ne: null } });
+
+    // Recent 24h new users count
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const newTodayCount = await User.countDocuments({ role: { $ne: 'admin' }, createdAt: { $gte: startOfToday } });
+
+    // Last 6 enrolled users (prioritizing referred, or recent registrations)
+    const recentAlerts = await User.find({ role: { $ne: 'admin' } })
+      .populate('referredBy', 'name email referralCode')
+      .select('name email phone referralCode referredBy createdAt isEmailVerified')
+      .sort({ createdAt: -1 })
+      .limit(6);
+
+    res.json({
+      totalUsers,
+      totalReferred,
+      newTodayCount,
+      recentAlerts
+    });
+  } catch (err) {
+    console.error('Error fetching user alerts:', err);
+    res.status(500).json({ error: 'Failed to fetch user alerts' });
+  }
+});
+
+// Get Withdrawal Alerts (Admin)
+router.get('/withdrawals/alerts', authAdmin, async (req, res) => {
+  try {
+    const pendingCount = await Withdrawal.countDocuments({ status: 'Pending' });
+    const totalWithdrawals = await Withdrawal.countDocuments();
+    const recentAlerts = await Withdrawal.find()
+      .populate('user', 'name email phone')
+      .sort({ createdAt: -1 })
+      .limit(6);
+
+    res.json({
+      pendingCount,
+      totalWithdrawals,
+      recentAlerts
+    });
+  } catch (err) {
+    console.error('Error fetching withdrawal alerts:', err);
+    res.status(500).json({ error: 'Failed to fetch withdrawal alerts' });
+  }
+});
+
 // Get All Withdrawals (Admin)
 router.get('/withdrawals', authAdmin, async (req, res) => {
   try {
-    const withdrawals = await Withdrawal.find().populate('user', 'name email').sort({ createdAt: -1 });
+    const withdrawals = await Withdrawal.find().populate('user', 'name email phone walletBalance').sort({ createdAt: -1 });
     res.json(withdrawals);
   } catch (err) {
     console.error(err);
@@ -471,11 +525,12 @@ router.put('/withdrawals/:id/status', authAdmin, async (req, res) => {
     if (!withdrawal) return res.status(404).json({ error: 'Withdrawal not found' });
     if (withdrawal.status !== 'Pending') return res.status(400).json({ error: 'Withdrawal is already processed' });
 
+    // Mark as Paid, Approved or Completed
     withdrawal.status = status;
     withdrawal.adminNote = adminNote;
 
-    if (status === 'Completed') {
-      // Deduct the wallet now that it is completed
+    if (status === 'Paid' || status === 'Completed' || status === 'Approved') {
+      // Deduct the wallet now that it is completed/paid
       const user = await User.findById(withdrawal.user);
       if (user) {
         user.walletBalance = Math.max(0, (user.walletBalance || 0) - withdrawal.amount);
@@ -569,7 +624,9 @@ router.put('/settings', authAdmin, async (req, res) => {
       settings = new Setting();
     }
     const allowedFields = [
-      'storeName', 'supportEmail', 'supportPhone', 'storeAddress', 
+      'storeName', 'supportEmail', 'supportPhone', 'storeAddress',
+      'locationCity', 'mapPinUrl', 'mapEmbedIframe', 'whatsappNumber', 'supportTiming',
+      'socialFacebook', 'socialTwitter', 'socialInstagram', 'socialYoutube', 'socialLinkedin', 'socialWhatsapp',
       'currency', 'timezone', 'enablePromos', 'enableFreeShipping', 
       'freeShippingMin', 'taxRate', 'lowStockAlert', 'maintenanceMode', 'orderEmailAlerts'
     ];
