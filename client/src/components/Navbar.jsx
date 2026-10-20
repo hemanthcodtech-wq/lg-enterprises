@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import {
   FiSearch, FiShoppingCart, FiUser, FiHeart,
   FiMenu, FiX, FiLogOut, FiPackage, FiChevronDown,
@@ -14,9 +15,32 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [qualifiedGiftsCount, setQualifiedGiftsCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
+
+  // Check if current user has qualified for any return gifts
+  useEffect(() => {
+    const fetchUserGifts = async () => {
+      const token = localStorage.getItem('token');
+      if (!token || !user) {
+        setQualifiedGiftsCount(0);
+        return;
+      }
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/return-gifts/my-claims`, {
+          headers: { 'x-auth-token': token }
+        });
+        if (Array.isArray(res.data)) {
+          setQualifiedGiftsCount(res.data.length);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetchUserGifts();
+  }, [user, location.pathname]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -92,6 +116,30 @@ const Navbar = () => {
             <FiPhone />
             <span>Contact</span>
           </Link>
+          {/* Gift Offers */}
+          <Link to="/gift-offers" className="nav-action" title="Gift Offers" style={{ position: 'relative' }}>
+            <FiGift style={{ color: qualifiedGiftsCount > 0 ? '#10b981' : '#d97706' }} />
+            <span>Gift Offers</span>
+            {qualifiedGiftsCount > 0 ? (
+              <span style={{ 
+                position: 'absolute', 
+                top: '-6px', 
+                right: '-8px', 
+                background: 'linear-gradient(135deg, #10b981, #059669)', 
+                color: 'white', 
+                fontSize: '9px', 
+                fontWeight: 800, 
+                padding: '1px 5px', 
+                borderRadius: '10px', 
+                boxShadow: '0 2px 6px rgba(16,185,129,0.5)',
+                whiteSpace: 'nowrap'
+              }}>
+                {qualifiedGiftsCount} UNLOCKED 🎁
+              </span>
+            ) : (
+              <span style={{ position: 'absolute', top: '-5px', right: '-6px', background: '#f59e0b', color: 'white', fontSize: '9px', fontWeight: 800, padding: '1px 5px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(245,158,11,0.4)' }}>LIVE</span>
+            )}
+          </Link>
           {/* Wishlist */}
           <Link to="/wishlist" className="nav-action" title="Wishlist">
             <FiHeart />
@@ -128,6 +176,16 @@ const Navbar = () => {
                   </Link>
                   <Link to="/orders" onClick={() => setDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem', color: '#334155', textDecoration: 'none', fontSize: '0.9rem', borderRadius: '6px', transition: '0.2s' }}>
                     <FiPackage /> My Orders
+                  </Link>
+                  <Link to="/gift-offers" onClick={() => setDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem', color: '#334155', textDecoration: 'none', fontSize: '0.9rem', borderRadius: '6px', transition: '0.2s' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <FiGift style={{ color: qualifiedGiftsCount > 0 ? '#10b981' : '#d97706' }} /> Gift Offers
+                    </div>
+                    {qualifiedGiftsCount > 0 && (
+                      <span style={{ background: '#ecfdf5', color: '#047857', fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+                        {qualifiedGiftsCount} Won 🎁
+                      </span>
+                    )}
                   </Link>
                   <Link to="/wishlist" onClick={() => setDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem', color: '#334155', textDecoration: 'none', fontSize: '0.9rem', borderRadius: '6px', transition: '0.2s' }}>
                     <FiHeart /> Wishlist
@@ -241,6 +299,16 @@ const Navbar = () => {
               <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', margin: '0.2rem 0 0.1rem 0' }}>
                 Explore Store
               </div>
+              <Link to="/gift-offers" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: qualifiedGiftsCount > 0 ? '#047857' : '#b45309' }}>
+                <FiGift style={{ color: qualifiedGiftsCount > 0 ? '#10b981' : '#d97706' }} /> Gift Offers 
+                {qualifiedGiftsCount > 0 ? (
+                  <span style={{ marginLeft: 'auto', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800 }}>
+                    {qualifiedGiftsCount} UNLOCKED 🎁
+                  </span>
+                ) : (
+                  <span style={{ marginLeft: 'auto', background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800 }}>LIVE</span>
+                )}
+              </Link>
               <Link to="/" onClick={() => setMenuOpen(false)}><FiHome /> Home</Link>
               <Link to="/products" onClick={() => setMenuOpen(false)}><FiPackage /> All Products</Link>
               <Link to="/cart" onClick={() => setMenuOpen(false)}>

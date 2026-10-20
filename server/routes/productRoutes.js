@@ -6,7 +6,7 @@ const { authAdmin, authUser } = require('../middleware/auth');
 const { upload } = require('../config/cloudinary');
 
 // Create a Product (Admin Only)
-router.post('/', authAdmin, upload.array('images', 5), async (req, res) => {
+router.post('/', authAdmin, upload.array('images', 10), async (req, res) => {
   try {
     const { name, slug, description, price, originalPrice, stock, category, isFeatured } = req.body;
     let tags = [];
@@ -18,8 +18,26 @@ router.post('/', authAdmin, upload.array('images', 5), async (req, res) => {
       }
     }
     let images = [];
+    // 1. Files uploaded via Multer / Cloudinary
     if (req.files && req.files.length > 0) {
       images = req.files.map(file => file.path);
+    }
+
+    // 2. Image URLs or existing images passed as JSON string or array
+    const urlSources = [req.body.existingImages, req.body.imageUrls].filter(Boolean);
+    for (const source of urlSources) {
+      try {
+        const parsed = typeof source === 'string' ? JSON.parse(source) : source;
+        if (Array.isArray(parsed)) {
+          images = [...images, ...parsed.filter(u => typeof u === 'string' && u.trim().length > 0)];
+        } else if (typeof parsed === 'string' && parsed.trim()) {
+          images.push(parsed.trim());
+        }
+      } catch (e) {
+        if (typeof source === 'string' && source.trim()) {
+          images.push(source.trim());
+        }
+      }
     }
     
     let product = await Product.findOne({ slug });
@@ -124,7 +142,7 @@ router.delete('/:id', authAdmin, async (req, res) => {
 });
 
 // Update a Product (Admin Only)
-router.put('/:id', authAdmin, upload.array('images', 5), async (req, res) => {
+router.put('/:id', authAdmin, upload.array('images', 10), async (req, res) => {
   try {
     const { name, slug, description, price, originalPrice, stock, category, isFeatured } = req.body;
     let tags;
@@ -156,11 +174,44 @@ router.put('/:id', authAdmin, upload.array('images', 5), async (req, res) => {
     product.isFeatured = isFeatured !== undefined ? isFeatured : product.isFeatured;
     if (tags !== undefined) product.tags = tags;
 
-    // Optional: If new images are uploaded, replace the old ones (or append them based on requirements)
-    // Here we'll replace them
-    if (req.files && req.files.length > 0) {
-      product.images = req.files.map(file => file.path);
+    // Handle images:
+    // If existingImages is specified in the request body, use it as the retained image list
+    let finalImages = null;
+    if (req.body.existingImages !== undefined) {
+      try {
+        finalImages = JSON.parse(req.body.existingImages);
+      } catch (e) {
+        finalImages = Array.isArray(req.body.existingImages) 
+          ? req.body.existingImages 
+          : (req.body.existingImages ? [req.body.existingImages] : []);
+      }
+    } else {
+      finalImages = [...(product.images || [])];
     }
+
+    // Append newly uploaded files
+    if (req.files && req.files.length > 0) {
+      const newUploaded = req.files.map(file => file.path);
+      finalImages = [...finalImages, ...newUploaded];
+    }
+
+    // Append any extra imageUrls passed
+    if (req.body.imageUrls) {
+      try {
+        const extraUrls = JSON.parse(req.body.imageUrls);
+        if (Array.isArray(extraUrls)) {
+          finalImages = [...finalImages, ...extraUrls.filter(u => typeof u === 'string' && u.trim().length > 0)];
+        }
+      } catch (e) {
+        if (Array.isArray(req.body.imageUrls)) {
+          finalImages = [...finalImages, ...req.body.imageUrls];
+        } else if (typeof req.body.imageUrls === 'string' && req.body.imageUrls.trim()) {
+          finalImages.push(req.body.imageUrls.trim());
+        }
+      }
+    }
+
+    product.images = finalImages;
 
     await product.save();
     res.json(product);

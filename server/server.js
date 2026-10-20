@@ -11,6 +11,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const carouselRoutes = require('./routes/carouselRoutes');
 const brandRoutes = require('./routes/brandRoutes');
 const testimonialRoutes = require('./routes/testimonialRoutes');
+const returnGiftRoutes = require('./routes/returnGiftRoutes');
 const app = express();
 
 app.use(cors());
@@ -31,6 +32,7 @@ app.use('/api/carousel', carouselRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/feedbacks', testimonialRoutes);
+app.use('/api/return-gifts', returnGiftRoutes);
 
 const path = require('path');
 const fs = require('fs');

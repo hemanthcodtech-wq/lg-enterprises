@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag, FiSettings, FiMessageSquare, FiGrid, FiList, FiBox, FiClipboard, FiImage, FiStar, FiMessageCircle, FiBell, FiPieChart } from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag, FiSettings, FiMessageSquare, FiGrid, FiList, FiBox, FiClipboard, FiImage, FiStar, FiMessageCircle, FiBell, FiPieChart, FiGift } from 'react-icons/fi';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [orderAlerts, setOrderAlerts] = useState({ pendingCount: 0, totalOrders: 0, newOrdersToday: 0, recentAlerts: [] });
+  const [giftAlerts, setGiftAlerts] = useState({ pendingDispatchCount: 0, totalQualified: 0, dispatchedCount: 0, deliveredCount: 0, recentAlerts: [] });
+  const [alertTab, setAlertTab] = useState('all'); // 'all' | 'orders' | 'gifts'
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,18 +56,35 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchGiftAlerts = async () => {
+    const storedToken = localStorage.getItem('adminToken');
+    if (!storedToken) return;
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/return-gifts/admin/alerts`, {
+        headers: { 'x-auth-token': storedToken }
+      });
+      setGiftAlerts(res.data);
+    } catch (err) {
+      console.error('Error fetching gift alerts:', err);
+    }
+  };
+
   useEffect(() => {
     if (localStorage.getItem('adminToken')) {
       fetchStats();
       fetchOrderAlerts();
+      fetchGiftAlerts();
     }
     const interval = setInterval(() => {
       if (localStorage.getItem('adminToken')) {
         fetchOrderAlerts();
+        fetchGiftAlerts();
       }
-    }, 20000); // Poll every 20 seconds for new orders
+    }, 20000); // Poll every 20 seconds for new orders & gift offers
     return () => clearInterval(interval);
   }, [location.pathname]);
+
+  const totalPendingAlerts = (orderAlerts.pendingCount || 0) + (giftAlerts.pendingDispatchCount || 0);
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -143,6 +162,17 @@ const AdminDashboard = () => {
           <NavLink to="/admin/dashboard/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
             <FiUsers className="nav-icon" /> {!isCollapsed && <span>Users</span>}
           </NavLink>
+          <NavLink to="/admin/dashboard/return-gifts" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+              <FiGift className="nav-icon" /> 
+              {!isCollapsed && <span>Gift Offers</span>}
+            </div>
+            {giftAlerts.pendingDispatchCount > 0 && (
+              <span className="sidebar-alert-badge gift-badge" title={`${giftAlerts.pendingDispatchCount} gift claim(s) need dispatch`}>
+                {giftAlerts.pendingDispatchCount}
+              </span>
+            )}
+          </NavLink>
           <NavLink to="/admin/dashboard/promos" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)}>
             <FiTag className="nav-icon" /> {!isCollapsed && <span>Promo Codes</span>}
           </NavLink>
@@ -180,6 +210,7 @@ const AdminDashboard = () => {
               {location.pathname.includes('inventory') && 'Inventory & Sales Analysis'}
               {location.pathname.includes('users') && 'Customer Data'}
               {location.pathname.includes('orders') && 'Order History'}
+              {(location.pathname.includes('return-gifts') || location.pathname.includes('gift-offers')) && 'Gift Offers & Campaigns'}
               {location.pathname.includes('promos') && 'Manage Promo Codes'}
               {location.pathname.includes('carousel') && 'Manage Carousel'}
               {location.pathname.includes('brands') && 'Manage Brands'}
@@ -192,19 +223,19 @@ const AdminDashboard = () => {
           </div>
           
           <div className="header-actions">
-            {/* Top Bar Order Alert Bell */}
+            {/* Top Bar Alerts Bell (Orders + Qualified Gift Offers) */}
             <div className="notification-bell-container">
               <button 
                 type="button"
                 onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
                 className="bell-icon-btn"
-                aria-label="Order Alerts"
-                title={`${orderAlerts.pendingCount} pending orders`}
+                aria-label="Alerts"
+                title={`${totalPendingAlerts} pending alert(s) (${orderAlerts.pendingCount} pending orders, ${giftAlerts.pendingDispatchCount} gift dispatches)`}
               >
                 <FiBell style={{ fontSize: '1.2rem' }} />
-                {orderAlerts.pendingCount > 0 && (
+                {totalPendingAlerts > 0 && (
                   <span className="bell-badge-count">
-                    {orderAlerts.pendingCount}
+                    {totalPendingAlerts}
                   </span>
                 )}
               </button>
@@ -215,56 +246,153 @@ const AdminDashboard = () => {
                   <div className="bell-dropdown-card">
                     <div className="bell-card-header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
-                        <FiBell style={{ color: '#4f46e5' }} /> Order Alerts
+                        <FiBell style={{ color: '#4f46e5' }} /> Notifications & Alerts
                       </div>
-                      <span className="bell-card-badge" style={{ background: orderAlerts.pendingCount > 0 ? '#fee2e2' : '#ecfdf5', color: orderAlerts.pendingCount > 0 ? '#b91c1c' : '#047857' }}>
-                        {orderAlerts.pendingCount > 0 ? `${orderAlerts.pendingCount} Pending` : 'All Caught Up'}
+                      <span className="bell-card-badge" style={{
+                        background: totalPendingAlerts > 0 ? '#fee2e2' : '#ecfdf5',
+                        color: totalPendingAlerts > 0 ? '#b91c1c' : '#047857'
+                      }}>
+                        {totalPendingAlerts > 0 ? `${totalPendingAlerts} Action Required` : 'All Caught Up'}
                       </span>
                     </div>
 
+                    {/* Filter Tabs: All, Orders, Gift Offers */}
+                    <div className="bell-tabs-bar">
+                      <button
+                        type="button"
+                        className={`bell-tab-btn ${alertTab === 'all' ? 'active' : ''}`}
+                        onClick={() => setAlertTab('all')}
+                      >
+                        All ({totalPendingAlerts})
+                      </button>
+                      <button
+                        type="button"
+                        className={`bell-tab-btn ${alertTab === 'orders' ? 'active' : ''}`}
+                        onClick={() => setAlertTab('orders')}
+                      >
+                        Orders ({orderAlerts.pendingCount})
+                      </button>
+                      <button
+                        type="button"
+                        className={`bell-tab-btn ${alertTab === 'gifts' ? 'active' : ''}`}
+                        onClick={() => setAlertTab('gifts')}
+                      >
+                        Gift Offers ({giftAlerts.pendingDispatchCount})
+                      </button>
+                    </div>
+
                     <div className="bell-card-body">
-                      {orderAlerts.recentAlerts && orderAlerts.recentAlerts.length > 0 ? (
-                        orderAlerts.recentAlerts.map(ord => (
-                          <div 
-                            key={ord._id} 
-                            className="bell-order-row"
-                            onClick={() => {
-                              setShowNotificationDropdown(false);
-                              navigate('/admin/dashboard/orders');
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>
-                                #{ord._id.toString().slice(-6).toUpperCase()}
-                              </span>
-                              <span style={{
-                                fontSize: '0.7rem',
-                                fontWeight: 700,
-                                padding: '1px 6px',
-                                borderRadius: '4px',
-                                background: ord.status === 'Pending' ? '#fef3c7' : ord.status === 'Delivered' ? '#dcfce7' : '#f1f5f9',
-                                color: ord.status === 'Pending' ? '#b45309' : ord.status === 'Delivered' ? '#15803d' : '#475569'
-                              }}>
-                                {ord.status}
-                              </span>
+                      {/* Qualified Gift Offer Alerts */}
+                      {(alertTab === 'all' || alertTab === 'gifts') && giftAlerts.recentAlerts && giftAlerts.recentAlerts.length > 0 && (
+                        <>
+                          {alertTab === 'all' && (
+                            <div className="bell-section-heading">
+                              <span>🎁 Qualified Gift Offers</span>
+                              <span className="bell-sub-count">{giftAlerts.pendingDispatchCount} need dispatch</span>
                             </div>
-                            <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                              <span>{ord.user?.name || 'Customer'}</span>
-                              <span style={{ fontWeight: 700, color: '#334155' }}>₹{ord.totalAmount?.toLocaleString('en-IN')}</span>
+                          )}
+                          {giftAlerts.recentAlerts.map(gift => (
+                            <div 
+                              key={gift._id} 
+                              className="bell-gift-row"
+                              onClick={() => {
+                                setShowNotificationDropdown(false);
+                                navigate(`/admin/dashboard/return-gifts?tab=claims&search=${encodeURIComponent(gift.user?.name || '')}`);
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontSize: '0.95rem' }}>🎁</span>
+                                  <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
+                                    {gift.user?.name || 'Customer'}
+                                  </span>
+                                  <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                                    Qualified
+                                  </span>
+                                </div>
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  background: gift.status === 'Pending Dispatch' ? '#fef3c7' : '#dcfce7',
+                                  color: gift.status === 'Pending Dispatch' ? '#b45309' : '#15803d'
+                                }}>
+                                  {gift.status}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: '#475569' }}>
+                                Milestone reached for <strong>{gift.campaign?.title}</strong>
+                              </div>
+                              <div style={{ fontSize: '0.74rem', color: '#4f46e5', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span>Gift: {gift.campaign?.giftTitle}</span>
+                                {gift.campaign?.giftValue > 0 && <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>(₹{gift.campaign.giftValue.toLocaleString('en-IN')})</span>}
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{new Date(gift.qualifiedAt || gift.createdAt).toLocaleDateString()}</span>
+                                <span style={{ color: '#d97706', fontWeight: 700 }}>Dispatch Gift →</span>
+                              </div>
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px' }}>
-                              {new Date(ord.createdAt).toLocaleDateString()} at {new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          ))}
+                        </>
+                      )}
+
+                      {/* Recent Store Orders */}
+                      {(alertTab === 'all' || alertTab === 'orders') && orderAlerts.recentAlerts && orderAlerts.recentAlerts.length > 0 && (
+                        <>
+                          {alertTab === 'all' && (
+                            <div className="bell-section-heading">
+                              <span>📦 Store Orders</span>
+                              <span className="bell-sub-count">{orderAlerts.pendingCount} pending</span>
                             </div>
-                          </div>
-                        ))
-                      ) : (
+                          )}
+                          {orderAlerts.recentAlerts.map(ord => (
+                            <div 
+                              key={ord._id} 
+                              className="bell-order-row"
+                              onClick={() => {
+                                setShowNotificationDropdown(false);
+                                navigate('/admin/dashboard/orders');
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>
+                                  #{ord._id.toString().slice(-6).toUpperCase()}
+                                </span>
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  background: ord.status === 'Pending' ? '#fef3c7' : ord.status === 'Delivered' ? '#dcfce7' : '#f1f5f9',
+                                  color: ord.status === 'Pending' ? '#b45309' : ord.status === 'Delivered' ? '#15803d' : '#475569'
+                                }}>
+                                  {ord.status}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{ord.user?.name || 'Customer'}</span>
+                                <span style={{ fontWeight: 700, color: '#334155' }}>₹{ord.totalAmount?.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px' }}>
+                                {new Date(ord.createdAt).toLocaleDateString()} at {new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {/* Empty state */}
+                      {((alertTab === 'orders' && (!orderAlerts.recentAlerts || orderAlerts.recentAlerts.length === 0)) ||
+                        (alertTab === 'gifts' && (!giftAlerts.recentAlerts || giftAlerts.recentAlerts.length === 0)) ||
+                        (alertTab === 'all' && (!orderAlerts.recentAlerts || orderAlerts.recentAlerts.length === 0) && (!giftAlerts.recentAlerts || giftAlerts.recentAlerts.length === 0))) && (
                         <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
-                          No recent orders
+                          No notifications found
                         </div>
                       )}
                     </div>
 
-                    <div className="bell-card-footer">
+                    <div className="bell-card-footer" style={{ display: 'flex', gap: '8px' }}>
                       <button 
                         type="button"
                         onClick={() => {
@@ -272,8 +400,20 @@ const AdminDashboard = () => {
                           navigate('/admin/dashboard/orders');
                         }}
                         className="bell-view-all-btn"
+                        style={{ flex: 1, background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
                       >
-                        View Order History ({orderAlerts.totalOrders || 0})
+                        Orders ({orderAlerts.totalOrders || 0})
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setShowNotificationDropdown(false);
+                          navigate('/admin/dashboard/return-gifts?tab=claims');
+                        }}
+                        className="bell-view-all-btn"
+                        style={{ flex: 1, background: '#4f46e5', color: '#fff' }}
+                      >
+                        Gift Claims ({giftAlerts.totalQualified || 0})
                       </button>
                     </div>
                   </div>
@@ -308,6 +448,16 @@ const AdminDashboard = () => {
           </NavLink>
           <NavLink to="/admin/dashboard/users" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
             <FiUsers className="popup-icon" /> Users
+          </NavLink>
+          <NavLink to="/admin/dashboard/return-gifts" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+              <FiGift className="popup-icon" /> Gift Offers
+            </div>
+            {giftAlerts.pendingDispatchCount > 0 && (
+              <span className="sidebar-alert-badge gift-badge">
+                {giftAlerts.pendingDispatchCount}
+              </span>
+            )}
           </NavLink>
           <NavLink to="/admin/dashboard/promos" className="popup-item" onClick={() => setIsBottomMenuOpen(false)}>
             <FiTag className="popup-icon" /> Promo Codes
@@ -352,7 +502,12 @@ const AdminDashboard = () => {
             <span>Products</span>
           </NavLink>
           <button className={`bottom-nav-item ${isBottomMenuOpen ? 'active' : ''}`} onClick={() => setIsBottomMenuOpen(!isBottomMenuOpen)}>
-            <FiMenu className="bottom-nav-icon" />
+            <div style={{ position: 'relative', display: 'inline-flex' }}>
+              <FiMenu className="bottom-nav-icon" />
+              {giftAlerts.pendingDispatchCount > 0 && (
+                <span className="mobile-order-badge" style={{ background: '#f59e0b' }}>{giftAlerts.pendingDispatchCount}</span>
+              )}
+            </div>
             <span>Menu</span>
           </button>
         </div>
@@ -530,10 +685,72 @@ const AdminDashboard = () => {
           animation: alertPulse 2s infinite;
           margin-left: auto;
         }
+        .sidebar-alert-badge.gift-badge {
+          background: #f59e0b;
+          animation: giftPulse 2s infinite;
+        }
         @keyframes alertPulse {
           0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
           70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
           100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        @keyframes giftPulse {
+          0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+          70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+        .bell-tabs-bar {
+          display: flex;
+          background: #f1f5f9;
+          padding: 4px 6px;
+          border-bottom: 1px solid #e2e8f0;
+          gap: 4px;
+        }
+        .bell-tab-btn {
+          flex: 1;
+          padding: 6px 8px;
+          background: transparent;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .bell-tab-btn.active {
+          background: #fff;
+          color: #0f172a;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        .bell-section-heading {
+          padding: 6px 12px;
+          background: #f8fafc;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 0.72rem;
+          font-weight: 800;
+          color: #475569;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .bell-sub-count {
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: #94a3b8;
+          text-transform: none;
+        }
+        .bell-gift-row {
+          padding: 0.85rem 1.1rem;
+          border-bottom: 1px solid #f1f5f9;
+          cursor: pointer;
+          transition: background 0.15s;
+          background: #fffdf5;
+        }
+        .bell-gift-row:hover {
+          background: #fef9c3;
         }
         .notification-bell-container {
           position: relative;

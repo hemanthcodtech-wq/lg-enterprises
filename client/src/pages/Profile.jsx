@@ -8,6 +8,7 @@ import {
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Orders from './Orders';
 import Wishlist from './Wishlist';
+import ReturnGifts from './ReturnGifts';
 
 const Profile = () => {
   const { user, logout, refreshUser } = useAuth();
@@ -17,6 +18,7 @@ const Profile = () => {
     if (location.pathname.includes('/orders')) return 'orders';
     if (location.pathname.includes('/wishlist')) return 'wishlist';
     if (location.hash === '#referrals') return 'referrals';
+    if (location.hash === '#gift-offers' || location.hash === '#return-gifts') return 'returnGifts';
     return 'profile';
   });
   const [referralData, setReferralData] = useState(null);
@@ -39,6 +41,7 @@ const Profile = () => {
     if (location.pathname.includes('/orders')) setActiveTab('orders');
     else if (location.pathname.includes('/wishlist')) setActiveTab('wishlist');
     else if (location.hash === '#referrals') setActiveTab('referrals');
+    else if (location.hash === '#gift-offers' || location.hash === '#return-gifts') setActiveTab('returnGifts');
     else if (location.pathname.includes('/profile')) setActiveTab('profile');
   }, [location]);
 
@@ -459,6 +462,26 @@ const Profile = () => {
 
             <button 
               className="profile-nav-btn"
+              onClick={() => { setActiveTab('returnGifts'); navigate('/profile#gift-offers'); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.5rem',
+                borderRadius: '12px', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'all 0.3s ease',
+                background: activeTab === 'returnGifts' ? 'linear-gradient(135deg, #4f46e5, #6366f1)' : 'transparent',
+                color: activeTab === 'returnGifts' ? 'white' : '#475569',
+                fontWeight: activeTab === 'returnGifts' ? '600' : '500',
+                marginBottom: '0.5rem',
+                position: 'relative'
+              }}
+            >
+              <FiGift style={{ fontSize: '1.2rem', color: activeTab === 'returnGifts' ? 'white' : '#d97706', flexShrink: 0 }} />
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Gift Offers</span>
+              <span style={{ whiteSpace: 'nowrap', marginLeft: 'auto', background: activeTab === 'returnGifts' ? '#fff' : '#fef3c7', color: activeTab === 'returnGifts' ? '#4f46e5' : '#b45309', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '12px', flexShrink: 0 }}>
+                LIVE
+              </span>
+            </button>
+
+            <button 
+              className="profile-nav-btn"
               onClick={() => { setActiveTab('orders'); navigate('/orders'); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.5rem',
@@ -497,6 +520,7 @@ const Profile = () => {
       <div className="profile-main">
         {activeTab === 'orders' && <Orders />}
         {activeTab === 'wishlist' && <Wishlist />}
+        {activeTab === 'returnGifts' && <ReturnGifts />}
         
         {activeTab === 'profile' && (
           <>

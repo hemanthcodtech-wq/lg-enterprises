@@ -5,7 +5,8 @@ import { toast } from 'react-hot-toast';
 import { 
   FiTrash2, FiPlus, FiEdit2, FiSearch, FiRefreshCw, 
   FiPackage, FiCheckCircle, FiAlertCircle, FiFolder,
-  FiChevronLeft, FiChevronRight, FiX, FiInfo
+  FiChevronLeft, FiChevronRight, FiX, FiInfo,
+  FiUploadCloud, FiStar, FiLink, FiArrowLeft, FiArrowRight, FiCheck
 } from 'react-icons/fi';
 
 const AdminProducts = () => {
@@ -25,7 +26,12 @@ const AdminProducts = () => {
   const [stock, setStock] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [images, setImages] = useState(null);
+  // Unified image list: { type: 'existing', url } or { type: 'new', id, file, preview }
+  const [imageList, setImageList] = useState([]);
+  const [urlInput, setUrlInput] = useState('');
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = React.useRef(null);
   const [tags, setTags] = useState([]);
 
   // Filter & Pagination State
@@ -97,8 +103,98 @@ const AdminProducts = () => {
     return filteredProducts.slice(start, start + itemsPerPage);
   }, [filteredProducts, currentPage, itemsPerPage]);
 
+  const handleFilesAdded = (filesList) => {
+    if (!filesList || filesList.length === 0) return;
+    const currentCount = imageList.length;
+    const remainingSlots = 10 - currentCount;
+    if (remainingSlots <= 0) {
+      toast.error('Maximum 10 images allowed per product');
+      return;
+    }
+
+    const filesArray = Array.from(filesList).slice(0, remainingSlots);
+    const validItems = [];
+
+    for (const file of filesArray) {
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not an image file`);
+        continue;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 8MB size limit`);
+        continue;
+      }
+      validItems.push({
+        type: 'new',
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        file,
+        preview: URL.createObjectURL(file)
+      });
+    }
+
+    if (validItems.length > 0) {
+      setImageList(prev => [...prev, ...validItems]);
+      toast.success(`Added ${validItems.length} image${validItems.length > 1 ? 's' : ''}`);
+    }
+  };
+
+  const handleAddUrl = (e) => {
+    e?.preventDefault();
+    const url = urlInput.trim();
+    if (!url) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      toast.error('Please enter a valid image URL (http:// or https://)');
+      return;
+    }
+    if (imageList.length >= 10) {
+      toast.error('Maximum 10 images allowed per product');
+      return;
+    }
+    setImageList(prev => [...prev, { type: 'existing', url }]);
+    setUrlInput('');
+    setShowUrlInput(false);
+    toast.success('Image URL added');
+  };
+
+  const handleRemoveImage = (index) => {
+    setImageList(prev => {
+      const item = prev[index];
+      if (item?.type === 'new' && item?.preview) {
+        URL.revokeObjectURL(item.preview);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleSetMainImage = (index) => {
+    if (index === 0) return;
+    setImageList(prev => {
+      const copy = [...prev];
+      const [selected] = copy.splice(index, 1);
+      return [selected, ...copy];
+    });
+    toast.success('Set as Primary Cover Image');
+  };
+
+  const handleMoveImage = (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= imageList.length) return;
+    setImageList(prev => {
+      const copy = [...prev];
+      const temp = copy[index];
+      copy[index] = copy[target];
+      copy[target] = temp;
+      return copy;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (imageList.length === 0) {
+      toast.error('Please add at least one product image');
+      return;
+    }
+
     setLoading(true);
     try {
       const formData = new FormData();
@@ -114,11 +210,18 @@ const AdminProducts = () => {
       formData.append('category', category);
       formData.append('description', description || '');
       formData.append('tags', JSON.stringify(tags));
-      if (images) {
-        for (let i = 0; i < images.length; i++) {
-          formData.append('images', images[i]);
+
+      // Separate existing retained image URLs and newly selected file objects
+      const existingUrls = imageList
+        .filter(item => item.type === 'existing')
+        .map(item => item.url);
+      formData.append('existingImages', JSON.stringify(existingUrls));
+
+      imageList.forEach(item => {
+        if (item.type === 'new') {
+          formData.append('images', item.file);
         }
-      }
+      });
 
       if (editingId) {
         await axios.put(`${import.meta.env.VITE_API_URL}/products/${editingId}`, formData, {
@@ -157,13 +260,33 @@ const AdminProducts = () => {
     setCategory(prod.category?._id || '');
     setDescription(prod.description || '');
     setTags(prod.tags || []);
-    setImages(null);
+    
+    // Revoke previous object URLs
+    imageList.forEach(item => {
+      if (item.type === 'new' && item.preview) URL.revokeObjectURL(item.preview);
+    });
+
+    if (prod.images && Array.isArray(prod.images) && prod.images.length > 0) {
+      setImageList(prod.images.map(url => ({ type: 'existing', url })));
+    } else {
+      setImageList([]);
+    }
+    setUrlInput('');
+    setShowUrlInput(false);
     setShowAddForm(true);
   };
 
   const resetForm = () => {
     setEditingId(null);
-    setName(''); setSlug(''); setPrice(''); setOriginalPrice(''); setStock(''); setCategory(''); setDescription(''); setImages(null); setTags([]);
+    setName(''); setSlug(''); setPrice(''); setOriginalPrice(''); setStock(''); setCategory(''); setDescription(''); setTags([]);
+    
+    // Revoke previews to prevent memory leak
+    imageList.forEach(item => {
+      if (item.type === 'new' && item.preview) URL.revokeObjectURL(item.preview);
+    });
+    setImageList([]);
+    setUrlInput('');
+    setShowUrlInput(false);
     setShowAddForm(false);
   };
 
@@ -816,6 +939,244 @@ const AdminProducts = () => {
           line-height: 1.4;
           margin-top: 0.35rem;
         }
+
+        /* Modern Amazon-Grade Multi-Image Uploader */
+        .multi-image-uploader-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+        .uploader-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .image-count-indicator {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #4f46e5;
+          background: #eef2ff;
+          padding: 2px 8px;
+          border-radius: 999px;
+          border: 1px solid #e0e7ff;
+        }
+        .uploader-dropzone-box {
+          border: 2px dashed #cbd5e1;
+          border-radius: 10px;
+          background: #f8fafc;
+          padding: 1.25rem 1rem;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 0.4rem;
+        }
+        .uploader-dropzone-box:hover {
+          border-color: #4f46e5;
+          background: #f1f5f9;
+        }
+        .uploader-dropzone-box.drag-active {
+          border-color: #4f46e5;
+          background: #eff6ff;
+          transform: scale(1.01);
+        }
+        .uploader-drop-icon {
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          background: #eef2ff;
+          color: #4f46e5;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.3rem;
+          margin-bottom: 0.15rem;
+        }
+        .uploader-drop-title {
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .uploader-drop-hint {
+          font-size: 0.72rem;
+          color: #64748b;
+        }
+        .uploader-actions-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+          margin-top: 0.25rem;
+        }
+        .url-toggle-btn {
+          background: transparent;
+          border: none;
+          color: #4f46e5;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 0;
+          font-family: inherit;
+        }
+        .url-toggle-btn:hover {
+          text-decoration: underline;
+        }
+        .url-input-container {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+          background: #f8fafc;
+          padding: 0.5rem;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+        .url-input-field {
+          flex: 1;
+          padding: 0.4rem 0.6rem;
+          font-size: 0.78rem;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          outline: none;
+          background: #ffffff;
+        }
+        .url-input-field:focus {
+          border-color: #4f46e5;
+        }
+        .url-add-btn {
+          padding: 0.4rem 0.8rem;
+          background: #4f46e5;
+          color: #ffffff;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .image-preview-mosaic {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+          gap: 0.6rem;
+          margin-top: 0.35rem;
+        }
+        .preview-tile {
+          position: relative;
+          aspect-ratio: 1;
+          border-radius: 8px;
+          overflow: hidden;
+          background: #f1f5f9;
+          border: 2px solid #e2e8f0;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+          transition: all 0.2s ease;
+        }
+        .preview-tile.is-primary {
+          border-color: #f59e0b;
+          box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+        }
+        .preview-tile-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+        .primary-badge {
+          position: absolute;
+          top: 4px;
+          left: 4px;
+          background: #f59e0b;
+          color: #ffffff;
+          font-size: 0.58rem;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          padding: 2px 5px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          z-index: 2;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+        }
+        .tile-number-badge {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          background: rgba(15, 23, 42, 0.75);
+          color: #ffffff;
+          font-size: 0.6rem;
+          font-weight: 700;
+          padding: 1px 5px;
+          border-radius: 4px;
+          z-index: 2;
+        }
+        .tile-action-overlay {
+          position: absolute;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.7);
+          opacity: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          padding: 6px;
+          transition: opacity 0.2s ease;
+          z-index: 3;
+        }
+        .preview-tile:hover .tile-action-overlay {
+          opacity: 1;
+        }
+        .overlay-nav-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 2px;
+        }
+        .tile-icon-btn {
+          width: 24px;
+          height: 24px;
+          border-radius: 4px;
+          border: none;
+          background: rgba(255, 255, 255, 0.9);
+          color: #1e293b;
+          font-size: 0.75rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .tile-icon-btn:hover:not(:disabled) {
+          background: #ffffff;
+          color: #0f172a;
+          transform: scale(1.1);
+        }
+        .tile-icon-btn:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+        .tile-icon-btn.delete-btn:hover {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+        .tile-make-primary-btn {
+          background: #f59e0b;
+          color: #ffffff;
+          border: none;
+          border-radius: 4px;
+          padding: 3px 6px;
+          font-size: 0.62rem;
+          font-weight: 700;
+          cursor: pointer;
+          width: 100%;
+          text-align: center;
+          transition: all 0.15s ease;
+        }
+        .tile-make-primary-btn:hover {
+          background: #d97706;
+        }
       `}</style>
 
       {/* Header section */}
@@ -966,11 +1327,32 @@ const AdminProducts = () => {
                   <tr key={prod._id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        {prod.images && prod.images.length > 0 ? (
-                          <img src={prod.images[0]} alt={prod.name} className="prod-image-cell" />
-                        ) : (
-                          <div className="prod-image-cell">📦</div>
-                        )}
+                        <div style={{ position: 'relative' }}>
+                          {prod.images && prod.images.length > 0 ? (
+                            <img src={prod.images[0]} alt={prod.name} className="prod-image-cell" />
+                          ) : (
+                            <div className="prod-image-cell">📦</div>
+                          )}
+                          {prod.images && prod.images.length > 1 && (
+                            <span 
+                              title={`${prod.images.length} images available`}
+                              style={{
+                                position: 'absolute',
+                                bottom: '-3px',
+                                right: '-3px',
+                                background: '#4f46e5',
+                                color: '#ffffff',
+                                fontSize: '0.62rem',
+                                fontWeight: '700',
+                                padding: '1px 5px',
+                                borderRadius: '999px',
+                                border: '1.5px solid #ffffff',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
+                              }}>
+                              +{prod.images.length - 1}
+                            </span>
+                          )}
+                        </div>
                         <div>
                           <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.82rem', marginBottom: '0.15rem' }}>
                             {prod.name}
@@ -1196,17 +1578,170 @@ const AdminProducts = () => {
               </div>
 
               <div className="drawer-field-group">
-                <label className="drawer-field-label">Product Images (Cloudinary)</label>
-                <input 
-                  type="file" 
-                  className="drawer-field-input" 
-                  multiple 
-                  onChange={e => setImages(e.target.files)} 
-                  accept="image/*"
-                />
-                <div className="aspect-ratio-notice">
-                  <FiInfo style={{ fontSize: '0.95rem', flexShrink: 0, marginTop: '2px' }} />
-                  <span><strong>Recommended Ratio:</strong> 1:1 (Square, e.g. 800×800 px or 1000×1000 px) with clean white or transparent background for catalog cards.</span>
+                <div className="multi-image-uploader-wrapper">
+                  <div className="uploader-header-row">
+                    <label className="drawer-field-label" style={{ margin: 0 }}>
+                      Product Images (Upload Multiple) *
+                    </label>
+                    <span className="image-count-indicator">
+                      {imageList.length} / 10 images
+                    </span>
+                  </div>
+
+                  {/* Hidden multi-file input */}
+                  <input 
+                    ref={fileInputRef}
+                    type="file" 
+                    multiple 
+                    onChange={e => {
+                      handleFilesAdded(e.target.files);
+                      e.target.value = ''; // allow selecting the same file again if needed
+                    }} 
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
+
+                  {/* Drag and Drop Zone */}
+                  {imageList.length < 10 && (
+                    <div 
+                      className={`uploader-dropzone-box ${isDragging ? 'drag-active' : ''}`}
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={e => { e.preventDefault(); setIsDragging(false); }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        handleFilesAdded(e.dataTransfer.files);
+                      }}
+                    >
+                      <div className="uploader-drop-icon">
+                        <FiUploadCloud />
+                      </div>
+                      <div className="uploader-drop-title">
+                        Click to select images or drag & drop files here
+                      </div>
+                      <div className="uploader-drop-hint">
+                        Select multiple images (PNG, JPG, WEBP up to 8MB). Up to 10 photos.
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="uploader-actions-bar">
+                    <button 
+                      type="button" 
+                      className="url-toggle-btn"
+                      onClick={() => setShowUrlInput(!showUrlInput)}
+                    >
+                      <FiLink /> {showUrlInput ? 'Hide URL Input' : '+ Add Image by Web URL'}
+                    </button>
+                    {imageList.length > 0 && (
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                        Tip: First image is Primary Cover image
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Optional Image URL Input */}
+                  {showUrlInput && (
+                    <div className="url-input-container">
+                      <input 
+                        type="url"
+                        className="url-input-field"
+                        placeholder="Paste image URL (e.g. https://images.unsplash.com/...)"
+                        value={urlInput}
+                        onChange={e => setUrlInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddUrl(); } }}
+                      />
+                      <button 
+                        type="button" 
+                        className="url-add-btn"
+                        onClick={handleAddUrl}
+                      >
+                        Add URL
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Image Preview Mosaic */}
+                  {imageList.length > 0 && (
+                    <div className="image-preview-mosaic">
+                      {imageList.map((item, index) => {
+                        const imgSrc = item.type === 'new' ? item.preview : item.url;
+                        const isMain = index === 0;
+
+                        return (
+                          <div 
+                            key={item.id || item.url || index} 
+                            className={`preview-tile ${isMain ? 'is-primary' : ''}`}
+                          >
+                            <img 
+                              src={imgSrc} 
+                              alt={`Product image ${index + 1}`} 
+                              className="preview-tile-img"
+                              onError={e => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150?text=Invalid'; }}
+                            />
+
+                            {isMain ? (
+                              <div className="primary-badge">
+                                <FiStar /> Main Cover
+                              </div>
+                            ) : (
+                              <div className="tile-number-badge">
+                                #{index + 1}
+                              </div>
+                            )}
+
+                            {/* Hover Overlay Controls */}
+                            <div className="tile-action-overlay">
+                              <div className="overlay-nav-row">
+                                <button 
+                                  type="button"
+                                  className="tile-icon-btn"
+                                  title="Move Left"
+                                  disabled={index === 0}
+                                  onClick={() => handleMoveImage(index, -1)}
+                                >
+                                  <FiArrowLeft />
+                                </button>
+                                <button 
+                                  type="button"
+                                  className="tile-icon-btn"
+                                  title="Move Right"
+                                  disabled={index === imageList.length - 1}
+                                  onClick={() => handleMoveImage(index, 1)}
+                                >
+                                  <FiArrowRight />
+                                </button>
+                                <button 
+                                  type="button"
+                                  className="tile-icon-btn delete-btn"
+                                  title="Remove image"
+                                  onClick={() => handleRemoveImage(index)}
+                                >
+                                  <FiTrash2 />
+                                </button>
+                              </div>
+
+                              {!isMain && (
+                                <button 
+                                  type="button"
+                                  className="tile-make-primary-btn"
+                                  onClick={() => handleSetMainImage(index)}
+                                >
+                                  Make Main
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="aspect-ratio-notice">
+                    <FiInfo style={{ fontSize: '0.95rem', flexShrink: 0, marginTop: '2px' }} />
+                    <span><strong>Amazon Display Standard:</strong> Upload multiple high-res angles (Front, Side, Details). Square 1:1 ratio is recommended for best catalog presentation.</span>
+                  </div>
                 </div>
               </div>
             </form>

@@ -104,6 +104,54 @@ router.post('/', authUser, async (req, res) => {
 
     await order.save(); // CRITICAL FIX: Save the order to the database
 
+    // Auto-check qualification for active Return Gift Campaigns
+    (async () => {
+      try {
+        const ReturnGiftCampaign = require('../models/ReturnGiftCampaign');
+        const ReturnGiftClaim = require('../models/ReturnGiftClaim');
+        const now = new Date();
+        const activeCampaigns = await ReturnGiftCampaign.find({
+          isActive: true,
+          startDate: { $lte: now },
+          endDate: { $gte: now }
+        });
+
+        for (const camp of activeCampaigns) {
+          const userOrders = await Order.find({
+            user: req.user.id,
+            createdAt: { $gte: camp.startDate, $lte: camp.endDate },
+            status: { $nin: ['Cancelled', 'Returned'] }
+          });
+          const userPurchased = userOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+          if (userPurchased >= camp.targetAmount) {
+            let claim = await ReturnGiftClaim.findOne({ campaign: camp._id, user: req.user.id });
+            if (!claim) {
+              claim = new ReturnGiftClaim({
+                campaign: camp._id,
+                user: req.user.id,
+                totalPurchased: userPurchased,
+                targetAmount: camp.targetAmount,
+                qualifiedAt: new Date(),
+                status: 'Pending Dispatch',
+                shippingAddress: {
+                  name: userObj.name,
+                  phone: userObj.phone || '',
+                  email: userObj.email || '',
+                  address: shippingAddress || userObj.address || ''
+                }
+              });
+              await claim.save();
+            } else {
+              claim.totalPurchased = userPurchased;
+              await claim.save();
+            }
+          }
+        }
+      } catch (giftErr) {
+        console.error('Error auto-checking return gift claim:', giftErr);
+      }
+    })();
+
     // Deduct stock for each item in the order
     for (const item of items) {
       const pId = item.product?._id || item.product;

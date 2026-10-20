@@ -36,6 +36,9 @@ import AdminSettings from '../pages/admin/AdminSettings';
 import AdminTestimonials from '../pages/admin/AdminTestimonials';
 import AdminReviews from '../pages/admin/AdminReviews';
 import AdminInventoryAnalysis from '../pages/admin/AdminInventoryAnalysis';
+import AdminReturnGifts from '../pages/admin/AdminReturnGifts';
+import ReturnGifts from '../pages/ReturnGifts';
+import LiveReturnGiftBanner from '../components/LiveReturnGiftBanner';
 import ScrollToTop from '../components/ScrollToTop';
 
 const AppRouter = () => (
@@ -53,6 +56,8 @@ const AppRouter = () => (
         <Route path="users/:id" element={<AdminUserDetails />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="orders/:id" element={<AdminOrderDetails />} />
+        <Route path="return-gifts" element={<AdminReturnGifts />} />
+        <Route path="gift-offers" element={<AdminReturnGifts />} />
         <Route path="promos" element={<AdminPromos />} />
         <Route path="withdrawals" element={<AdminWithdrawals />} />
         <Route path="carousel" element={<AdminCarousel />} />
@@ -67,6 +72,7 @@ const AppRouter = () => (
       <Route path="*" element={
         <>
           <Navbar />
+          <LiveReturnGiftBanner />
           <PromoBanner />
           <CategoryBar />
           <main className="main-content">
@@ -74,6 +80,8 @@ const AppRouter = () => (
               <Route path="/" element={<Home />} />
               <Route path="/products" element={<Products />} />
               <Route path="/limited" element={<Products />} />
+              <Route path="/return-gifts" element={<ReturnGifts />} />
+              <Route path="/gift-offers" element={<ReturnGifts />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/login" element={<Login />} />

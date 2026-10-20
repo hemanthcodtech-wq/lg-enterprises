@@ -2,7 +2,7 @@ import React from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { FiTrash2, FiMinus, FiPlus, FiArrowLeft, FiShoppingBag, FiLock, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiTrash2, FiMinus, FiPlus, FiArrowLeft, FiShoppingBag, FiLock, FiChevronDown, FiChevronUp, FiGift } from 'react-icons/fi';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 const Cart = () => {
@@ -21,6 +21,7 @@ const Cart = () => {
   const [shippingAddress, setShippingAddress] = React.useState(user?.address || '');
   const [activePromos, setActivePromos] = React.useState([]);
   const [showPromos, setShowPromos] = React.useState(false);
+  const [activeReturnGift, setActiveReturnGift] = React.useState(null);
 
   React.useEffect(() => {
     const fetchPromos = async () => {
@@ -31,7 +32,18 @@ const Cart = () => {
         console.error('Failed to load active promos');
       }
     };
+    const fetchReturnGift = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/return-gifts/active`);
+        if (res.data && res.data.length > 0) {
+          setActiveReturnGift(res.data[0]);
+        }
+      } catch (err) {
+        // silent fail
+      }
+    };
     fetchPromos();
+    fetchReturnGift();
   }, []);
 
   const handleApplyPromo = async () => {
@@ -237,6 +249,21 @@ const Cart = () => {
 
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>Order Summary</h3>
           
+          {/* Live Gift Offer Motivation */}
+          {activeReturnGift && (
+            <div style={{ background: 'linear-gradient(135deg, #fefce8, #fef9c3)', border: '1px solid #fde047', borderRadius: '12px', padding: '0.85rem 1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 800, color: '#854d0e', fontSize: '0.85rem', marginBottom: '3px' }}>
+                <FiGift style={{ color: '#d97706' }} /> Live Gift Offer Active!
+              </div>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#713f12', lineHeight: 1.4 }}>
+                This order adds <strong>₹{totalAmount.toLocaleString('en-IN')}</strong> toward unlocking a free <strong>{activeReturnGift.giftTitle}</strong> (Target: ₹{activeReturnGift.targetAmount?.toLocaleString('en-IN')}).
+              </p>
+              <Link to="/gift-offers" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b45309', textDecoration: 'underline', display: 'inline-block', marginTop: '4px' }}>
+                View Gift Offers & Live Progress &rarr;
+              </Link>
+            </div>
+          )}
+
           {/* Promo Code Input */}
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <input 
