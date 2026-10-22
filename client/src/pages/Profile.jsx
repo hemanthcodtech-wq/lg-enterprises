@@ -532,11 +532,12 @@ const Profile = () => {
               <span style={{ fontSize: '2.4rem', fontWeight: 800, color: '#38bdf8' }}>₹{(user.walletBalance || 0).toFixed(2)}</span>
             </div>
             <div style={{ fontSize: '0.95rem', color: '#e2e8f0', marginTop: '4px', fontWeight: 500 }}>
-              <span style={{ color: '#fbbf24', fontWeight: 700 }}>₹{(user.pendingWalletBalance || 0).toFixed(2)}</span> Pending (Awaiting Delivery)
+              <span style={{ color: '#fbbf24', fontWeight: 700 }}>₹{(user.pendingWalletBalance || 0).toFixed(2)}</span> Pending (Delivery & 7-Day Return Window)
             </div>
             <p style={{ margin: '8px 0 0 0', fontSize: '0.8rem', color: '#cbd5e1' }}>
-              Instant credit from 5-level referral commissions. 100% redeemable on any order!
+              Instant credit from 5-level referral commissions after 7-day return window. 100% redeemable on any order!
             </p>
+
           </div>
 
           <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '1.5rem' }}>
@@ -885,10 +886,29 @@ const Profile = () => {
                             <td style={{ padding: '14px 8px', color: '#64748b', whiteSpace: 'nowrap' }}>₹{comm.orderTotal}</td>
                             <td style={{ padding: '14px 8px', fontWeight: 800, color: '#16a34a', whiteSpace: 'nowrap' }}>+₹{comm.amount.toFixed(2)}</td>
                             <td style={{ padding: '14px 8px', whiteSpace: 'nowrap' }}>
-                              {comm.status === 'Credited' && <span style={{ background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }}>Credited</span>}
-                              {comm.status === 'Pending' && <span style={{ background: '#fef9c3', color: '#854d0e', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }}>Pending</span>}
-                              {comm.status === 'Cancelled' && <span style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }}>Cancelled</span>}
+                              {comm.status === 'Credited' && (
+                                <span style={{ background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }}>
+                                  Credited
+                                </span>
+                              )}
+                              {comm.status === 'Pending' && (
+                                <span 
+                                  style={{ background: '#fef9c3', color: '#854d0e', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }} 
+                                  title="Held during 7-day return inspection window. Auto-credits after 7 days from delivery."
+                                >
+                                  Pending (7-Day Window)
+                                </span>
+                              )}
+                              {comm.status === 'Cancelled' && (
+                                <span 
+                                  style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block' }} 
+                                  title="Cancelled due to order return or cancellation"
+                                >
+                                  Cancelled (Returned)
+                                </span>
+                              )}
                             </td>
+
                             <td style={{ padding: '14px 8px', color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                               {new Date(comm.date).toLocaleDateString()}
                             </td>

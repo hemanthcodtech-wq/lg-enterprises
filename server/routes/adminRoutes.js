@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const Order = require('../models/Order');
 const Withdrawal = require('../models/Withdrawal');
+const { processMaturedCommissions } = require('../utils/commissionHelper');
 
 // Admin Login Route
 router.post('/login', async (req, res) => {
@@ -52,6 +53,7 @@ const Commission = require('../models/Commission');
 // Dashboard Real Stats Route (Admin Only)
 router.get('/dashboard-stats', authAdmin, async (req, res) => {
   try {
+    await processMaturedCommissions();
     const { startDate, endDate } = req.query;
     let dateFilter = {};
     if (startDate && endDate) {
@@ -260,6 +262,8 @@ router.get('/users/:id/details', authAdmin, async (req, res) => {
 // Get all Orders (Admin Only)
 router.get('/orders', authAdmin, async (req, res) => {
   try {
+    processMaturedCommissions().catch(err => console.error('Admin orders auto-mature error:', err));
+
     const orders = await Order.find()
       .populate('user', 'name email')
       .populate('items.product', 'name price')
@@ -313,33 +317,59 @@ router.put('/orders/:id/status', authAdmin, async (req, res) => {
     if (courierDetails !== undefined) order.courierDetails = courierDetails;
     if (!order.shippingAddress) order.shippingAddress = 'Address not provided (legacy order)';
 
-    await order.save();
-
     if (status === 'Delivered') {
-      const Commission = require('../models/Commission');
-      const commissions = await Commission.find({ order: order._id, status: 'Pending' });
-      for (const comm of commissions) {
-        const user = await User.findById(comm.recipient);
-        if (user) {
-          user.pendingWalletBalance = Math.max(0, (user.pendingWalletBalance || 0) - comm.commissionAmount);
-          user.walletBalance = Math.round(((user.walletBalance || 0) + comm.commissionAmount) * 100) / 100;
-          user.totalReferralEarnings = Math.round(((user.totalReferralEarnings || 0) + comm.commissionAmount) * 100) / 100;
-          await user.save();
-        }
-        comm.status = 'Credited';
-        await comm.save();
+      order.status = 'Delivered';
+      if (!order.deliveredAt) {
+        order.deliveredAt = new Date();
       }
-    } else if (status === 'Cancelled' || status === 'Returned') {
-      const Commission = require('../models/Commission');
+      // CRITICAL REQUIREMENT: Referral commissions remain PENDING for 7 days during return window!
+      // Do not credit immediately. Set matureAt to 7 days from delivery date.
+      const matureAt = new Date(order.deliveredAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+      await Commission.updateMany(
+        { order: order._id, status: 'Pending' },
+        { $set: { matureAt } }
+      );
+    } else if (status === 'Returned') {
+      // Admin marks return item as received:
+      // 1. Stock added back to inventory
+      // 2. Amount repaid/refunded to customer
+      // 3. Referral commissions cancelled
+      order.status = 'Returned';
+      if (!order.returnedAt) order.returnedAt = new Date();
+
+      // 1. Count add to inventory
+      if (!order.isStockRestocked) {
+        for (const item of order.items) {
+          const pId = item.product?._id || item.product;
+          if (pId) {
+            await Product.findByIdAndUpdate(pId, { $inc: { stock: item.quantity } });
+          }
+        }
+        order.isStockRestocked = true;
+      }
+
+      // 2. Amount is repaid to customer
+      order.paymentStatus = 'Refunded';
+      if (!order.refundedAt) order.refundedAt = new Date();
+      if (!order.isAmountRepaid) {
+        const customer = await User.findById(order.user);
+        if (customer) {
+          customer.walletBalance = Math.round(((customer.walletBalance || 0) + order.totalAmount) * 100) / 100;
+          await customer.save();
+        }
+        order.isAmountRepaid = true;
+      }
+
+      // 3. Cancel commissions
       const commissions = await Commission.find({ order: order._id, status: { $ne: 'Cancelled' } });
       for (const comm of commissions) {
         const user = await User.findById(comm.recipient);
         if (user) {
           if (comm.status === 'Pending') {
-            user.pendingWalletBalance = Math.max(0, (user.pendingWalletBalance || 0) - comm.commissionAmount);
+            user.pendingWalletBalance = Math.max(0, Math.round(((user.pendingWalletBalance || 0) - comm.commissionAmount) * 100) / 100);
           } else if (comm.status === 'Credited') {
-            user.walletBalance = Math.max(0, (user.walletBalance || 0) - comm.commissionAmount);
-            user.totalReferralEarnings = Math.max(0, (user.totalReferralEarnings || 0) - comm.commissionAmount);
+            user.walletBalance = Math.max(0, Math.round(((user.walletBalance || 0) - comm.commissionAmount) * 100) / 100);
+            user.totalReferralEarnings = Math.max(0, Math.round(((user.totalReferralEarnings || 0) - comm.commissionAmount) * 100) / 100);
           }
           await user.save();
         }
@@ -347,15 +377,52 @@ router.put('/orders/:id/status', authAdmin, async (req, res) => {
         comm.commissionAmount = 0;
         await comm.save();
       }
+    } else if (status === 'Cancelled') {
+      order.status = 'Cancelled';
 
-      // Restore stock for items in the cancelled/returned order
-      for (const item of order.items) {
-        const pId = item.product?._id || item.product;
-        if (pId) {
-          await Product.findByIdAndUpdate(pId, { $inc: { stock: item.quantity } });
+      // Restore stock for items in the cancelled order
+      if (!order.isStockRestocked) {
+        for (const item of order.items) {
+          const pId = item.product?._id || item.product;
+          if (pId) {
+            await Product.findByIdAndUpdate(pId, { $inc: { stock: item.quantity } });
+          }
         }
+        order.isStockRestocked = true;
+      }
+
+      // If customer had completed payment, refund amount to customer's wallet
+      if (order.paymentStatus === 'Completed' && !order.isAmountRepaid) {
+        order.paymentStatus = 'Refunded';
+        order.refundedAt = new Date();
+        const customer = await User.findById(order.user);
+        if (customer) {
+          customer.walletBalance = Math.round(((customer.walletBalance || 0) + order.totalAmount) * 100) / 100;
+          await customer.save();
+        }
+        order.isAmountRepaid = true;
+      }
+
+      // Cancel commissions
+      const commissions = await Commission.find({ order: order._id, status: { $ne: 'Cancelled' } });
+      for (const comm of commissions) {
+        const user = await User.findById(comm.recipient);
+        if (user) {
+          if (comm.status === 'Pending') {
+            user.pendingWalletBalance = Math.max(0, Math.round(((user.pendingWalletBalance || 0) - comm.commissionAmount) * 100) / 100);
+          } else if (comm.status === 'Credited') {
+            user.walletBalance = Math.max(0, Math.round(((user.walletBalance || 0) - comm.commissionAmount) * 100) / 100);
+            user.totalReferralEarnings = Math.max(0, Math.round(((user.totalReferralEarnings || 0) - comm.commissionAmount) * 100) / 100);
+          }
+          await user.save();
+        }
+        comm.status = 'Cancelled';
+        comm.commissionAmount = 0;
+        await comm.save();
       }
     }
+
+    await order.save();
 
     res.json(order);
   } catch (err) {
@@ -363,6 +430,7 @@ router.put('/orders/:id/status', authAdmin, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 
 // Order Alerts for Sidebar & Top Bar (Admin Only)
 router.get('/orders/alerts', authAdmin, async (req, res) => {
@@ -377,7 +445,7 @@ router.get('/orders/alerts', authAdmin, async (req, res) => {
     const recentAlerts = await Order.find()
       .populate('user', 'name email')
       .sort({ createdAt: -1 })
-      .limit(6)
+      .limit(15)
       .select('_id totalAmount status createdAt user items');
     
     res.json({
@@ -465,12 +533,12 @@ router.get('/users/alerts', authAdmin, async (req, res) => {
     startOfToday.setHours(0, 0, 0, 0);
     const newTodayCount = await User.countDocuments({ role: { $ne: 'admin' }, createdAt: { $gte: startOfToday } });
 
-    // Last 6 enrolled users (prioritizing referred, or recent registrations)
+    // Last 15 enrolled users (prioritizing referred, or recent registrations)
     const recentAlerts = await User.find({ role: { $ne: 'admin' } })
       .populate('referredBy', 'name email referralCode')
       .select('name email phone referralCode referredBy createdAt isEmailVerified')
       .sort({ createdAt: -1 })
-      .limit(6);
+      .limit(15);
 
     res.json({
       totalUsers,
@@ -492,7 +560,7 @@ router.get('/withdrawals/alerts', authAdmin, async (req, res) => {
     const recentAlerts = await Withdrawal.find()
       .populate('user', 'name email phone')
       .sort({ createdAt: -1 })
-      .limit(6);
+      .limit(15);
 
     res.json({
       pendingCount,

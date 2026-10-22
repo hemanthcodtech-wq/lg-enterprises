@@ -249,7 +249,7 @@ router.get('/admin/alerts', authAdmin, async (req, res) => {
       .populate('user', 'name email phone')
       .populate('campaign', 'title giftTitle giftImage giftValue targetAmount')
       .sort({ qualifiedAt: -1, createdAt: -1 })
-      .limit(6);
+      .limit(15);
 
     res.json({
       pendingDispatchCount,

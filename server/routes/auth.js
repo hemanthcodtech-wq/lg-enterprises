@@ -133,10 +133,12 @@ router.post('/login', async (req, res) => {
 const { authUser } = require('../middleware/auth');
 const Commission = require('../models/Commission');
 const Withdrawal = require('../models/Withdrawal');
+const { processMaturedCommissions } = require('../utils/commissionHelper');
 
 // Get Current User Profile (Fresh wallet & details)
 router.get('/me', authUser, async (req, res) => {
   try {
+    await processMaturedCommissions();
     const user = await User.findById(req.user.id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     
@@ -213,6 +215,8 @@ router.get('/withdrawals', authUser, async (req, res) => {
 // Get 5-Tier Referral Statistics
 router.get('/referral-stats', authUser, async (req, res) => {
   try {
+    await processMaturedCommissions();
+
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -253,15 +257,21 @@ router.get('/referral-stats', authUser, async (req, res) => {
       totalDownline: l1Users.length + l2Users.length + l3Users.length + l4Users.length + l5Users.length
     };
 
-    // 2. Fetch all commissions earned by this user
+    // 2. Fetch all commissions earned by this user (populate order status)
     const commissions = await Commission.find({ recipient: user._id })
       .populate('buyer', 'name email')
+      .populate('order', 'status deliveredAt totalAmount')
       .sort({ createdAt: -1 });
 
-    // 3. Compute earnings breakdown per level
-    const earningsAgg = await Commission.aggregate([
-      { $match: { recipient: user._id } },
+    // 3. Compute earnings breakdown per level for Credited commissions
+    const creditedAgg = await Commission.aggregate([
+      { $match: { recipient: user._id, status: 'Credited' } },
       { $group: { _id: '$level', total: { $sum: '$commissionAmount' }, count: { $sum: 1 } } }
+    ]);
+
+    const pendingAgg = await Commission.aggregate([
+      { $match: { recipient: user._id, status: 'Pending' } },
+      { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
     ]);
 
     const levelEarnings = {
@@ -273,18 +283,21 @@ router.get('/referral-stats', authUser, async (req, res) => {
     };
 
     let totalCommissionEarned = 0;
-    earningsAgg.forEach(item => {
+    creditedAgg.forEach(item => {
       if (item._id >= 1 && item._id <= 5) {
         levelEarnings[`level${item._id}`] = Math.round(item.total * 100) / 100;
       }
       totalCommissionEarned += item.total;
     });
 
+    const totalPendingCommission = pendingAgg.length > 0 ? Math.round(pendingAgg[0].total * 100) / 100 : 0;
+
     res.json({
       referralCode: user.referralCode,
       walletBalance: user.walletBalance || 0,
       pendingWalletBalance: user.pendingWalletBalance || 0,
       totalCommissionEarned: Math.round(totalCommissionEarned * 100) / 100,
+      totalPendingCommission,
       levelCounts,
       levelEarnings,
       directReferrals: l1Users,
@@ -302,7 +315,9 @@ router.get('/referral-stats', authUser, async (req, res) => {
         amount: c.commissionAmount,
         status: c.status || 'Pending',
         orderTotal: c.orderTotal,
-        orderId: c.order,
+        orderId: c.order?._id ? c.order._id.toString() : (c.order ? c.order.toString() : 'N/A'),
+        orderStatus: c.order?.status || 'N/A',
+        deliveredAt: c.order?.deliveredAt || null,
         buyerName: c.buyer?.name ? c.buyer.name : 'Unknown',
         date: c.createdAt
       })),
@@ -313,6 +328,7 @@ router.get('/referral-stats', authUser, async (req, res) => {
         createdAt: u.createdAt
       }))
     });
+
   } catch (err) {
     console.error('Referral stats error:', err);
     res.status(500).json({ message: 'Failed to fetch referral statistics' });

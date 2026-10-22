@@ -75,6 +75,13 @@ const AdminOrders = () => {
   }, [token]);
 
   const handleStatusChange = async (orderId, newStatus) => {
+    if (newStatus === 'Returned') {
+      const confirmed = window.confirm(
+        `Are you marking the returned item as RECEIVED for order #${orderId.slice(-8).toUpperCase()}?\n\nThis will automatically:\n1. Restock item quantities back to inventory\n2. Refund the order amount to the customer\n3. Cancel any pending referral commissions\n\nProceed?`
+      );
+      if (!confirmed) return;
+    }
+
     setUpdatingId(orderId);
     try {
       await axios.put(
@@ -82,7 +89,11 @@ const AdminOrders = () => {
         { status: newStatus },
         { headers: { 'x-auth-token': token } }
       );
-      toast.success(`Order status updated to ${newStatus}`);
+      if (newStatus === 'Returned') {
+        toast.success(`Return item marked received! Inventory restocked & refund processed.`);
+      } else {
+        toast.success(`Order status updated to ${newStatus}`);
+      }
       setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
     } catch (err) {
       console.error('Error updating order status:', err);
@@ -91,6 +102,7 @@ const AdminOrders = () => {
       setUpdatingId(null);
     }
   };
+
 
   const handleCopyId = (e, id) => {
     e.stopPropagation();
@@ -289,13 +301,17 @@ const AdminOrders = () => {
         return { bg: '#f5f3ff', text: '#6d28d9', border: '#ddd6fe' };
       case 'Pending':
         return { bg: '#fffbeb', text: '#b45309', border: '#fde68a' };
-      case 'Cancelled':
+      case 'Return Requested':
+        return { bg: '#fff7ed', text: '#c2410c', border: '#fdba74' };
       case 'Returned':
+        return { bg: '#f5f3ff', text: '#6d28d9', border: '#ddd6fe' };
+      case 'Cancelled':
         return { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' };
       default:
         return { bg: '#f8fafc', text: '#475569', border: '#e2e8f0' };
     }
   };
+
 
   const formatTimestamp = (dateStr) => {
     if (!dateStr) return { date: 'N/A', time: '' };
@@ -1406,7 +1422,7 @@ const AdminOrders = () => {
 
           {/* Status Segmented Filter Pills */}
           <div className="status-filter-pills">
-            {['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'].map(status => {
+            {['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Return Requested', 'Returned', 'Cancelled'].map(status => {
               const count = status === 'All' 
                 ? orders.length 
                 : orders.filter(o => o.status === status).length;
@@ -1422,6 +1438,7 @@ const AdminOrders = () => {
               );
             })}
           </div>
+
         </div>
 
         {/* Data Table */}
@@ -1532,8 +1549,9 @@ const AdminOrders = () => {
                             <option value="Processing">● Processing</option>
                             <option value="Shipped">● Shipped</option>
                             <option value="Delivered">● Delivered</option>
+                            <option value="Return Requested">● Return Requested</option>
+                            <option value="Returned">● Returned (Received & Repaid)</option>
                             <option value="Cancelled">● Cancelled</option>
-                            <option value="Returned">● Returned</option>
                           </select>
                           <span className="status-dropdown-arrow" style={{ color: statusStyle.text }}>▼</span>
                         </div>
@@ -1557,16 +1575,40 @@ const AdminOrders = () => {
 
                       {/* Actions */}
                       <td style={{ textAlign: 'right' }}>
-                        <button 
-                          className="view-details-action-btn"
-                          onClick={() => navigate(`/admin/dashboard/orders/${o._id}`)}
-                          title="View order details, commissions & invoice"
-                        >
-                          <span>View</span>
-                          <FiArrowUpRight size={14} />
-                        </button>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                          {o.status === 'Return Requested' && (
+                            <button
+                              onClick={() => handleStatusChange(o._id, 'Returned')}
+                              disabled={updatingId === o._id}
+                              style={{
+                                background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.35rem 0.65rem',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 2px 6px rgba(124,58,237,0.25)'
+                              }}
+                              title="Mark return package received, restock inventory and refund amount to customer"
+                            >
+                              Receive & Refund
+                            </button>
+                          )}
+                          <button 
+                            className="view-details-action-btn"
+                            onClick={() => navigate(`/admin/dashboard/orders/${o._id}`)}
+                            title="View order details, commissions & invoice"
+                          >
+                            <span>View</span>
+                            <FiArrowUpRight size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
+
                   );
                 })
               )}

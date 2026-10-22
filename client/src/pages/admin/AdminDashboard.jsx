@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag, FiSettings, FiMessageSquare, FiGrid, FiList, FiBox, FiClipboard, FiImage, FiStar, FiMessageCircle, FiBell, FiPieChart, FiGift } from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiDollarSign, FiLogOut, FiMenu, FiTag, FiSettings, FiMessageSquare, FiGrid, FiList, FiBox, FiClipboard, FiImage, FiStar, FiMessageCircle, FiBell, FiPieChart, FiGift, FiCheck, FiX, FiTrash2 } from 'react-icons/fi';
+
+const STORAGE_CLEARED_IDS = 'admin_cleared_alert_ids';
+const STORAGE_CLEARED_AT = 'admin_alerts_cleared_at';
+const STORAGE_LAST_SEEN_AT = 'admin_alerts_last_seen_at';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -11,6 +15,22 @@ const AdminDashboard = () => {
   const [userAlerts, setUserAlerts] = useState({ totalUsers: 0, totalReferred: 0, newTodayCount: 0, recentAlerts: [] });
   const [alertTab, setAlertTab] = useState('all'); // 'all' | 'users' | 'withdrawals' | 'orders' | 'gifts'
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+
+  // Persistent cleared and seen notification trackers
+  const [clearedAlertIds, setClearedAlertIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_CLEARED_IDS) || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [alertsClearedAt, setAlertsClearedAt] = useState(() => {
+    return localStorage.getItem(STORAGE_CLEARED_AT) || null;
+  });
+  const [alertsLastSeenAt, setAlertsLastSeenAt] = useState(() => {
+    return localStorage.getItem(STORAGE_LAST_SEEN_AT) || null;
+  });
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -116,7 +136,95 @@ const AdminDashboard = () => {
     return () => clearInterval(interval);
   }, [location.pathname]);
 
-  const totalPendingAlerts = (orderAlerts.pendingCount || 0) + (giftAlerts.pendingDispatchCount || 0) + (withdrawalAlerts.pendingCount || 0) + (userAlerts.newTodayCount || 0);
+  // Dismiss single alert (either via ✕ button or row click)
+  const dismissAlert = (id, e) => {
+    if (e) e.stopPropagation();
+    if (!id) return;
+    const strId = id.toString();
+    setClearedAlertIds(prev => {
+      if (prev.includes(strId)) return prev;
+      const next = [strId, ...prev].slice(0, 500);
+      localStorage.setItem(STORAGE_CLEARED_IDS, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // Clear all currently active alerts
+  const handleClearAll = (e) => {
+    if (e) e.stopPropagation();
+    const now = new Date().toISOString();
+
+    const allCurrentIds = [
+      ...(userAlerts.recentAlerts || []).map(u => u._id?.toString()),
+      ...(withdrawalAlerts.recentAlerts || []).map(w => w._id?.toString()),
+      ...(orderAlerts.recentAlerts || []).map(o => o._id?.toString()),
+      ...(giftAlerts.recentAlerts || []).map(g => g._id?.toString())
+    ].filter(Boolean);
+
+    setClearedAlertIds(prev => {
+      const combined = Array.from(new Set([...prev, ...allCurrentIds])).slice(0, 500);
+      localStorage.setItem(STORAGE_CLEARED_IDS, JSON.stringify(combined));
+      return combined;
+    });
+
+    setAlertsClearedAt(now);
+    localStorage.setItem(STORAGE_CLEARED_AT, now);
+
+    setAlertsLastSeenAt(now);
+    localStorage.setItem(STORAGE_LAST_SEEN_AT, now);
+  };
+
+  // Restore cleared alerts
+  const handleRestoreAll = (e) => {
+    if (e) e.stopPropagation();
+    localStorage.removeItem(STORAGE_CLEARED_IDS);
+    localStorage.removeItem(STORAGE_CLEARED_AT);
+    setClearedAlertIds([]);
+    setAlertsClearedAt(null);
+  };
+
+  // Check if an alert is active (not cleared/dismissed)
+  const isAlertActive = (alert) => {
+    if (!alert || !alert._id) return false;
+    const strId = alert._id.toString();
+    if (clearedAlertIds.includes(strId)) return false;
+    if (alertsClearedAt) {
+      const alertTime = new Date(alert.createdAt || alert.qualifiedAt || 0).getTime();
+      const clearTime = new Date(alertsClearedAt).getTime();
+      if (alertTime <= clearTime) return false;
+    }
+    return true;
+  };
+
+  const activeUserAlerts = (userAlerts.recentAlerts || []).filter(isAlertActive);
+  const activeWithdrawalAlerts = (withdrawalAlerts.recentAlerts || []).filter(isAlertActive);
+  const activeOrderAlerts = (orderAlerts.recentAlerts || []).filter(isAlertActive);
+  const activeGiftAlerts = (giftAlerts.recentAlerts || []).filter(isAlertActive);
+
+  const totalActiveAlerts = activeUserAlerts.length + activeWithdrawalAlerts.length + activeOrderAlerts.length + activeGiftAlerts.length;
+
+  // Unseen alerts for red badge on bell (clears when seen)
+  const unseenAlertsCount = [
+    ...activeUserAlerts,
+    ...activeWithdrawalAlerts,
+    ...activeOrderAlerts,
+    ...activeGiftAlerts
+  ].filter(a => {
+    if (!alertsLastSeenAt) return true;
+    const t = new Date(a.createdAt || a.qualifiedAt || 0).getTime();
+    return t > new Date(alertsLastSeenAt).getTime();
+  }).length;
+
+  const handleToggleNotificationDropdown = () => {
+    const nextOpen = !showNotificationDropdown;
+    setShowNotificationDropdown(nextOpen);
+    if (nextOpen) {
+      // Mark as seen when bell is opened
+      const now = new Date().toISOString();
+      setAlertsLastSeenAt(now);
+      localStorage.setItem(STORAGE_LAST_SEEN_AT, now);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -279,15 +387,15 @@ const AdminDashboard = () => {
             <div className="notification-bell-container">
               <button 
                 type="button"
-                onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                onClick={handleToggleNotificationDropdown}
                 className="bell-icon-btn"
                 aria-label="Alerts"
-                title={`${totalPendingAlerts} pending alert(s) (${orderAlerts.pendingCount} pending orders, ${giftAlerts.pendingDispatchCount} gift dispatches)`}
+                title={`${unseenAlertsCount} new notification(s), ${totalActiveAlerts} active alert(s)`}
               >
                 <FiBell style={{ fontSize: '1.2rem' }} />
-                {totalPendingAlerts > 0 && (
+                {unseenAlertsCount > 0 && (
                   <span className="bell-badge-count">
-                    {totalPendingAlerts}
+                    {unseenAlertsCount}
                   </span>
                 )}
               </button>
@@ -300,12 +408,22 @@ const AdminDashboard = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
                         <FiBell style={{ color: '#4f46e5' }} /> Notifications & Alerts
                       </div>
-                      <span className="bell-card-badge" style={{
-                        background: totalPendingAlerts > 0 ? '#fee2e2' : '#ecfdf5',
-                        color: totalPendingAlerts > 0 ? '#b91c1c' : '#047857'
-                      }}>
-                        {totalPendingAlerts > 0 ? `${totalPendingAlerts} Action Required` : 'All Caught Up'}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {totalActiveAlerts > 0 ? (
+                          <button
+                            type="button"
+                            className="bell-clear-all-btn"
+                            onClick={handleClearAll}
+                            title="Clear all active notifications"
+                          >
+                            <FiTrash2 style={{ fontSize: '0.75rem' }} /> Clear All
+                          </button>
+                        ) : (
+                          <span className="bell-card-badge" style={{ background: '#ecfdf5', color: '#047857' }}>
+                            All Caught Up
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Filter Tabs: All, Users, Withdrawals, Orders, Gift Offers */}
@@ -315,58 +433,67 @@ const AdminDashboard = () => {
                         className={`bell-tab-btn ${alertTab === 'all' ? 'active' : ''}`}
                         onClick={() => setAlertTab('all')}
                       >
-                        All ({totalPendingAlerts})
+                        All ({totalActiveAlerts})
                       </button>
                       <button
                         type="button"
                         className={`bell-tab-btn ${alertTab === 'users' ? 'active' : ''}`}
                         onClick={() => setAlertTab('users')}
                       >
-                        Users ({userAlerts.newTodayCount})
+                        Users ({activeUserAlerts.length})
                       </button>
                       <button
                         type="button"
                         className={`bell-tab-btn ${alertTab === 'withdrawals' ? 'active' : ''}`}
                         onClick={() => setAlertTab('withdrawals')}
                       >
-                        Payouts ({withdrawalAlerts.pendingCount})
+                        Payouts ({activeWithdrawalAlerts.length})
                       </button>
                       <button
                         type="button"
                         className={`bell-tab-btn ${alertTab === 'orders' ? 'active' : ''}`}
                         onClick={() => setAlertTab('orders')}
                       >
-                        Orders ({orderAlerts.pendingCount})
+                        Orders ({activeOrderAlerts.length})
                       </button>
                       <button
                         type="button"
                         className={`bell-tab-btn ${alertTab === 'gifts' ? 'active' : ''}`}
                         onClick={() => setAlertTab('gifts')}
                       >
-                        Gifts ({giftAlerts.pendingDispatchCount})
+                        Gifts ({activeGiftAlerts.length})
                       </button>
                     </div>
 
                     <div className="bell-card-body">
                       {/* New Registered & Referred User Alerts */}
-                      {(alertTab === 'all' || alertTab === 'users') && userAlerts.recentAlerts && userAlerts.recentAlerts.length > 0 && (
+                      {(alertTab === 'all' || alertTab === 'users') && activeUserAlerts.length > 0 && (
                         <>
                           {alertTab === 'all' && (
                             <div className="bell-section-heading" style={{ background: '#eff6ff', color: '#1e40af' }}>
                               <span>👤 New Enrolled & Referred Users</span>
-                              <span className="bell-sub-count" style={{ color: '#2563eb', fontWeight: 700 }}>{userAlerts.newTodayCount} joined today</span>
+                              <span className="bell-sub-count" style={{ color: '#2563eb', fontWeight: 700 }}>{activeUserAlerts.length} active</span>
                             </div>
                           )}
-                          {userAlerts.recentAlerts.map(u => (
+                          {activeUserAlerts.map(u => (
                             <div 
                               key={u._id} 
                               className="bell-order-row"
                               style={{ background: u.referredBy ? '#f0fdf4' : '#ffffff' }}
                               onClick={() => {
+                                dismissAlert(u._id);
                                 setShowNotificationDropdown(false);
                                 navigate(`/admin/dashboard/users/${u._id}`);
                               }}
                             >
+                              <button
+                                type="button"
+                                className="bell-row-dismiss"
+                                title="Dismiss notification"
+                                onClick={(e) => dismissAlert(u._id, e)}
+                              >
+                                <FiX />
+                              </button>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
@@ -382,7 +509,7 @@ const AdminDashboard = () => {
                                     </span>
                                   )}
                                 </div>
-                                <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 700 }}>
+                                <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 700, marginRight: '16px' }}>
                                   View User →
                                 </span>
                               </div>
@@ -404,24 +531,33 @@ const AdminDashboard = () => {
                       )}
 
                       {/* Withdrawal Requests Alerts */}
-                      {(alertTab === 'all' || alertTab === 'withdrawals') && withdrawalAlerts.recentAlerts && withdrawalAlerts.recentAlerts.length > 0 && (
+                      {(alertTab === 'all' || alertTab === 'withdrawals') && activeWithdrawalAlerts.length > 0 && (
                         <>
                           {alertTab === 'all' && (
                             <div className="bell-section-heading" style={{ background: '#ecfdf5', color: '#065f46' }}>
                               <span>💸 Payout / Withdrawal Requests</span>
-                              <span className="bell-sub-count" style={{ color: '#047857', fontWeight: 700 }}>{withdrawalAlerts.pendingCount} pending</span>
+                              <span className="bell-sub-count" style={{ color: '#047857', fontWeight: 700 }}>{activeWithdrawalAlerts.length} active</span>
                             </div>
                           )}
-                          {withdrawalAlerts.recentAlerts.map(w => (
+                          {activeWithdrawalAlerts.map(w => (
                             <div 
                               key={w._id} 
                               className="bell-order-row"
                               style={{ background: w.status === 'Pending' ? '#fffbeb' : '#ffffff' }}
                               onClick={() => {
+                                dismissAlert(w._id);
                                 setShowNotificationDropdown(false);
                                 navigate('/admin/dashboard/withdrawals');
                               }}
                             >
+                              <button
+                                type="button"
+                                className="bell-row-dismiss"
+                                title="Dismiss notification"
+                                onClick={(e) => dismissAlert(w._id, e)}
+                              >
+                                <FiX />
+                              </button>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
                                 <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#0f172a' }}>
                                   ₹{w.amount?.toFixed(2)} via {w.method}
@@ -432,12 +568,13 @@ const AdminDashboard = () => {
                                   padding: '1px 6px',
                                   borderRadius: '4px',
                                   background: w.status === 'Pending' ? '#fef3c7' : (w.status === 'Paid' || w.status === 'Completed' || w.status === 'Approved') ? '#dcfce7' : '#fee2e2',
-                                  color: w.status === 'Pending' ? '#b45309' : (w.status === 'Paid' || w.status === 'Completed' || w.status === 'Approved') ? '#15803d' : '#b91c1c'
+                                  color: w.status === 'Pending' ? '#b45309' : (w.status === 'Paid' || w.status === 'Completed' || w.status === 'Approved') ? '#15803d' : '#b91c1c',
+                                  marginRight: '16px'
                                 }}>
                                   {w.status === 'Paid' || w.status === 'Completed' || w.status === 'Approved' ? 'Paid' : w.status}
                                 </span>
                               </div>
-                              <div style={{ fontSize: '0.78rem', color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                              <div style={{ fontSize: '0.78rem', color: '#475569', display: 'flex', justifyContent: 'space-between', marginRight: '16px' }}>
                                 <span>{w.user?.name || 'Affiliate User'}</span>
                                 <span style={{ color: '#059669', fontWeight: 700 }}>Pay Now →</span>
                               </div>
@@ -453,23 +590,32 @@ const AdminDashboard = () => {
                       )}
 
                       {/* Qualified Gift Offer Alerts */}
-                      {(alertTab === 'all' || alertTab === 'gifts') && giftAlerts.recentAlerts && giftAlerts.recentAlerts.length > 0 && (
+                      {(alertTab === 'all' || alertTab === 'gifts') && activeGiftAlerts.length > 0 && (
                         <>
                           {alertTab === 'all' && (
                             <div className="bell-section-heading">
                               <span>🎁 Qualified Gift Offers</span>
-                              <span className="bell-sub-count">{giftAlerts.pendingDispatchCount} need dispatch</span>
+                              <span className="bell-sub-count">{activeGiftAlerts.length} need dispatch</span>
                             </div>
                           )}
-                          {giftAlerts.recentAlerts.map(gift => (
+                          {activeGiftAlerts.map(gift => (
                             <div 
                               key={gift._id} 
                               className="bell-gift-row"
                               onClick={() => {
+                                dismissAlert(gift._id);
                                 setShowNotificationDropdown(false);
                                 navigate(`/admin/dashboard/return-gifts?tab=claims&search=${encodeURIComponent(gift.user?.name || '')}`);
                               }}
                             >
+                              <button
+                                type="button"
+                                className="bell-row-dismiss"
+                                title="Dismiss notification"
+                                onClick={(e) => dismissAlert(gift._id, e)}
+                              >
+                                <FiX />
+                              </button>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontSize: '0.95rem' }}>🎁</span>
@@ -486,7 +632,8 @@ const AdminDashboard = () => {
                                   padding: '1px 6px',
                                   borderRadius: '4px',
                                   background: gift.status === 'Pending Dispatch' ? '#fef3c7' : '#dcfce7',
-                                  color: gift.status === 'Pending Dispatch' ? '#b45309' : '#15803d'
+                                  color: gift.status === 'Pending Dispatch' ? '#b45309' : '#15803d',
+                                  marginRight: '16px'
                                 }}>
                                   {gift.status}
                                 </span>
@@ -498,7 +645,7 @@ const AdminDashboard = () => {
                                 <span>Gift: {gift.campaign?.giftTitle}</span>
                                 {gift.campaign?.giftValue > 0 && <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>(₹{gift.campaign.giftValue.toLocaleString('en-IN')})</span>}
                               </div>
-                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px', display: 'flex', justifyContent: 'space-between' }}>
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '3px', display: 'flex', justifyContent: 'space-between', marginRight: '16px' }}>
                                 <span>{new Date(gift.qualifiedAt || gift.createdAt).toLocaleDateString()}</span>
                                 <span style={{ color: '#d97706', fontWeight: 700 }}>Dispatch Gift →</span>
                               </div>
@@ -508,23 +655,32 @@ const AdminDashboard = () => {
                       )}
 
                       {/* Recent Store Orders */}
-                      {(alertTab === 'all' || alertTab === 'orders') && orderAlerts.recentAlerts && orderAlerts.recentAlerts.length > 0 && (
+                      {(alertTab === 'all' || alertTab === 'orders') && activeOrderAlerts.length > 0 && (
                         <>
                           {alertTab === 'all' && (
                             <div className="bell-section-heading">
                               <span>📦 Store Orders</span>
-                              <span className="bell-sub-count">{orderAlerts.pendingCount} pending</span>
+                              <span className="bell-sub-count">{activeOrderAlerts.length} active</span>
                             </div>
                           )}
-                          {orderAlerts.recentAlerts.map(ord => (
+                          {activeOrderAlerts.map(ord => (
                             <div 
                               key={ord._id} 
                               className="bell-order-row"
                               onClick={() => {
+                                dismissAlert(ord._id);
                                 setShowNotificationDropdown(false);
                                 navigate('/admin/dashboard/orders');
                               }}
                             >
+                              <button
+                                type="button"
+                                className="bell-row-dismiss"
+                                title="Dismiss notification"
+                                onClick={(e) => dismissAlert(ord._id, e)}
+                              >
+                                <FiX />
+                              </button>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
                                 <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>
                                   #{ord._id.toString().slice(-6).toUpperCase()}
@@ -534,13 +690,14 @@ const AdminDashboard = () => {
                                   fontWeight: 700,
                                   padding: '1px 6px',
                                   borderRadius: '4px',
-                                  background: ord.status === 'Pending' ? '#fef3c7' : ord.status === 'Delivered' ? '#dcfce7' : '#f1f5f9',
-                                  color: ord.status === 'Pending' ? '#b45309' : ord.status === 'Delivered' ? '#15803d' : '#475569'
+                                  background: ord.status === 'Pending' ? '#fef3c7' : ord.status === 'Delivered' ? '#dcfce7' : ord.status === 'Return Requested' ? '#ffedd5' : ord.status === 'Returned' ? '#ede9fe' : ord.status === 'Cancelled' ? '#fee2e2' : '#f1f5f9',
+                                  color: ord.status === 'Pending' ? '#b45309' : ord.status === 'Delivered' ? '#15803d' : ord.status === 'Return Requested' ? '#c2410c' : ord.status === 'Returned' ? '#6d28d9' : ord.status === 'Cancelled' ? '#b91c1c' : '#475569',
+                                  marginRight: '16px'
                                 }}>
                                   {ord.status}
                                 </span>
                               </div>
-                              <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                              <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', marginRight: '16px' }}>
                                 <span>{ord.user?.name || 'Customer'}</span>
                                 <span style={{ fontWeight: 700, color: '#334155' }}>₹{ord.totalAmount?.toLocaleString('en-IN')}</span>
                               </div>
@@ -553,13 +710,42 @@ const AdminDashboard = () => {
                       )}
 
                       {/* Empty state */}
-                      {((alertTab === 'users' && (!userAlerts.recentAlerts || userAlerts.recentAlerts.length === 0)) ||
-                        (alertTab === 'withdrawals' && (!withdrawalAlerts.recentAlerts || withdrawalAlerts.recentAlerts.length === 0)) ||
-                        (alertTab === 'orders' && (!orderAlerts.recentAlerts || orderAlerts.recentAlerts.length === 0)) ||
-                        (alertTab === 'gifts' && (!giftAlerts.recentAlerts || giftAlerts.recentAlerts.length === 0)) ||
-                        (alertTab === 'all' && (!userAlerts.recentAlerts || userAlerts.recentAlerts.length === 0) && (!withdrawalAlerts.recentAlerts || withdrawalAlerts.recentAlerts.length === 0) && (!orderAlerts.recentAlerts || orderAlerts.recentAlerts.length === 0) && (!giftAlerts.recentAlerts || giftAlerts.recentAlerts.length === 0))) && (
-                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
-                          No notifications found
+                      {((alertTab === 'users' && activeUserAlerts.length === 0) ||
+                        (alertTab === 'withdrawals' && activeWithdrawalAlerts.length === 0) ||
+                        (alertTab === 'orders' && activeOrderAlerts.length === 0) ||
+                        (alertTab === 'gifts' && activeGiftAlerts.length === 0) ||
+                        (alertTab === 'all' && totalActiveAlerts === 0)) && (
+                        <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
+                          <div style={{
+                            width: '46px',
+                            height: '46px',
+                            borderRadius: '50%',
+                            background: '#f0fdf4',
+                            color: '#16a34a',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 10px',
+                            fontSize: '1.4rem',
+                            border: '1px solid #bbf7d0'
+                          }}>
+                            <FiCheck />
+                          </div>
+                          <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem', marginBottom: '4px' }}>
+                            All Caught Up!
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                            {totalActiveAlerts === 0 ? 'No unread notifications.' : `No active notifications in ${alertTab}.`}
+                          </div>
+                          {(clearedAlertIds.length > 0 || alertsClearedAt) && (
+                            <button
+                              type="button"
+                              onClick={handleRestoreAll}
+                              className="bell-restore-btn"
+                            >
+                              Restore cleared notifications
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -946,16 +1132,6 @@ const AdminDashboard = () => {
           color: #94a3b8;
           text-transform: none;
         }
-        .bell-gift-row {
-          padding: 0.85rem 1.1rem;
-          border-bottom: 1px solid #f1f5f9;
-          cursor: pointer;
-          transition: background 0.15s;
-          background: #fffdf5;
-        }
-        .bell-gift-row:hover {
-          background: #fef9c3;
-        }
         .notification-bell-container {
           position: relative;
         }
@@ -994,7 +1170,7 @@ const AdminDashboard = () => {
         .bell-dropdown-card {
           position: absolute;
           top: 48px; right: 0;
-          width: 330px;
+          width: min(380px, 94vw);
           background: white;
           border-radius: 14px;
           box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
@@ -1013,6 +1189,25 @@ const AdminDashboard = () => {
           border-bottom: 1px solid #e2e8f0;
           display: flex; justify-content: space-between; align-items: center;
         }
+        .bell-clear-all-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 8px;
+          background: #fee2e2;
+          color: #b91c1c;
+          border: 1px solid #fca5a5;
+          border-radius: 6px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .bell-clear-all-btn:hover {
+          background: #fecaca;
+          color: #991b1b;
+          border-color: #f87171;
+        }
         .bell-card-badge {
           font-size: 0.72rem;
           font-weight: 700;
@@ -1020,17 +1215,80 @@ const AdminDashboard = () => {
           border-radius: 12px;
         }
         .bell-card-body {
-          max-height: 280px;
+          max-height: 340px;
           overflow-y: auto;
         }
         .bell-order-row {
+          position: relative;
           padding: 0.85rem 1.1rem;
+          padding-right: 2.2rem;
           border-bottom: 1px solid #f1f5f9;
           cursor: pointer;
           transition: background 0.15s;
         }
         .bell-order-row:hover {
           background: #f8fafc;
+        }
+        .bell-gift-row {
+          position: relative;
+          padding: 0.85rem 1.1rem;
+          padding-right: 2.2rem;
+          border-bottom: 1px solid #f1f5f9;
+          cursor: pointer;
+          transition: background 0.15s;
+          background: #fffdf5;
+        }
+        .bell-gift-row:hover {
+          background: #fef9c3;
+        }
+        .bell-row-dismiss {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          color: #94a3b8;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.75rem;
+          cursor: pointer;
+          opacity: 0.6;
+          transition: all 0.15s ease;
+          z-index: 5;
+        }
+        .bell-order-row:hover .bell-row-dismiss,
+        .bell-gift-row:hover .bell-row-dismiss {
+          opacity: 1;
+          background: #fee2e2;
+          color: #ef4444;
+          border-color: #fca5a5;
+        }
+        .bell-row-dismiss:hover {
+          background: #ef4444 !important;
+          color: #ffffff !important;
+          border-color: #dc2626 !important;
+          transform: scale(1.1);
+        }
+        .bell-restore-btn {
+          margin-top: 10px;
+          background: transparent;
+          border: none;
+          color: #4f46e5;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          text-decoration: underline;
+          padding: 4px 8px;
+          border-radius: 4px;
+          transition: all 0.15s;
+        }
+        .bell-restore-btn:hover {
+          background: #eef2ff;
+          color: #3730a3;
         }
         .bell-card-footer {
           padding: 0.75rem 1.1rem;

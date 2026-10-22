@@ -41,28 +41,59 @@ const AdminOrderDetails = () => {
     fetchDetails();
   }, [id, token]);
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
+  const handleMarkReturnReceived = async () => {
+    const totalQty = order?.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1;
+    const confirmed = window.confirm(
+      `Confirm physical receipt of returned package for Order #${order._id.substring(order._id.length - 8).toUpperCase()}?\n\nThis will automatically:\n1. Restock ${totalQty} product unit(s) back to inventory\n2. Repay ₹${order.totalAmount} to customer\n3. Cancel associated referral commissions\n\nProceed?`
+    );
+    if (!confirmed) return;
+
     setSaving(true);
     try {
-      await axios.put(`${import.meta.env.VITE_API_URL}/admin/orders/${id}/status`, trackingForm, {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/admin/orders/${id}/status`, {
+        status: 'Returned',
+        paymentStatus: 'Refunded'
+      }, {
+        headers: { 'x-auth-token': token }
+      });
+      toast.success('Return item marked received! Inventory restocked & customer refunded.');
+      setOrder(res.data);
+      setTrackingForm(prev => ({
+        ...prev,
+        status: 'Returned',
+        paymentStatus: 'Refunded'
+      }));
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to mark return received');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (trackingForm.status === 'Returned' && order.status !== 'Returned') {
+      const confirmed = window.confirm(
+        `Are you marking the returned item as RECEIVED?\n\nThis will restock inventory, repay ₹${order.totalAmount} to customer, and cancel commissions.\n\nProceed?`
+      );
+      if (!confirmed) return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/admin/orders/${id}/status`, trackingForm, {
         headers: { 'x-auth-token': token }
       });
       toast.success('Order updated successfully!');
-      // Update local state to reflect changes without full refetch
-      setOrder(prev => ({
-        ...prev,
-        trackingNumber: trackingForm.trackingNumber,
-        courierDetails: trackingForm.courierDetails,
-        status: trackingForm.status,
-        paymentStatus: trackingForm.paymentStatus
-      }));
+      setOrder(res.data);
     } catch (err) {
       toast.error('Failed to update order details');
     } finally {
       setSaving(false);
     }
   };
+
 
   const handlePrintInvoice = () => {
     const printWindow = window.open('', '_blank');
@@ -200,7 +231,7 @@ const AdminOrderDetails = () => {
   return (
     <div className="admin-tab-content">
       {/* Header */}
-      <div style={{ marginBottom: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
           <button 
             onClick={() => navigate('/admin/dashboard/orders')}
@@ -213,7 +244,16 @@ const AdminOrderDetails = () => {
             <FiArrowLeft /> Back
           </button>
           <div>
-            <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.8rem', fontWeight: 800 }}>Order #{order._id.substring(order._id.length - 8).toUpperCase()}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <h2 style={{ margin: 0, color: '#0f172a', fontSize: '1.8rem', fontWeight: 800 }}>Order #{order._id.substring(order._id.length - 8).toUpperCase()}</h2>
+              <span style={{
+                fontSize: '0.8rem', fontWeight: 700, padding: '0.2rem 0.75rem', borderRadius: '50px',
+                background: order.status === 'Delivered' ? '#dcfce7' : order.status === 'Return Requested' ? '#ffedd5' : order.status === 'Returned' ? '#ede9fe' : order.status === 'Cancelled' ? '#fee2e2' : '#eff6ff',
+                color: order.status === 'Delivered' ? '#15803d' : order.status === 'Return Requested' ? '#c2410c' : order.status === 'Returned' ? '#6d28d9' : order.status === 'Cancelled' ? '#b91c1c' : '#1d4ed8'
+              }}>
+                {order.status}
+              </span>
+            </div>
             <p style={{ margin: '0.3rem 0 0 0', color: '#64748b' }}>Placed on {new Date(order.createdAt).toLocaleString()}</p>
           </div>
         </div>
@@ -228,6 +268,86 @@ const AdminOrderDetails = () => {
           <FiPrinter /> Print Invoice
         </button>
       </div>
+
+      {/* ─── ACTION BANNER: Return Requested by Customer ─── */}
+      {order.status === 'Return Requested' && (
+        <div style={{ background: '#fffbeb', border: '2px solid #f59e0b', borderRadius: '16px', padding: '1.5rem 2rem', marginBottom: '2rem', boxShadow: '0 4px 15px rgba(245,158,11,0.12)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.2rem' }}>
+            <div style={{ flex: 1, minWidth: '280px' }}>
+              <span style={{ background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Action Required: Return Requested
+              </span>
+              <h3 style={{ margin: '0.4rem 0 0.3rem 0', color: '#92400e', fontSize: '1.3rem', fontWeight: 800 }}>
+                Customer Has Requested a Return
+              </h3>
+              <p style={{ margin: 0, color: '#b45309', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                <strong>Reason:</strong> {order.returnReason || 'Not specified'} | <strong>Requested:</strong> {new Date(order.returnRequestedAt || order.updatedAt).toLocaleString()}
+              </p>
+              <div style={{ marginTop: '0.4rem', fontSize: '0.85rem', color: '#78350f' }}>
+                <strong>Customer Refund Destination:</strong> {order.refundDetails || 'LG Wallet'}
+              </div>
+            </div>
+
+            <button
+              onClick={handleMarkReturnReceived}
+              disabled={saving}
+              style={{
+                background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                color: 'white',
+                border: 'none',
+                padding: '0.9rem 1.75rem',
+                borderRadius: '10px',
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 14px rgba(124,58,237,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <FiCheckCircle size={18} /> Mark Return Received & Refund (₹{order.totalAmount})
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Delivered 7-Day Inspection Banner ─── */}
+      {order.status === 'Delivered' && (() => {
+        const d = new Date(order.deliveredAt || order.updatedAt).getTime() + 7 * 24 * 60 * 60 * 1000 - Date.now();
+        const days = Math.ceil(d / (1000 * 60 * 60 * 24));
+        return (
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '1rem 1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <FiCheckCircle size={24} style={{ color: '#16a34a', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 800, color: '#166534', fontSize: '0.95rem' }}>
+                Delivered on {new Date(order.deliveredAt || order.updatedAt).toLocaleDateString()}
+              </div>
+              <div style={{ color: '#15803d', fontSize: '0.85rem' }}>
+                7-Day Return Inspection Window: {days > 0 ? `${days} day(s) remaining for customer return` : 'Window expired (Return period ended)'}.
+                Referral commissions remain in 'Pending' until this 7-day window concludes.
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ─── Returned Confirmation Banner ─── */}
+      {order.status === 'Returned' && (
+        <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '12px', padding: '1.2rem 1.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+            <FiCheckCircle size={20} style={{ color: '#7c3aed' }} />
+            <h4 style={{ margin: 0, color: '#5b21b6', fontSize: '1.05rem', fontWeight: 800 }}>
+              Return Received & Processed
+            </h4>
+          </div>
+          <p style={{ margin: 0, color: '#6d28d9', fontSize: '0.875rem' }}>
+            Returned item received at warehouse. Inventory was restocked, and full amount of ₹{order.totalAmount} has been refunded to the customer. All commissions for this order were cancelled.
+          </p>
+        </div>
+      )}
+
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', alignItems: 'start' }}>
         
@@ -325,9 +445,11 @@ const AdminOrderDetails = () => {
                   <option value="Processing">Processing</option>
                   <option value="Shipped">Shipped</option>
                   <option value="Delivered">Delivered</option>
+                  <option value="Return Requested">Return Requested</option>
+                  <option value="Returned">Returned (Item Received & Refund)</option>
                   <option value="Cancelled">Cancelled</option>
-                  <option value="Returned">Returned</option>
                 </select>
+
               </div>
 
               <div style={{ marginBottom: '1.2rem' }}>

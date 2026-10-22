@@ -8,6 +8,7 @@ const Product = require('../models/Product');
 const { authUser } = require('../middleware/auth');
 const Razorpay = require('razorpay');
 const sendEmail = require('../utils/mailer');
+const { processMaturedCommissions } = require('../utils/commissionHelper');
 
 const razorpayInstance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_TfwrOlkqXf2RIf',
@@ -311,6 +312,9 @@ router.post('/validate-promo', authUser, async (req, res) => {
 // Get User Orders
 router.get('/myorders', authUser, async (req, res) => {
   try {
+    // Auto-check and process matured commissions in background
+    processMaturedCommissions().catch(err => console.error('Error auto-maturing commissions in myorders:', err));
+
     const orders = await Order.find({ user: req.user.id })
       .populate('items.product', 'name images slug')
       .sort({ createdAt: -1 });
@@ -323,9 +327,10 @@ router.get('/myorders', authUser, async (req, res) => {
 // Cancel or Return Order (Customer)
 router.put('/:id/status', authUser, async (req, res) => {
   try {
-    const { action, refundDetails } = req.body; // 'cancel' or 'return'
+    const { action, refundDetails, returnReason } = req.body; // 'cancel', 'return', 'request_return', or 'update_refund'
     const order = await Order.findOne({ _id: req.params.id, user: req.user.id });
     if (!order) return res.status(404).json({ error: 'Order not found' });
+
     if (action === 'update_refund') {
       if (!refundDetails) return res.status(400).json({ error: 'Refund details are required' });
       order.refundDetails = refundDetails;
@@ -339,46 +344,79 @@ router.put('/:id/status', authUser, async (req, res) => {
       }
       order.status = 'Cancelled';
 
-      // Restore stock when order is cancelled
-      for (const item of order.items) {
-        const pId = item.product?._id || item.product;
-        if (pId) {
-          await Product.findByIdAndUpdate(pId, { $inc: { stock: item.quantity } });
+      // Restore stock when order is cancelled (prevent double increment)
+      if (!order.isStockRestocked) {
+        for (const item of order.items) {
+          const pId = item.product?._id || item.product;
+          if (pId) {
+            await Product.findByIdAndUpdate(pId, { $inc: { stock: item.quantity } });
+          }
         }
+        order.isStockRestocked = true;
       }
-    } else if (action === 'return') {
+
+      // Repay amount to customer's wallet if payment was already completed
+      if (order.paymentStatus === 'Completed' && !order.isAmountRepaid) {
+        order.paymentStatus = 'Refunded';
+        order.refundedAt = new Date();
+        const customer = await User.findById(order.user);
+        if (customer) {
+          customer.walletBalance = Math.round(((customer.walletBalance || 0) + order.totalAmount) * 100) / 100;
+          await customer.save();
+        }
+        order.isAmountRepaid = true;
+      }
+
+      // Reverse pending referral commissions if cancelled
+      const commissions = await Commission.find({ order: order._id, status: { $ne: 'Cancelled' } });
+      for (const comm of commissions) {
+        const user = await User.findById(comm.recipient);
+        if (user) {
+          if (comm.status === 'Pending') {
+            user.pendingWalletBalance = Math.max(0, Math.round(((user.pendingWalletBalance || 0) - comm.commissionAmount) * 100) / 100);
+          } else if (comm.status === 'Credited') {
+            user.walletBalance = Math.max(0, Math.round(((user.walletBalance || 0) - comm.commissionAmount) * 100) / 100);
+            user.totalReferralEarnings = Math.max(0, Math.round(((user.totalReferralEarnings || 0) - comm.commissionAmount) * 100) / 100);
+          }
+          await user.save();
+        }
+        comm.status = 'Cancelled';
+        comm.commissionAmount = 0;
+        await comm.save();
+      }
+
+    } else if (action === 'return' || action === 'request_return') {
       if (order.status !== 'Delivered') {
         return res.status(400).json({ error: 'Only delivered orders can be returned' });
       }
-      order.status = 'Returned';
+
+      // Verify 7-day return policy
+      const deliveryDate = order.deliveredAt || order.updatedAt || order.createdAt;
+      const daysSinceDelivery = (Date.now() - new Date(deliveryDate).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceDelivery > 7) {
+        return res.status(400).json({ 
+          error: 'Return window expired. Returns are only allowed within 7 days of delivery.' 
+        });
+      }
+
+      // Customer requests return -> status transitions to 'Return Requested'
+      // Note: Admin must physically receive the returned item to mark it 'Returned',
+      // which restocks inventory and repays the customer amount.
+      order.status = 'Return Requested';
+      order.returnRequestedAt = new Date();
+      if (returnReason) order.returnReason = returnReason;
+      if (refundDetails) order.refundDetails = refundDetails;
+
     } else {
       return res.status(400).json({ error: 'Invalid action' });
     }
     
-    if (refundDetails) {
+    if (refundDetails && action !== 'cancel') {
       order.refundDetails = refundDetails;
     }
 
     if (!order.shippingAddress) order.shippingAddress = 'Address not provided (legacy order)';
     await order.save();
-    
-    // Reverse commissions if cancelled or returned
-    const commissions = await Commission.find({ order: order._id, status: { $ne: 'Cancelled' } });
-    for (const comm of commissions) {
-      const user = await User.findById(comm.recipient);
-      if (user) {
-        if (comm.status === 'Pending') {
-          user.pendingWalletBalance = Math.max(0, (user.pendingWalletBalance || 0) - comm.commissionAmount);
-        } else if (comm.status === 'Credited') {
-          user.walletBalance = Math.max(0, (user.walletBalance || 0) - comm.commissionAmount);
-          user.totalReferralEarnings = Math.max(0, (user.totalReferralEarnings || 0) - comm.commissionAmount);
-        }
-        await user.save();
-      }
-      comm.status = 'Cancelled';
-      comm.commissionAmount = 0;
-      await comm.save();
-    }
     
     res.json(order);
   } catch (err) {
@@ -386,6 +424,7 @@ router.put('/:id/status', authUser, async (req, res) => {
     res.status(500).json({ error: 'Server Error' });
   }
 });
+
 
 // Get Single Order Details
 router.get('/:id', authUser, async (req, res) => {

@@ -67,10 +67,58 @@ const Orders = () => {
                 </div>
                 <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                   <p style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--primary)', margin: 0 }}>₹{order.totalAmount}</p>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#dcfce7', color: '#16a34a', padding: '0.3rem 0.6rem', borderRadius: '50px', fontSize: '0.75rem', fontWeight: '700' }}>
-                    <FiCheckCircle /> {order.status || 'Processing'}
-                  </span>
+                  
+                  {/* Status Badge */}
+                  {(() => {
+                    let bg = '#f1f5f9';
+                    let color = '#475569';
+                    let label = order.status || 'Processing';
+                    
+                    if (order.status === 'Delivered') {
+                      bg = '#dcfce7'; color = '#15803d'; label = 'Delivered';
+                    } else if (order.status === 'Return Requested') {
+                      bg = '#ffedd5'; color = '#c2410c'; label = 'Return Requested';
+                    } else if (order.status === 'Returned') {
+                      bg = '#ede9fe'; color = '#6d28d9'; label = 'Returned & Repaid';
+                    } else if (order.status === 'Cancelled') {
+                      bg = '#fee2e2'; color = '#b91c1c'; label = 'Cancelled';
+                    } else if (order.status === 'Shipped') {
+                      bg = '#dbeafe'; color = '#1d4ed8'; label = 'Shipped';
+                    } else if (order.status === 'Processing') {
+                      bg = '#e0f2fe'; color = '#0369a1'; label = 'Processing';
+                    } else {
+                      bg = '#fef3c7'; color = '#b45309'; label = 'Pending';
+                    }
+
+                    return (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: bg, color, padding: '0.3rem 0.7rem', borderRadius: '50px', fontSize: '0.75rem', fontWeight: '700' }}>
+                        <FiCheckCircle /> {label}
+                      </span>
+                    );
+                  })()}
+
+                  {/* 7-Day Return Window Badge for Delivered Orders */}
+                  {order.status === 'Delivered' && (() => {
+                    const deliveredTime = new Date(order.deliveredAt || order.updatedAt || order.createdAt).getTime();
+                    const deadline = deliveredTime + 7 * 24 * 60 * 60 * 1000;
+                    const diffMs = deadline - Date.now();
+                    const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                    if (diffMs > 0) {
+                      return (
+                        <span style={{ fontSize: '0.7rem', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>
+                          ↺ 7-Day Return Active ({daysLeft}d left)
+                        </span>
+                      );
+                    } else {
+                      return (
+                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                          Return window ended
+                        </span>
+                      );
+                    }
+                  })()}
                 </div>
+
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>

@@ -249,7 +249,7 @@ const Footer = () => {
             Privacy Policy
           </Link>
           <Link to="/terms" onClick={scrollToTop} className="footer-legal-link">
-            Terms of Use
+            Terms and Conditions
           </Link>
         </div>
       </div>

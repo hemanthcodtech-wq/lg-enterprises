@@ -10,13 +10,25 @@ const OrderSchema = new mongoose.Schema({
     }
   ],
   totalAmount: { type: Number, required: true },
-  status: { type: String, default: 'Pending', enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'] },
+  status: { 
+    type: String, 
+    default: 'Pending', 
+    enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Return Requested', 'Returned', 'Cancelled'] 
+  },
   paymentStatus: { type: String, default: 'Pending', enum: ['Pending', 'Completed', 'Failed', 'Refunded'] },
   paymentMethod: { type: String, default: 'Card' },
   trackingNumber: { type: String },
   courierDetails: { type: String },
   shippingAddress: { type: String, required: true },
-  refundDetails: { type: String }
+  deliveredAt: { type: Date },
+  returnRequestedAt: { type: Date },
+  returnReason: { type: String },
+  returnedAt: { type: Date },
+  refundDetails: { type: String },
+  refundedAt: { type: Date },
+  isStockRestocked: { type: Boolean, default: false },
+  isAmountRepaid: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', OrderSchema);
+

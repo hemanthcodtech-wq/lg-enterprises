@@ -17,10 +17,21 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const { processMaturedCommissions } = require('./utils/commissionHelper');
+
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/lg-ecommerce')
-  .then(() => console.log('MongoDB connected'))
+  .then(() => {
+    console.log('MongoDB connected');
+    // Process commissions matured past 7-day return window on startup
+    processMaturedCommissions().catch(err => console.error('Startup commission mature error:', err));
+    // Set 30-minute recurring check
+    setInterval(() => {
+      processMaturedCommissions().catch(err => console.error('Interval commission mature error:', err));
+    }, 30 * 60 * 1000);
+  })
   .catch(err => console.error(err));
+
 
 // Routes
 app.use('/api/auth', authRoutes);

@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FiCheck, FiTruck, FiPackage, FiArrowLeft, FiDownload, FiPhoneCall, FiMail } from 'react-icons/fi';
+import { 
+  FiCheck, FiTruck, FiPackage, FiArrowLeft, FiDownload, 
+  FiPhoneCall, FiMail, FiClock, FiAlertCircle, FiX, FiRotateCcw 
+} from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +17,15 @@ const OrderDetails = () => {
   const [reviewingProduct, setReviewingProduct] = useState(null);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+
+  // Return Request Modal State
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState('Defective or damaged product');
+  const [returnNotes, setReturnNotes] = useState('');
+  const [refundMethod, setRefundMethod] = useState('wallet'); // 'wallet' or 'custom'
+  const [customRefundDetails, setCustomRefundDetails] = useState('');
+  const [submittingReturn, setSubmittingReturn] = useState(false);
+
 
   const handleSubmitReview = async (productId) => {
     if (!reviewForm.comment.trim()) return toast.error('Please write a review comment');
@@ -51,13 +63,47 @@ const OrderDetails = () => {
     fetchOrder();
   }, [id]);
 
+  const handleConfirmReturn = async (e) => {
+    e.preventDefault();
+    if (refundMethod === 'custom' && !customRefundDetails.trim()) {
+      return toast.error('Please enter your UPI ID or Bank Account Details for the refund.');
+    }
+    
+    setSubmittingReturn(true);
+    try {
+      const token = localStorage.getItem('lg_token');
+      const refundInfo = refundMethod === 'wallet' 
+        ? 'Instant Refund to LG Wallet' 
+        : customRefundDetails.trim();
+      
+      const fullReason = returnNotes.trim() 
+        ? `${returnReason} - ${returnNotes.trim()}`
+        : returnReason;
+
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/orders/${id}/status`, {
+        action: 'return',
+        returnReason: fullReason,
+        refundDetails: refundInfo
+      }, {
+        headers: { 'x-auth-token': token }
+      });
+      setOrder(res.data);
+      setShowReturnModal(false);
+      toast.success('Return request submitted! Our admin team will inspect the item upon receipt and process your refund.');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to request return');
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
+
   const handleUpdateStatus = async (action, providedRefundDetails = '') => {
     if (action !== 'update_refund' && !window.confirm(`Are you sure you want to ${action} this order?`)) return;
 
     let refundDetails = providedRefundDetails;
-    if (action !== 'update_refund' && (order.paymentStatus === 'Completed' || (order.paymentMethod && order.paymentMethod.toLowerCase() !== 'cash on delivery' && order.paymentMethod.toLowerCase() !== 'cod'))) {
+    if (action === 'cancel' && (order.paymentStatus === 'Completed' || (order.paymentMethod && order.paymentMethod.toLowerCase() !== 'cash on delivery' && order.paymentMethod.toLowerCase() !== 'cod'))) {
       refundDetails = window.prompt("Since this is a paid order, please enter your UPI ID or Bank Details to receive your refund:");
-      if (refundDetails === null) return; // User cancelled prompt
+      if (refundDetails === null) return;
       if (!refundDetails.trim()) {
         toast.error("Refund details are required to process the refund.");
         return;
@@ -74,7 +120,7 @@ const OrderDetails = () => {
       if (action === 'update_refund') {
         toast.success("Refund details saved successfully");
       } else {
-        toast.success(`Order ${action === 'cancel' ? 'cancelled' : 'returned'} successfully`);
+        toast.success(`Order ${action === 'cancel' ? 'cancelled' : 'updated'} successfully`);
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update order');
@@ -82,6 +128,7 @@ const OrderDetails = () => {
       setUpdating(false);
     }
   };
+
 
   const handleDownloadInvoice = () => {
     const printWindow = window.open('', '_blank');
@@ -216,92 +263,364 @@ const OrderDetails = () => {
   if (loading) return <div className="section-pad"><p>Loading order details...</p></div>;
   if (!order) return <div className="section-pad"><p>Order not found.</p><Link to="/orders">Go back</Link></div>;
 
+  const deliveryDate = order?.deliveredAt 
+    ? new Date(order.deliveredAt) 
+    : (order?.updatedAt ? new Date(order.updatedAt) : new Date(order?.createdAt || Date.now()));
+  const returnDeadline = new Date(deliveryDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const msRemaining = returnDeadline.getTime() - Date.now();
+  const daysRemaining = Math.max(0, Math.floor(msRemaining / (1000 * 60 * 60 * 24)));
+  const hoursRemaining = Math.max(0, Math.floor((msRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
+  const isReturnEligible = order?.status === 'Delivered' && msRemaining > 0;
+
   return (
     <div className="section-pad" style={{ maxWidth: '1000px', margin: '0 auto', minHeight: '60vh' }}>
       <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-gray)', marginBottom: '2rem', fontWeight: 600 }}>
         <FiArrowLeft /> Back to Orders
       </Link>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+      {/* Top Header & Quick Actions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
-          <h2 className="section-title" style={{ margin: 0 }}>Order #{order._id.slice(-8).toUpperCase()}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <h2 className="section-title" style={{ margin: 0 }}>Order #{order._id.slice(-8).toUpperCase()}</h2>
+            <span style={{ 
+              fontSize: '0.75rem', fontWeight: 700, padding: '0.25rem 0.75rem', borderRadius: '50px',
+              background: order.status === 'Delivered' ? '#dcfce7' : order.status === 'Return Requested' ? '#ffedd5' : order.status === 'Returned' ? '#ede9fe' : order.status === 'Cancelled' ? '#fee2e2' : '#eff6ff',
+              color: order.status === 'Delivered' ? '#15803d' : order.status === 'Return Requested' ? '#c2410c' : order.status === 'Returned' ? '#6d28d9' : order.status === 'Cancelled' ? '#b91c1c' : '#1d4ed8'
+            }}>
+              {order.status}
+            </span>
+          </div>
           <p style={{ color: 'var(--text-gray)', marginTop: '0.5rem' }}>Placed on {new Date(order.createdAt).toLocaleString()}</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {(order.status === 'Pending' || order.status === 'Processing') && (
-            <button disabled={updating} onClick={() => handleUpdateStatus('cancel')} className="btn-primary" style={{ background: '#ef4444' }}>
+            <button disabled={updating} onClick={() => handleUpdateStatus('cancel')} className="btn-primary" style={{ background: '#ef4444', padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}>
               {updating ? '...' : 'Cancel Order'}
             </button>
           )}
-          {order.status === 'Delivered' && (
-            ((new Date() - new Date(order.updatedAt)) / (1000 * 60 * 60 * 24) <= 7) ? (
-              <button disabled={updating} onClick={() => handleUpdateStatus('return')} className="btn-primary" style={{ background: '#f59e0b' }}>
-                {updating ? '...' : 'Return Order'}
-              </button>
-            ) : (
-              <div style={{ background: '#fef3c7', color: '#b45309', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                Return window closed
-              </div>
-            )
+
+          {order.status === 'Delivered' && isReturnEligible && (
+            <button onClick={() => setShowReturnModal(true)} className="btn-primary" style={{ background: '#f59e0b', padding: '0.6rem 1.4rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <FiRotateCcw /> Request Return ({daysRemaining}d left)
+            </button>
           )}
-          <button onClick={handleDownloadInvoice} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#334155' }}>
+
+          <button onClick={handleDownloadInvoice} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#334155', padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}>
             <FiDownload /> Download Invoice
           </button>
         </div>
       </div>
 
-      {(order.status === 'Cancelled' || order.status === 'Returned') && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '1rem', borderRadius: '8px', marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ fontWeight: 'bold' }}>This order has been {order.status.toLowerCase()}.</div>
-          
-          {(order.paymentStatus === 'Completed' || (order.paymentMethod && order.paymentMethod.toLowerCase() !== 'cash on delivery' && order.paymentMethod.toLowerCase() !== 'cod')) && (
-            <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', border: '1px solid #fecaca' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', color: '#991b1b' }}>Refund Details</h4>
-              {order.refundDetails ? (
-                <p style={{ margin: 0, color: '#450a0a', fontWeight: '500' }}>Your provided details: {order.refundDetails}</p>
-              ) : (
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <input type="text" id="refundInput" placeholder="Enter UPI ID or Bank Details for refund" style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid #fca5a5', minWidth: '250px', outline: 'none' }} />
-                  <button disabled={updating} onClick={() => {
-                    const val = document.getElementById('refundInput').value;
-                    if (!val) return toast.error('Please enter details');
-                    handleUpdateStatus('update_refund', val);
-                  }} className="btn-primary" style={{ background: '#ef4444', padding: '0.5rem 1rem' }}>Submit Details</button>
-                </div>
-              )}
+      {/* ─── 7-Day Return Notification Banner for Delivered Orders ─── */}
+      {order.status === 'Delivered' && (
+        isReturnEligible ? (
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>
+                <FiClock />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, color: '#166534', fontSize: '1rem', fontWeight: 800 }}>7-Day Return Window Active</h4>
+                <p style={{ margin: '0.25rem 0 0', color: '#15803d', fontSize: '0.875rem' }}>
+                  Delivered on <strong>{deliveryDate.toLocaleDateString()}</strong>. You have <strong>{daysRemaining} day(s) and {hoursRemaining} hour(s) left</strong> to request a return if unsatisfied with your items.
+                </p>
+              </div>
             </div>
-          )}
+            <button onClick={() => setShowReturnModal(true)} className="btn-primary" style={{ background: '#f59e0b', padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 700, borderRadius: '8px', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              Return Item(s)
+            </button>
+          </div>
+        ) : (
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', color: '#64748b', fontSize: '0.875rem' }}>
+            <span style={{ fontSize: '1.2rem' }}>🔒</span>
+            <span>
+              Delivered on {deliveryDate.toLocaleDateString()}. The standard <strong>7-day return window expired</strong> on {returnDeadline.toLocaleDateString()}. Returns are no longer accepted for this order.
+            </span>
+          </div>
+        )
+      )}
+
+      {/* ─── Return Requested Banner ─── */}
+      {order.status === 'Return Requested' && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '1.5rem', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+              <FiRotateCcw />
+            </div>
+            <h4 style={{ margin: 0, color: '#92400e', fontSize: '1.1rem', fontWeight: 800 }}>Return Requested (Awaiting Item Receipt at Warehouse)</h4>
+          </div>
+          <p style={{ color: '#b45309', margin: '0 0 1rem 0', fontSize: '0.9rem', lineHeight: 1.5 }}>
+            Your return request has been submitted. Please keep the item securely packaged for pickup.
+            Once our admin team receives and inspects the physical item at our warehouse, <strong>the item count will be added back to inventory</strong> and <strong>your refund of ₹{order.totalAmount?.toLocaleString('en-IN')} will be repaid</strong>.
+          </p>
+          <div style={{ background: 'white', padding: '1rem', borderRadius: '10px', border: '1px solid #fef3c7', fontSize: '0.85rem', color: '#78350f', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <div><strong>Reason for Return:</strong> {order.returnReason || 'Product return'}</div>
+            <div><strong>Refund Destination:</strong> {order.refundDetails || 'LG Wallet Balance'}</div>
+            <div><strong>Requested On:</strong> {new Date(order.returnRequestedAt || order.updatedAt).toLocaleDateString()} at {new Date(order.returnRequestedAt || order.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
         </div>
       )}
 
+      {/* ─── Returned Banner ─── */}
+      {order.status === 'Returned' && (
+        <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '14px', padding: '1.5rem', marginBottom: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#ede9fe', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+              <FiCheck />
+            </div>
+            <h4 style={{ margin: 0, color: '#5b21b6', fontSize: '1.1rem', fontWeight: 800 }}>Return Received & Full Amount Repaid</h4>
+          </div>
+          <p style={{ color: '#6d28d9', margin: '0 0 0.6rem 0', fontSize: '0.9rem', lineHeight: 1.5 }}>
+            The returned item has been received and verified by our warehouse team. The product stock has been restored to inventory, and the full order amount of <strong>₹{order.totalAmount?.toLocaleString('en-IN')}</strong> has been repaid to your account.
+          </p>
+          <div style={{ fontSize: '0.825rem', color: '#7c3aed', fontWeight: 600 }}>
+            Payment Status: <span style={{ color: '#059669', background: '#dcfce7', padding: '2px 8px', borderRadius: '4px' }}>Refunded</span>
+            {order.refundedAt && ` on ${new Date(order.refundedAt).toLocaleDateString()} at ${new Date(order.refundedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Cancelled Banner ─── */}
+      {order.status === 'Cancelled' && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '1.25rem', borderRadius: '12px', marginBottom: '2rem' }}>
+          <div style={{ fontWeight: 800, fontSize: '1rem', marginBottom: '0.35rem' }}>This order has been cancelled.</div>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#991b1b' }}>
+            Stock has been restored to inventory. {order.paymentStatus === 'Refunded' ? `Refund of ₹${order.totalAmount} has been processed.` : ''}
+          </p>
+        </div>
+      )}
+
+      {/* ─── Tracking Status Stepper ─── */}
       <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', marginBottom: '2rem' }}>
-        <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', color: '#1e293b' }}>Tracking Status</h3>
+        <h3 style={{ fontSize: '1.15rem', marginBottom: '1.75rem', color: '#1e293b', fontWeight: 700 }}>Tracking Lifecycle</h3>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', marginBottom: '2rem', maxWidth: '800px', margin: '0 auto 2rem' }}>
-          <div style={{ position: 'absolute', top: '20px', left: '10%', right: '10%', height: '4px', background: '#e2e8f0', zIndex: 0 }}>
-            <div style={{ height: '100%', background: 'var(--primary)', width: order.status === 'Delivered' ? '100%' : order.status === 'Shipped' ? '50%' : '10%' }}></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', maxWidth: '800px', margin: '0 auto 1rem' }}>
+          {/* Progress Bar Background */}
+          <div style={{ position: 'absolute', top: '22px', left: '10%', right: '10%', height: '4px', background: '#e2e8f0', zIndex: 0 }}>
+            <div style={{ 
+              height: '100%', 
+              background: order.status === 'Returned' ? '#7c3aed' : order.status === 'Return Requested' ? '#f59e0b' : 'var(--primary)', 
+              width: (order.status === 'Returned' || order.status === 'Return Requested') ? '100%' : order.status === 'Delivered' ? '100%' : order.status === 'Shipped' ? '50%' : '15%',
+              transition: 'all 0.4s ease'
+            }}></div>
           </div>
           
+          {/* Step 1: Processing */}
           <div style={{ zIndex: 1, textAlign: 'center', flex: 1 }}>
             <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', fontSize: '1.2rem', border: '4px solid white', boxShadow: '0 0 0 2px var(--primary)' }}>
               <FiPackage />
             </div>
-            <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#1e293b', margin: 0 }}>Processing</p>
+            <p style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b', margin: 0 }}>Processing</p>
           </div>
+
+          {/* Step 2: Shipped */}
           <div style={{ zIndex: 1, textAlign: 'center', flex: 1 }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: order.status === 'Shipped' || order.status === 'Delivered' ? 'var(--primary)' : '#e2e8f0', color: order.status === 'Shipped' || order.status === 'Delivered' ? 'white' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', fontSize: '1.2rem', border: '4px solid white' }}>
+            <div style={{ 
+              width: '44px', height: '44px', borderRadius: '50%', 
+              background: ['Shipped', 'Delivered', 'Return Requested', 'Returned'].includes(order.status) ? 'var(--primary)' : '#e2e8f0', 
+              color: ['Shipped', 'Delivered', 'Return Requested', 'Returned'].includes(order.status) ? 'white' : '#94a3b8', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', fontSize: '1.2rem', border: '4px solid white' 
+            }}>
               <FiTruck />
             </div>
-            <p style={{ fontSize: '0.9rem', fontWeight: '600', color: order.status === 'Shipped' || order.status === 'Delivered' ? '#1e293b' : '#94a3b8', margin: 0 }}>Shipped</p>
+            <p style={{ fontSize: '0.85rem', fontWeight: '700', color: ['Shipped', 'Delivered', 'Return Requested', 'Returned'].includes(order.status) ? '#1e293b' : '#94a3b8', margin: 0 }}>Shipped</p>
           </div>
+
+          {/* Step 3: Delivered */}
           <div style={{ zIndex: 1, textAlign: 'center', flex: 1 }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: order.status === 'Delivered' ? 'var(--green)' : '#e2e8f0', color: order.status === 'Delivered' ? 'white' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', fontSize: '1.2rem', border: '4px solid white' }}>
+            <div style={{ 
+              width: '44px', height: '44px', borderRadius: '50%', 
+              background: ['Delivered', 'Return Requested', 'Returned'].includes(order.status) ? 'var(--green)' : '#e2e8f0', 
+              color: ['Delivered', 'Return Requested', 'Returned'].includes(order.status) ? 'white' : '#94a3b8', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', fontSize: '1.2rem', border: '4px solid white' 
+            }}>
               <FiCheck />
             </div>
-            <p style={{ fontSize: '0.9rem', fontWeight: '600', color: order.status === 'Delivered' ? 'var(--green)' : '#94a3b8', margin: 0 }}>Delivered</p>
+            <p style={{ fontSize: '0.85rem', fontWeight: '700', color: ['Delivered', 'Return Requested', 'Returned'].includes(order.status) ? 'var(--green)' : '#94a3b8', margin: 0 }}>Delivered</p>
+          </div>
+
+          {/* Step 4: Return Status (if requested or returned) */}
+          {(order.status === 'Return Requested' || order.status === 'Returned') && (
+            <div style={{ zIndex: 1, textAlign: 'center', flex: 1 }}>
+              <div style={{ 
+                width: '44px', height: '44px', borderRadius: '50%', 
+                background: order.status === 'Returned' ? '#7c3aed' : '#f59e0b', 
+                color: 'white', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', fontSize: '1.2rem', border: '4px solid white' 
+              }}>
+                {order.status === 'Returned' ? <FiCheck /> : <FiRotateCcw />}
+              </div>
+              <p style={{ fontSize: '0.85rem', fontWeight: '700', color: order.status === 'Returned' ? '#7c3aed' : '#f59e0b', margin: 0 }}>
+                {order.status === 'Returned' ? 'Returned & Repaid' : 'Return Requested'}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {order.trackingNumber && (
+          <div style={{ textAlign: 'center', marginTop: '1.2rem', fontSize: '0.85rem', color: '#64748b' }}>
+            Courier Partner: <strong style={{ color: '#1e293b' }}>{order.courierDetails || 'Delhivery / BlueDart'}</strong> | AWB Tracking: <strong style={{ color: '#4f46e5' }}>{order.trackingNumber}</strong>
+          </div>
+        )}
+      </div>
+
+      {/* ─── RETURN REQUEST MODAL ─── */}
+      {showReturnModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '20px', maxWidth: '540px', width: '100%',
+            padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative',
+            maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <button 
+              onClick={() => setShowReturnModal(false)}
+              style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}
+            >
+              <FiX size={18} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fffbeb', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                <FiRotateCcw />
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1.3rem', color: '#0f172a', fontWeight: 800 }}>Request Order Return</h3>
+            </div>
+            
+            <p style={{ color: '#64748b', fontSize: '0.875rem', margin: '0 0 1.5rem 0' }}>
+              Eligible under the <strong>7-Day Return Policy</strong> ({daysRemaining} days left). Total refund amount: <strong>₹{order.totalAmount?.toLocaleString('en-IN')}</strong>.
+            </p>
+
+            <form onSubmit={handleConfirmReturn}>
+              {/* Reason Selector */}
+              <div style={{ marginBottom: '1.2rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
+                  Reason for Return *
+                </label>
+                <select 
+                  value={returnReason} 
+                  onChange={e => setReturnReason(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                >
+                  <option value="Defective or damaged product">Defective or damaged product</option>
+                  <option value="Wrong item received">Wrong item received</option>
+                  <option value="Item does not match description">Item does not match description</option>
+                  <option value="Quality not satisfactory">Quality not satisfactory</option>
+                  <option value="Changed mind / No longer needed">Changed mind / No longer needed</option>
+                  <option value="Other">Other reason</option>
+                </select>
+              </div>
+
+              {/* Detailed Notes */}
+              <div style={{ marginBottom: '1.2rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
+                  Additional Remarks (Optional)
+                </label>
+                <textarea 
+                  rows={2}
+                  placeholder="Provide any details about the issue..."
+                  value={returnNotes}
+                  onChange={e => setReturnNotes(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+
+              {/* Refund Method Preference */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '0.6rem' }}>
+                  Refund Repayment Method *
+                </label>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <label style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.8rem 1rem',
+                    borderRadius: '10px', border: `1.5px solid ${refundMethod === 'wallet' ? '#4f46e5' : '#e2e8f0'}`,
+                    background: refundMethod === 'wallet' ? '#f5f3ff' : '#f8fafc', cursor: 'pointer'
+                  }}>
+                    <input 
+                      type="radio" 
+                      name="refundMethod" 
+                      checked={refundMethod === 'wallet'} 
+                      onChange={() => setRefundMethod('wallet')}
+                      style={{ marginTop: '3px' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem' }}>Instant LG Wallet Credit (Recommended)</div>
+                      <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
+                        ₹{order.totalAmount?.toLocaleString('en-IN')} added immediately to your wallet once return is received. 100% usable on orders or withdrawable to bank anytime.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.8rem 1rem',
+                    borderRadius: '10px', border: `1.5px solid ${refundMethod === 'custom' ? '#4f46e5' : '#e2e8f0'}`,
+                    background: refundMethod === 'custom' ? '#f5f3ff' : '#f8fafc', cursor: 'pointer'
+                  }}>
+                    <input 
+                      type="radio" 
+                      name="refundMethod" 
+                      checked={refundMethod === 'custom'} 
+                      onChange={() => setRefundMethod('custom')}
+                      style={{ marginTop: '3px' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem' }}>Direct Bank / UPI Transfer</div>
+                      <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
+                        Provide your UPI ID or Bank details for direct payout.
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {refundMethod === 'custom' && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <input 
+                      type="text" 
+                      placeholder="e.g., yourname@okhdfcbank OR Account No, IFSC, Name"
+                      value={customRefundDetails}
+                      onChange={e => setCustomRefundDetails(e.target.value)}
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', outline: 'none' }}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Policy Explainer Note */}
+              <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.5rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5, borderLeft: '3px solid #f59e0b' }}>
+                <strong>Warehouse Return Inspection:</strong> After pickup, once our admin marks the return item as received at our facility, the stock count is added back to inventory and ₹{order.totalAmount} is repaid to your selected destination.
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowReturnModal(false)}
+                  style={{ padding: '0.75rem 1.25rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={submittingReturn}
+                  className="btn-primary"
+                  style={{ background: '#f59e0b', padding: '0.75rem 1.75rem', fontWeight: 700, fontSize: '0.9rem', borderRadius: '8px', border: 'none', cursor: submittingReturn ? 'not-allowed' : 'pointer' }}
+                >
+                  {submittingReturn ? 'Submitting...' : 'Confirm Return Request'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
+
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
         <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>

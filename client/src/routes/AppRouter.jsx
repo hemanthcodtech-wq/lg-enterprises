@@ -88,6 +88,7 @@ const AppRouter = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/terms-and-conditions" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/orders" element={<Profile />} />
