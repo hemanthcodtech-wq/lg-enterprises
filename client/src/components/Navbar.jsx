@@ -8,10 +8,12 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useSettings } from '../context/SettingsContext';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { cartCount, clearCart, clearWishlist } = useCart();
+  const { settings } = useSettings() || {};
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
