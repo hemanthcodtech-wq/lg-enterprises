@@ -19,8 +19,8 @@ function App() {
     return (
       <div className="splash-screen">
         <div className="splash-content">
-          <img src="/logo.png" alt="LG Enterprises" className="splash-logo" />
-          <h2 className="splash-title">LG Enterprises</h2>
+          <img src="/logo.png" alt="SVR Mart" className="splash-logo" />
+          <h2 className="splash-title">SVR Mart</h2>
         </div>
       </div>
     );

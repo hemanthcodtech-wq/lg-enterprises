@@ -5,8 +5,16 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phone: { type: String },
   address: { type: String },
-  password: { type: String, required: true },
+  password: { 
+    type: String, 
+    required: function() {
+      return !this.googleId && (!this.authProvider || this.authProvider === 'local');
+    }
+  },
   role: { type: String, default: 'user' }, // user or admin
+  authProvider: { type: String, default: 'local' }, // 'local' or 'google'
+  googleId: { type: String },
+  avatar: { type: String },
   referralCode: { type: String, unique: true },
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   walletBalance: { type: Number, default: 0 },

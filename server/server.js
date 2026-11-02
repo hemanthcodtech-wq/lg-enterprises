@@ -20,9 +20,10 @@ app.use(express.json());
 const { processMaturedCommissions } = require('./utils/commissionHelper');
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/lg-ecommerce')
+const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/lg-ecommerce';
+mongoose.connect(mongoUri)
   .then(() => {
-    console.log('MongoDB connected');
+    console.log(`MongoDB connected: ${mongoUri.replace(/:([^:@]{3,})@/, ':***@')}`);
     // Process commissions matured past 7-day return window on startup
     processMaturedCommissions().catch(err => console.error('Startup commission mature error:', err));
     // Set 30-minute recurring check

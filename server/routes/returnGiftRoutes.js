@@ -6,7 +6,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const { authUser, authAdmin } = require('../middleware/auth');
 const sendEmail = require('../utils/mailer');
-const { upload } = require('../config/cloudinary');
+const { upload, deleteFromS3 } = require('../config/s3');
 
 /**
  * Helper: Calculate user's total purchases and progress for a campaign.
@@ -314,7 +314,7 @@ router.get('/admin/campaigns', authAdmin, async (req, res) => {
 
 /**
  * POST /api/return-gifts/admin/campaigns
- * Admin creates a new return gift campaign with optional Cloudinary image upload
+ * Admin creates a new return gift campaign with optional S3 image upload
  */
 router.post('/admin/campaigns', authAdmin, upload.single('image'), async (req, res) => {
   try {
@@ -335,7 +335,7 @@ router.post('/admin/campaigns', authAdmin, upload.single('image'), async (req, r
 
     let giftImage = req.body.giftImage;
     if (req.file) {
-      giftImage = req.file.path; // Cloudinary URL
+      giftImage = req.file.location || req.file.path; // S3 URL
     }
 
     if (!title || !targetAmount || !startDate || !endDate || !giftTitle) {
@@ -372,7 +372,7 @@ router.post('/admin/campaigns', authAdmin, upload.single('image'), async (req, r
 
 /**
  * PUT /api/return-gifts/admin/campaigns/:id
- * Admin updates a campaign with optional Cloudinary image upload
+ * Admin updates a campaign with optional S3 image upload
  */
 router.put('/admin/campaigns/:id', authAdmin, upload.single('image'), async (req, res) => {
   try {
@@ -382,7 +382,7 @@ router.put('/admin/campaigns/:id', authAdmin, upload.single('image'), async (req
     }
 
     if (req.file) {
-      campaign.giftImage = req.file.path; // Cloudinary URL
+      campaign.giftImage = req.file.location || req.file.path; // S3 URL
     }
 
     const fields = [

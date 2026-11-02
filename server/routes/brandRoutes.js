@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Brand = require('../models/Brand');
 const { authAdmin } = require('../middleware/auth');
-const { upload } = require('../config/cloudinary');
+const { upload, deleteFromS3 } = require('../config/s3');
 
 // Get all brands
 router.get('/', async (req, res) => {
@@ -35,7 +35,7 @@ router.post('/', authAdmin, upload.single('image'), async (req, res) => {
 
     const brand = new Brand({
       name,
-      imageUrl: req.file.path
+      imageUrl: req.file.location || req.file.path
     });
     
     await brand.save();

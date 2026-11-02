@@ -709,7 +709,7 @@ const AdminCarousel = () => {
             </div>
 
             <div className="field-group">
-              <label className="field-label">Slide Image (Cloudinary) *</label>
+              <label className="field-label">Slide Image (AWS S3) *</label>
               <input 
                 type="file" 
                 name="image" 

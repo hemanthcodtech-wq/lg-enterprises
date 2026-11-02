@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiEye, FiEyeOff, FiAlertCircle, FiCheckCircle, FiShoppingBag, FiTag, FiStar, FiShield, FiX, FiCheck } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const Register = () => {
   const { register, verifyOtp } = useAuth();
@@ -74,8 +75,8 @@ const Register = () => {
       <div className="auth-wrapper" style={{ maxWidth: '1000px' }}>
         {/* Left */}
         <div className="auth-left">
-          <img src="/logo.png" alt="LG Enterprises" style={{ maxWidth: '240px', height: 'auto', marginBottom: '2rem', display: 'block' }} />
-          <h2>Join LG Enterprises Today!</h2>
+          <img src="/logo.png" alt="SVR Mart" style={{ maxWidth: '240px', height: 'auto', marginBottom: '2rem', display: 'block' }} />
+          <h2>Join SVR Mart Today!</h2>
           <p>Create a free account to unlock exclusive deals, track orders, and enjoy a seamless shopping experience.</p>
           <div className="auth-feature"><FiShoppingBag /> Access 10,000+ premium products</div>
           <div className="auth-feature"><FiTag /> Member-only discounts & early sales</div>
@@ -317,6 +318,15 @@ const Register = () => {
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
+          )}
+
+          {!requireOtp && (
+            <>
+              <div className="auth-divider" style={{ margin: '1.25rem 0' }}>or sign up with</div>
+              <div className="social-login-btns" style={{ display: 'flex', flexDirection: 'column', width: '100%', marginBottom: '1rem' }}>
+                <GoogleAuthButton text="signup_with" usedReferralCode={form.usedReferralCode} />
+              </div>
+            </>
           )}
 
           <p className="auth-switch">

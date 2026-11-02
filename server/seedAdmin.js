@@ -5,7 +5,7 @@ const User = require('./models/User');
 
 const seedAdmin = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/lg-ecommerce');
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/lg-ecommerce');
     console.log('MongoDB connected for seeding...');
 
     const adminEmail = process.env.SUPERADMIN_EMAIL || 'admin@lg.com';

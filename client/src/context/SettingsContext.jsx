@@ -4,11 +4,11 @@ import axios from 'axios';
 const SettingsContext = createContext();
 
 export const defaultSettings = {
-  storeName: 'LG Enterprises Store',
-  supportEmail: 'support@lg-enterprises.com',
+  storeName: 'SVR Mart',
+  supportEmail: 'support@svrmart.com',
   supportPhone: '+91 98765 43210',
   whatsappNumber: '+91 98765 43210',
-  storeAddress: 'LG Complex, Main Road, Bhimavaram, AP – 534201',
+  storeAddress: 'SVR Mart Complex, Main Road, Bhimavaram, AP – 534201',
   locationCity: 'Bhimavaram, Andhra Pradesh',
   mapPinUrl: 'https://maps.google.com/?q=Bhimavaram,+Andhra+Pradesh',
   mapEmbedIframe: '',

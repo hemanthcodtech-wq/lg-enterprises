@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 const SettingSchema = new mongoose.Schema({
-  storeName: { type: String, default: 'LG Enterprises Store' },
-  supportEmail: { type: String, default: 'support@lg-enterprises.com' },
+  storeName: { type: String, default: 'SVR Mart' },
+  supportEmail: { type: String, default: 'support@svrmart.com' },
   supportPhone: { type: String, default: '+91 98765 43210' },
   storeAddress: { type: String, default: 'Ground Floor, Tech Park, Mumbai, MH 400001' },
   locationCity: { type: String, default: 'Bhimavaram, Andhra Pradesh' },

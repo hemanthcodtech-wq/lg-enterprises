@@ -45,7 +45,7 @@ const Footer = () => {
         {/* Brand */}
         <div>
           <Link to="/" onClick={scrollToTop} style={{ display: 'inline-block' }}>
-            <img src="/logo.png" alt={settings.storeName || "LG Enterprises"} className="footer-brand-logo" />
+            <img src="/logo.png" alt={settings.storeName || "SVR Mart"} className="footer-brand-logo" />
           </Link>
           <p className="footer-desc">
             Your one-stop destination for Electronics, Furniture, Grocery, Clothing & more. Quality products at the best prices — delivered to your door.
@@ -238,7 +238,7 @@ const Footer = () => {
 
       <div className="footer-bottom">
         <div className="footer-bottom-left">
-          &copy; {new Date().getFullYear()} {settings.storeName || 'LG Enterprises'}. All Rights Reserved.
+          &copy; {new Date().getFullYear()} {settings.storeName || 'SVR Mart'}. All Rights Reserved.
         </div>
         <div className="footer-bottom-right">
           <span>Secure Payments:</span>

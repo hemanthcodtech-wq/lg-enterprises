@@ -771,7 +771,7 @@ const AdminCategories = () => {
             </div>
 
             <div className="field-group">
-              <label className="field-label">Banner Image (Cloudinary)</label>
+              <label className="field-label">Banner Image (AWS S3)</label>
               <input 
                 type="file" 
                 id="category-banner-image"

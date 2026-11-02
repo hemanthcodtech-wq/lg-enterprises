@@ -1,10 +1,11 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('./models/User');
 const Commission = require('./models/Commission');
 const Order = require('./models/Order');
 
 async function fixBalances() {
-  await mongoose.connect('mongodb+srv://hrzewotech:zewotech@zewo.yo2htvx.mongodb.net/lg-ecommerce');
+  await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/lg-ecommerce');
   console.log("Connected to DB");
 
   const allCommissions = await Commission.find().populate('order');

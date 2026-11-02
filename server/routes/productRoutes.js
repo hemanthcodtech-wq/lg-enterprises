@@ -3,7 +3,7 @@ const router = express.Router();
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const { authAdmin, authUser } = require('../middleware/auth');
-const { upload } = require('../config/cloudinary');
+const { upload, deleteFromS3 } = require('../config/s3');
 
 // Create a Product (Admin Only)
 router.post('/', authAdmin, upload.array('images', 10), async (req, res) => {
@@ -18,9 +18,9 @@ router.post('/', authAdmin, upload.array('images', 10), async (req, res) => {
       }
     }
     let images = [];
-    // 1. Files uploaded via Multer / Cloudinary
+    // 1. Files uploaded via Multer / AWS S3
     if (req.files && req.files.length > 0) {
-      images = req.files.map(file => file.path);
+      images = req.files.map(file => file.location || file.path);
     }
 
     // 2. Image URLs or existing images passed as JSON string or array
@@ -191,7 +191,7 @@ router.put('/:id', authAdmin, upload.array('images', 10), async (req, res) => {
 
     // Append newly uploaded files
     if (req.files && req.files.length > 0) {
-      const newUploaded = req.files.map(file => file.path);
+      const newUploaded = req.files.map(file => file.location || file.path);
       finalImages = [...finalImages, ...newUploaded];
     }
 

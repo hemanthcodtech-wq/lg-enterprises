@@ -285,7 +285,7 @@ const AdminReturnGifts = () => {
     const previewUrl = URL.createObjectURL(file);
     setGiftImageFile(file);
     setGiftImagePreview(previewUrl);
-    toast.success(`Selected "${file.name}" for Cloudinary upload`);
+    toast.success(`Selected "${file.name}" for upload`);
   };
 
   const handleDragOver = (e) => {
@@ -383,14 +383,14 @@ const AdminReturnGifts = () => {
           formData,
           config
         );
-        toast.success('Campaign updated with Cloudinary image!');
+        toast.success('Campaign updated with image!');
       } else {
         await axios.post(
           `${import.meta.env.VITE_API_URL}/return-gifts/admin/campaigns`,
           formData,
           config
         );
-        toast.success('Campaign created with Cloudinary image!');
+        toast.success('Campaign created with image!');
       }
       handleCloseDrawer();
       fetchCampaigns();
@@ -2328,13 +2328,13 @@ const AdminReturnGifts = () => {
                 />
               </div>
 
-              {/* Gift Image (Cloudinary File Upload + Direct URL Fallback) */}
+              {/* Gift Image (AWS S3 File Upload + Direct URL Fallback) */}
               <div className="drawer-field-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label className="drawer-field-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     Gift Image * 
                     <span className="cloudinary-cloud-badge">
-                      <FiUploadCloud /> Cloudinary Upload
+                      <FiUploadCloud /> AWS S3 Upload
                     </span>
                   </label>
                   <button 
@@ -2359,14 +2359,14 @@ const AdminReturnGifts = () => {
                   }} 
                 />
 
-                {/* If a new file is staged for Cloudinary upload */}
+                {/* If a new file is staged for S3 upload */}
                 {giftImageFile ? (
                   <div className="uploaded-file-card">
                     <img src={giftImagePreview} alt="Upload preview" className="uploaded-file-thumb" />
                     <div className="uploaded-file-details">
                       <div className="uploaded-file-name">{giftImageFile.name}</div>
                       <div className="uploaded-file-meta">
-                        <FiCheckCircle /> {(giftImageFile.size / 1024).toFixed(1)} KB • Ready for Cloudinary
+                        <FiCheckCircle /> {(giftImageFile.size / 1024).toFixed(1)} KB • Ready for S3
                       </div>
                     </div>
                     <button 
@@ -2394,7 +2394,7 @@ const AdminReturnGifts = () => {
                       Click to choose image or drag &amp; drop
                     </div>
                     <div className="uploader-drop-hint">
-                      PNG, JPG, WEBP or GIF up to 8MB • Auto-uploaded to Cloudinary CDN
+                      PNG, JPG, WEBP or GIF up to 8MB • Stored on AWS S3
                     </div>
                   </div>
                 )}
@@ -2514,7 +2514,7 @@ const AdminReturnGifts = () => {
                   Cancel
                 </button>
                 <button type="submit" disabled={submittingCampaign} className="drawer-btn-submit">
-                  {submittingCampaign ? (giftImageFile ? 'Uploading to Cloudinary...' : 'Saving Campaign...') : (editingCampaignId ? 'Update Campaign' : 'Launch Campaign')}
+                  {submittingCampaign ? (giftImageFile ? 'Uploading to S3...' : 'Saving Campaign...') : (editingCampaignId ? 'Update Campaign' : 'Launch Campaign')}
                 </button>
               </div>
             </form>

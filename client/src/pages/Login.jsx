@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiEye, FiEyeOff, FiAlertCircle, FiCheckCircle, FiShoppingBag, FiTag, FiStar, FiX } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 import axios from 'axios';
 
 const Login = () => {
@@ -106,9 +107,9 @@ const Login = () => {
     <div className="auth-page">
       <div className="auth-wrapper">
         <div className="auth-left">
-          <img src="/logo.png" alt="LG Enterprises" style={{ maxWidth: '240px', height: 'auto', marginBottom: '2rem', display: 'block' }} />
+          <img src="/logo.png" alt="SVR Mart" style={{ maxWidth: '240px', height: 'auto', marginBottom: '2rem', display: 'block' }} />
           <h2>Welcome Back!</h2>
-          <p>Sign in to explore thousands of products — Electronics, Furniture, Grocery & more at the best prices.</p>
+          <p>Sign in to explore thousands of products — Electronics, Furniture, Grocery & more at the best prices on SVR Mart.</p>
           <div className="auth-feature"><FiShoppingBag /> 10,000+ Products across categories</div>
           <div className="auth-feature"><FiTag /> Exclusive member discounts every day</div>
           <div className="auth-feature"><FiCheckCircle /> 100% Secure & Genuine Products</div>
@@ -194,16 +195,14 @@ const Login = () => {
                 </button>
               </form>
               
-              <div className="auth-divider">or</div>
+              <div className="auth-divider">or continue with</div>
               
-              <div className="social-login-btns" style={{ display: 'flex', flexDirection: 'column' }}>
-                <button className="social-btn google-btn" style={{ width: '100%', padding: '0.85rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-pill)', fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'white', color: 'var(--text-dark)', cursor: 'pointer' }}>
-                  <img src="https://www.google.com/favicon.ico" width="18" alt="Google" /> Continue with Google
-                </button>
+              <div className="social-login-btns" style={{ display: 'flex', flexDirection: 'column', width: '100%', marginBottom: '1rem' }}>
+                <GoogleAuthButton text="signin_with" />
               </div>
 
               <p className="auth-switch">
-                New to LG Enterprises? <Link to="/register">Create a Free Account</Link>
+                New to SVR Mart? <Link to="/register">Create a Free Account</Link>
               </p>
             </>
           )}

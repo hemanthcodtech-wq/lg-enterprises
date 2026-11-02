@@ -4,7 +4,7 @@ const ReturnGiftCampaign = require('./models/ReturnGiftCampaign');
 
 const seedReturnGift = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/lg-ecommerce');
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/lg-ecommerce');
     console.log('MongoDB connected for seeding return gift campaign...');
 
     const existing = await ReturnGiftCampaign.findOne({ title: 'Festive Shopping Return Gift Bonanza' });

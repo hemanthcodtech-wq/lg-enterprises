@@ -130,6 +130,138 @@ router.post('/login', async (req, res) => {
   }
 });
 
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Google OAuth Login / Registration
+router.post('/google', async (req, res) => {
+  try {
+    const { credential, accessToken, usedReferralCode } = req.body;
+    if (!credential && !accessToken) {
+      return res.status(400).json({ message: 'Google credential or access token is required' });
+    }
+
+    let googlePayload = null;
+
+    // 1. Verify via Google ID token (JWT from Google One-Tap / Identity Services)
+    if (credential) {
+      try {
+        if (process.env.GOOGLE_CLIENT_ID) {
+          const ticket = await googleClient.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID,
+          });
+          googlePayload = ticket.getPayload();
+        } else {
+          const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+          if (!response.ok) throw new Error('Google token validation failed');
+          googlePayload = await response.json();
+        }
+      } catch (tokenErr) {
+        // Fallback check with Google tokeninfo endpoint
+        const fallbackRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+        if (fallbackRes.ok) {
+          googlePayload = await fallbackRes.json();
+        } else {
+          console.error('Google ID token verification failed:', tokenErr.message);
+          return res.status(401).json({ message: 'Invalid or expired Google token' });
+        }
+      }
+    } else if (accessToken) {
+      // 2. Or verify via access token
+      const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!userRes.ok) {
+        return res.status(401).json({ message: 'Invalid Google access token' });
+      }
+      googlePayload = await userRes.json();
+    }
+
+    if (!googlePayload || !googlePayload.email) {
+      return res.status(400).json({ message: 'Could not retrieve email from Google account' });
+    }
+
+    const { email, name, sub, picture, email_verified } = googlePayload;
+    const cleanEmail = email.toLowerCase().trim();
+
+    let user = await User.findOne({ email: cleanEmail });
+
+    if (!user) {
+      // Handle referral code if user is new
+      let referredBy = null;
+      if (usedReferralCode && usedReferralCode.trim()) {
+        const cleanRef = usedReferralCode.trim().toUpperCase();
+        const referrer = await User.findOne({ referralCode: cleanRef });
+        if (referrer) {
+          referredBy = referrer._id;
+        }
+      }
+
+      // Generate random unique referral code for new user
+      const myReferralCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+
+      user = new User({
+        name: name || cleanEmail.split('@')[0],
+        email: cleanEmail,
+        googleId: sub,
+        avatar: picture || '',
+        authProvider: 'google',
+        isEmailVerified: email_verified !== false,
+        referralCode: myReferralCode,
+        referredBy
+      });
+      await user.save();
+    } else {
+      // Existing user: Link Google ID and avatar if missing
+      let changed = false;
+      if (!user.googleId && sub) {
+        user.googleId = sub;
+        changed = true;
+      }
+      if (!user.avatar && picture) {
+        user.avatar = picture;
+        changed = true;
+      }
+      if (!user.isEmailVerified && email_verified !== false) {
+        user.isEmailVerified = true;
+        changed = true;
+      }
+      if (!user.referralCode) {
+        user.referralCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+        changed = true;
+      }
+      if (changed) {
+        await user.save();
+      }
+    }
+
+    // Generate JWT
+    const payload = { userId: user.id, id: user.id };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        referralCode: user.referralCode,
+        address: user.address,
+        walletBalance: user.walletBalance || 0,
+        totalReferralEarnings: user.totalReferralEarnings || 0,
+        avatar: user.avatar,
+        authProvider: user.authProvider
+      }
+    });
+  } catch (err) {
+    console.error('Google OAuth error:', err);
+    res.status(500).json({ message: 'Internal server error during Google sign-in' });
+  }
+});
+
 const { authUser } = require('../middleware/auth');
 const Commission = require('../models/Commission');
 const Withdrawal = require('../models/Withdrawal');

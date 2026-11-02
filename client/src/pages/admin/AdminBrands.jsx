@@ -626,7 +626,7 @@ const AdminBrands = () => {
             </div>
             
             <div className="field-group">
-              <label className="field-label">Brand Logo (Cloudinary) *</label>
+              <label className="field-label">Brand Logo (AWS S3) *</label>
               <input 
                 type="file" 
                 name="image" 

@@ -83,6 +83,21 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const loginWithGoogle = async (credential, usedReferralCode) => {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential, usedReferralCode }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
+    
+    localStorage.setItem('lg_token', data.token);
+    localStorage.setItem('lg_user', JSON.stringify(data.user));
+    setUser(data.user);
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('lg_token');
     localStorage.removeItem('lg_user');
@@ -90,7 +105,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, verifyOtp, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, verifyOtp, loginWithGoogle, logout, refreshUser }}>
       {!loading && children}
     </AuthContext.Provider>
   );

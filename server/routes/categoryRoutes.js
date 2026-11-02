@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
 const { authAdmin } = require('../middleware/auth');
-const { upload } = require('../config/cloudinary');
+const { upload, deleteFromS3 } = require('../config/s3');
 
 // Create a Category (Admin Only)
 router.post('/', authAdmin, upload.single('image'), async (req, res) => {
@@ -15,7 +15,7 @@ router.post('/', authAdmin, upload.single('image'), async (req, res) => {
     
     let imageUrl = '';
     if (req.file) {
-      imageUrl = req.file.path;
+      imageUrl = req.file.location || req.file.path;
     }
 
     category = new Category({ 
