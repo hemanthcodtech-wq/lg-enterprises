@@ -46,6 +46,7 @@ const storage = multerS3({
     }
     cb(null, bucket);
   },
+  acl: (req, file, cb) => cb(null, undefined),
   contentType: multerS3.AUTO_CONTENT_TYPE,
   metadata: (req, file, cb) => {
     cb(null, { fieldName: file.fieldname });
@@ -101,12 +102,12 @@ const rawMulter = multer({
 // Normalize uploaded files so both file.path and file.location point to the S3 URL
 const normalizeFile = (file) => {
   if (!file) return;
-  if (!file.path && file.location) {
-    file.path = file.location;
-  }
-  if (!file.location && file.path) {
-    file.location = file.path;
-  }
+  const bucket = file.bucket || process.env.AWS_BUCKET_NAME || process.env.S3_BUCKET_NAME;
+  const region = process.env.AWS_REGION || 'ap-south-1';
+  const key = file.key;
+  const s3Url = file.location || (key && bucket ? `https://${bucket}.s3.${region}.amazonaws.com/${key}` : (file.path || ''));
+  file.location = s3Url;
+  file.path = s3Url;
 };
 
 // Middleware wrapper that automatically sets file.path = file.location
