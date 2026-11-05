@@ -2,9 +2,49 @@ import React from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { FiTrash2, FiMinus, FiPlus, FiArrowLeft, FiShoppingBag, FiLock, FiChevronDown, FiChevronUp, FiGift } from 'react-icons/fi';
+import { FiTrash2, FiMinus, FiPlus, FiArrowLeft, FiShoppingBag, FiLock, FiChevronDown, FiChevronUp, FiGift, FiMapPin } from 'react-icons/fi';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+
+const INDIAN_STATES = [
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Tamil Nadu',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+  'Andaman and Nicobar Islands',
+  'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi',
+  'Jammu and Kashmir',
+  'Ladakh',
+  'Lakshadweep',
+  'Puducherry'
+];
+
 const Cart = () => {
   const { cart, addToCart, updateQty, removeFromCart, clearCart } = useCart();
   const { user } = useAuth();
@@ -18,10 +58,115 @@ const Cart = () => {
   const [discount, setDiscount] = React.useState(0);
   const [appliedPromo, setAppliedPromo] = React.useState(null);
   const [useWallet, setUseWallet] = React.useState(false);
-  const [shippingAddress, setShippingAddress] = React.useState(user?.address || '');
   const [activePromos, setActivePromos] = React.useState([]);
   const [showPromos, setShowPromos] = React.useState(false);
   const [activeReturnGift, setActiveReturnGift] = React.useState(null);
+
+  // Structured shipping address state
+  const [addressForm, setAddressForm] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem('svr_shipping_address');
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (p && typeof p === 'object') {
+          return {
+            fullName: p.fullName || user?.name || '',
+            phone: p.phone || user?.phone || '',
+            houseNo: p.houseNo || '',
+            street: p.street || '',
+            landmark: p.landmark || '',
+            city: p.city || '',
+            state: p.state || 'Andhra Pradesh',
+            pincode: p.pincode || ''
+          };
+        }
+      }
+    } catch (e) {}
+
+    const raw = (user?.address || '').trim();
+    const isPinOnly = /^\d{6}$/.test(raw);
+    const pinMatch = raw.match(/\b\d{6}\b/);
+    return {
+      fullName: user?.name || '',
+      phone: user?.phone || '',
+      houseNo: isPinOnly ? '' : raw,
+      street: '',
+      landmark: '',
+      city: '',
+      state: 'Andhra Pradesh',
+      pincode: isPinOnly ? raw : (pinMatch ? pinMatch[0] : '')
+    };
+  });
+
+  const [addressErrors, setAddressErrors] = React.useState({});
+  const [saveToProfile, setSaveToProfile] = React.useState(true);
+
+  // Sync with user profile once loaded
+  React.useEffect(() => {
+    if (user) {
+      setAddressForm(prev => {
+        const raw = (user.address || '').trim();
+        const isPinOnly = /^\d{6}$/.test(raw);
+        const pinMatch = raw.match(/\b\d{6}\b/);
+        return {
+          fullName: prev.fullName || user.name || '',
+          phone: prev.phone || user.phone || '',
+          houseNo: prev.houseNo || (isPinOnly ? '' : raw),
+          street: prev.street || '',
+          landmark: prev.landmark || '',
+          city: prev.city || '',
+          state: prev.state || 'Andhra Pradesh',
+          pincode: prev.pincode || (isPinOnly ? raw : (pinMatch ? pinMatch[0] : ''))
+        };
+      });
+    }
+  }, [user]);
+
+  const handleAddressChange = (field, value) => {
+    setAddressForm(prev => {
+      const next = { ...prev, [field]: value };
+      try {
+        localStorage.setItem('svr_shipping_address', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+    if (addressErrors[field]) {
+      setAddressErrors(prev => ({ ...prev, [field]: null }));
+    }
+  };
+
+  const validateAddress = () => {
+    const errors = {};
+    if (!addressForm.fullName.trim()) errors.fullName = 'Full name is required';
+    const cleanPhone = (addressForm.phone || '').replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) errors.phone = 'Valid 10-digit phone required';
+    if (!addressForm.houseNo.trim()) errors.houseNo = 'House / Flat / Building is required';
+    if (!addressForm.street.trim()) errors.street = 'Street / Area is required';
+    if (!addressForm.city.trim()) errors.city = 'City / Town is required';
+    if (!addressForm.state.trim()) errors.state = 'State is required';
+    const cleanPin = (addressForm.pincode || '').replace(/\D/g, '');
+    if (!cleanPin || cleanPin.length !== 6) errors.pincode = 'Valid 6-digit PIN code required';
+
+    if (Object.keys(errors).length > 0) {
+      setAddressErrors(errors);
+      const firstError = Object.values(errors)[0];
+      toast.error(`Please complete shipping address: ${firstError}`);
+      return false;
+    }
+    setAddressErrors({});
+    return true;
+  };
+
+  const getFormattedShippingAddress = () => {
+    const parts = [
+      `${addressForm.fullName.trim()} (Ph: ${addressForm.phone.trim()})`,
+      addressForm.houseNo.trim(),
+      addressForm.street.trim(),
+      addressForm.landmark.trim() ? `Landmark: ${addressForm.landmark.trim()}` : null,
+      `${addressForm.city.trim()}, ${addressForm.state.trim()} - ${addressForm.pincode.trim()}`
+    ].filter(Boolean);
+    return parts.join(', ');
+  };
 
   React.useEffect(() => {
     const fetchPromos = async () => {
@@ -74,13 +219,30 @@ const Cart = () => {
   const amountToPay = finalTotal - walletUsed;
 
   const handleCheckout = async () => {
-    if (!shippingAddress.trim()) {
-      return toast.error('Please enter your shipping address before checkout.');
+    if (!validateAddress()) {
+      return;
     }
+
+    const formattedShippingAddress = getFormattedShippingAddress();
 
     try {
       const token = localStorage.getItem('lg_token');
       
+      // If saveToProfile is selected, sync to user profile immediately
+      if (saveToProfile) {
+        try {
+          await axios.put(`${import.meta.env.VITE_API_URL}/auth/profile`, {
+            address: formattedShippingAddress,
+            name: addressForm.fullName.trim() || user?.name,
+            phone: addressForm.phone.trim() || user?.phone
+          }, {
+            headers: { 'x-auth-token': token }
+          });
+        } catch (profileErr) {
+          // Non-blocking
+        }
+      }
+
       const items = cart.map(item => ({
         product: item.id,
         quantity: item.qty,
@@ -93,7 +255,7 @@ const Cart = () => {
         paymentMethod: amountToPay === 0 ? 'Wallet' : 'Card',
         promoId: appliedPromo ? appliedPromo.promoId : undefined,
         walletUsed: walletUsed,
-        shippingAddress
+        shippingAddress: formattedShippingAddress
       };
 
       if (amountToPay === 0) {
@@ -138,8 +300,9 @@ const Cart = () => {
             }
           },
           prefill: {
-            name: user?.name,
+            name: addressForm.fullName.trim() || user?.name,
             email: user?.email,
+            contact: addressForm.phone.trim() || user?.phone
           },
           theme: { color: '#2563eb' }
         };
@@ -181,7 +344,7 @@ const Cart = () => {
         Your Shopping Cart
       </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem', alignItems: 'start' }} className="cart-layout">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 390px', gap: '2rem', alignItems: 'start' }} className="cart-layout">
         <div className="cart-items">
           {cart.map(item => (
             <div key={item.id} style={{ display: 'flex', gap: '1.5rem', padding: '1.5rem', background: 'white', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '1rem' }}>
@@ -233,18 +396,239 @@ const Cart = () => {
           ))}
         </div>
 
-        <div className="cart-summary" style={{ background: 'white', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', position: 'sticky', top: '100px' }}>
+        <div className="cart-summary" style={{ background: 'white', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
           
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>Shipping Address</h3>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <textarea 
-              placeholder="Enter your complete delivery address (Street, City, State, ZIP)..." 
-              value={shippingAddress}
-              onChange={e => setShippingAddress(e.target.value)}
-              rows="3"
-              style={{ width: '100%', padding: '0.8rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', outline: 'none', resize: 'none', fontFamily: 'inherit' }}
-            ></textarea>
-            <small style={{ color: 'var(--text-gray)', display: 'block', marginTop: '0.4rem' }}>This address will be saved to your profile for future orders.</small>
+          {/* Shipping Address Section */}
+          <div style={{ marginBottom: '1.5rem', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+              <h3 style={{ fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#1e293b' }}>
+                <FiMapPin style={{ color: 'var(--primary)' }} />
+                Shipping Address
+              </h3>
+              <span style={{ fontSize: '0.72rem', background: '#eff6ff', color: 'var(--primary)', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                Delivery
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+              {/* Full Name */}
+              <div>
+                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  <span>Full Name <span style={{ color: '#ef4444' }}>*</span></span>
+                  {addressErrors.fullName && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="Recipient full name" 
+                  value={addressForm.fullName}
+                  onChange={e => handleAddressChange('fullName', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.8rem',
+                    borderRadius: '8px',
+                    border: addressErrors.fullName ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    background: addressErrors.fullName ? '#fef2f2' : '#f8fafc',
+                    color: '#0f172a',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Mobile Phone Number */}
+              <div>
+                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  <span>Mobile Number <span style={{ color: '#ef4444' }}>*</span></span>
+                  {addressErrors.phone && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>10 digits</span>}
+                </label>
+                <div style={{ display: 'flex' }}>
+                  <span style={{ padding: '0.6rem 0.65rem', background: '#f1f5f9', border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRight: 'none', borderRadius: '8px 0 0 8px', fontSize: '0.82rem', color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center' }}>+91</span>
+                  <input 
+                    type="tel" 
+                    placeholder="10-digit mobile number" 
+                    maxLength="10"
+                    value={addressForm.phone}
+                    onChange={e => handleAddressChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    style={{
+                      flex: 1,
+                      padding: '0.6rem 0.8rem',
+                      borderRadius: '0 8px 8px 0',
+                      border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                      fontSize: '0.85rem',
+                      background: addressErrors.phone ? '#fef2f2' : '#f8fafc',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Flat / House No / Building */}
+              <div>
+                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  <span>Flat, House No., Building <span style={{ color: '#ef4444' }}>*</span></span>
+                  {addressErrors.houseNo && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Flat 301, Sri Sai Residency" 
+                  value={addressForm.houseNo}
+                  onChange={e => handleAddressChange('houseNo', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.8rem',
+                    borderRadius: '8px',
+                    border: addressErrors.houseNo ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    background: addressErrors.houseNo ? '#fef2f2' : '#f8fafc',
+                    color: '#0f172a',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Street / Area / Locality */}
+              <div>
+                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  <span>Area, Street, Locality <span style={{ color: '#ef4444' }}>*</span></span>
+                  {addressErrors.street && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Main Road, Gandhi Nagar" 
+                  value={addressForm.street}
+                  onChange={e => handleAddressChange('street', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.8rem',
+                    borderRadius: '8px',
+                    border: addressErrors.street ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    background: addressErrors.street ? '#fef2f2' : '#f8fafc',
+                    color: '#0f172a',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Landmark (Optional) */}
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block' }}>
+                  Landmark <span style={{ fontSize: '0.72rem', fontWeight: 400 }}>(Optional)</span>
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Near Water Tank, Beside Bank" 
+                  value={addressForm.landmark}
+                  onChange={e => handleAddressChange('landmark', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.8rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* City & PIN Code (2-column side by side) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    <span>City / Town <span style={{ color: '#ef4444' }}>*</span></span>
+                    {addressErrors.city && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>Req.</span>}
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="City / Town" 
+                    value={addressForm.city}
+                    onChange={e => handleAddressChange('city', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.6rem 0.8rem',
+                      borderRadius: '8px',
+                      border: addressErrors.city ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                      fontSize: '0.85rem',
+                      background: addressErrors.city ? '#fef2f2' : '#f8fafc',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    <span>PIN Code <span style={{ color: '#ef4444' }}>*</span></span>
+                    {addressErrors.pincode && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>6 digits</span>}
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="6 digits" 
+                    maxLength="6"
+                    value={addressForm.pincode}
+                    onChange={e => handleAddressChange('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    style={{
+                      width: '100%',
+                      padding: '0.6rem 0.8rem',
+                      borderRadius: '8px',
+                      border: addressErrors.pincode ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                      fontSize: '0.85rem',
+                      background: addressErrors.pincode ? '#fef2f2' : '#f8fafc',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* State */}
+              <div>
+                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  <span>State <span style={{ color: '#ef4444' }}>*</span></span>
+                  {addressErrors.state && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
+                </label>
+                <select
+                  value={addressForm.state}
+                  onChange={e => handleAddressChange('state', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.8rem',
+                    borderRadius: '8px',
+                    border: addressErrors.state ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <option value="">Select State</option>
+                  {INDIAN_STATES.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.85rem', fontSize: '0.78rem', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={saveToProfile}
+                onChange={e => setSaveToProfile(e.target.checked)}
+                style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+              />
+              <span>Save this address to your profile for future orders</span>
+            </label>
           </div>
 
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>Order Summary</h3>
@@ -402,7 +786,7 @@ const Cart = () => {
       
       {/* Quick responsive css just for this page so it doesn't break */}
       <style>{`
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
           .cart-layout { grid-template-columns: 1fr !important; }
         }
       `}</style>
