@@ -81,7 +81,7 @@ const Cart = () => {
           };
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const raw = (user?.address || '').trim();
     const isPinOnly = /^\d{6}$/.test(raw);
@@ -127,7 +127,7 @@ const Cart = () => {
       const next = { ...prev, [field]: value };
       try {
         localStorage.setItem('svr_shipping_address', JSON.stringify(next));
-      } catch (e) {}
+      } catch (e) { }
       return next;
     });
     if (addressErrors[field]) {
@@ -213,7 +213,7 @@ const Cart = () => {
 
   const subTotal = totalAmount;
   const finalTotal = subTotal - discount;
-  
+
   const walletBalance = user?.walletBalance || 0;
   const walletUsed = useWallet ? Math.min(finalTotal, walletBalance) : 0;
   const amountToPay = finalTotal - walletUsed;
@@ -227,7 +227,7 @@ const Cart = () => {
 
     try {
       const token = localStorage.getItem('lg_token');
-      
+
       // If saveToProfile is selected, sync to user profile immediately
       if (saveToProfile) {
         try {
@@ -268,7 +268,7 @@ const Cart = () => {
         navigate('/');
         return;
       }
-      
+
       // Partial or full payment with Razorpay
       const { data: order } = await axios.post(`${import.meta.env.VITE_API_URL}/orders/create-razorpay-order`, {
         amount: amountToPay
@@ -357,24 +357,24 @@ const Cart = () => {
                   </div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>₹{item.price}</div>
                 </div>
-                
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-                      <button 
-                        onClick={() => updateQty(item.id, item.qty - 1)} 
+                      <button
+                        onClick={() => updateQty(item.id, item.qty - 1)}
                         style={{ padding: '0.3rem 0.7rem', background: 'var(--bg-page)', fontWeight: 700, border: 'none', cursor: 'pointer' }}
                         title="Decrease quantity"
                       >-</button>
                       <span style={{ padding: '0.3rem 0.8rem', fontWeight: 600, fontSize: '0.9rem', minWidth: '32px', textAlign: 'center' }}>{item.qty}</span>
-                      <button 
-                        onClick={() => updateQty(item.id, item.qty + 1)} 
+                      <button
+                        onClick={() => updateQty(item.id, item.qty + 1)}
                         disabled={item.stock !== undefined && item.qty >= item.stock}
-                        style={{ 
-                          padding: '0.3rem 0.7rem', 
-                          background: 'var(--bg-page)', 
-                          fontWeight: 700, 
-                          border: 'none', 
+                        style={{
+                          padding: '0.3rem 0.7rem',
+                          background: 'var(--bg-page)',
+                          fontWeight: 700,
+                          border: 'none',
                           cursor: (item.stock !== undefined && item.qty >= item.stock) ? 'not-allowed' : 'pointer',
                           opacity: (item.stock !== undefined && item.qty >= item.stock) ? 0.4 : 1
                         }}
@@ -397,7 +397,7 @@ const Cart = () => {
         </div>
 
         <div className="cart-summary" style={{ background: 'white', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-          
+
           {/* Shipping Address Section */}
           <div style={{ marginBottom: '1.5rem', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
@@ -417,9 +417,9 @@ const Cart = () => {
                   <span>Full Name <span style={{ color: '#ef4444' }}>*</span></span>
                   {addressErrors.fullName && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="Recipient full name" 
+                <input
+                  type="text"
+                  placeholder="Recipient full name"
                   value={addressForm.fullName}
                   onChange={e => handleAddressChange('fullName', e.target.value)}
                   style={{
@@ -444,9 +444,9 @@ const Cart = () => {
                 </label>
                 <div style={{ display: 'flex' }}>
                   <span style={{ padding: '0.6rem 0.65rem', background: '#f1f5f9', border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRight: 'none', borderRadius: '8px 0 0 8px', fontSize: '0.82rem', color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center' }}>+91</span>
-                  <input 
-                    type="tel" 
-                    placeholder="10-digit mobile number" 
+                  <input
+                    type="tel"
+                    placeholder="10-digit mobile number"
                     maxLength="10"
                     value={addressForm.phone}
                     onChange={e => handleAddressChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
@@ -471,9 +471,9 @@ const Cart = () => {
                   <span>Flat, House No., Building <span style={{ color: '#ef4444' }}>*</span></span>
                   {addressErrors.houseNo && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Flat 301, Sri Sai Residency" 
+                <input
+                  type="text"
+                  placeholder="e.g. Flat 301, Sri Sai Residency"
                   value={addressForm.houseNo}
                   onChange={e => handleAddressChange('houseNo', e.target.value)}
                   style={{
@@ -496,9 +496,9 @@ const Cart = () => {
                   <span>Area, Street, Locality <span style={{ color: '#ef4444' }}>*</span></span>
                   {addressErrors.street && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Main Road, Gandhi Nagar" 
+                <input
+                  type="text"
+                  placeholder="e.g. Main Road, Gandhi Nagar"
                   value={addressForm.street}
                   onChange={e => handleAddressChange('street', e.target.value)}
                   style={{
@@ -520,9 +520,9 @@ const Cart = () => {
                 <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block' }}>
                   Landmark <span style={{ fontSize: '0.72rem', fontWeight: 400 }}>(Optional)</span>
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Near Water Tank, Beside Bank" 
+                <input
+                  type="text"
+                  placeholder="e.g. Near Water Tank, Beside Bank"
                   value={addressForm.landmark}
                   onChange={e => handleAddressChange('landmark', e.target.value)}
                   style={{
@@ -546,9 +546,9 @@ const Cart = () => {
                     <span>City / Town <span style={{ color: '#ef4444' }}>*</span></span>
                     {addressErrors.city && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>Req.</span>}
                   </label>
-                  <input 
-                    type="text" 
-                    placeholder="City / Town" 
+                  <input
+                    type="text"
+                    placeholder="City / Town"
                     value={addressForm.city}
                     onChange={e => handleAddressChange('city', e.target.value)}
                     style={{
@@ -569,9 +569,9 @@ const Cart = () => {
                     <span>PIN Code <span style={{ color: '#ef4444' }}>*</span></span>
                     {addressErrors.pincode && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>6 digits</span>}
                   </label>
-                  <input 
-                    type="text" 
-                    placeholder="6 digits" 
+                  <input
+                    type="text"
+                    placeholder="6 digits"
                     maxLength="6"
                     value={addressForm.pincode}
                     onChange={e => handleAddressChange('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -621,8 +621,8 @@ const Cart = () => {
             </div>
 
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.85rem', fontSize: '0.78rem', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={saveToProfile}
                 onChange={e => setSaveToProfile(e.target.checked)}
                 style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }}
@@ -632,7 +632,7 @@ const Cart = () => {
           </div>
 
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>Order Summary</h3>
-          
+
           {/* Live Gift Offer Motivation */}
           {activeReturnGift && (
             <div style={{ background: 'linear-gradient(135deg, #fefce8, #fef9c3)', border: '1px solid #fde047', borderRadius: '12px', padding: '0.85rem 1rem', marginBottom: '1.25rem' }}>
@@ -650,19 +650,19 @@ const Cart = () => {
 
           {/* Promo Code Input */}
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <input 
-              type="text" 
-              placeholder="Promo Code" 
+            <input
+              type="text"
+              placeholder="Promo Code"
               value={promoCode}
               onChange={e => setPromoCode(e.target.value.toUpperCase())}
               style={{ flex: 1, padding: '0.6rem 1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', outline: 'none' }}
             />
             <button onClick={handleApplyPromo} className="btn-primary" style={{ padding: '0.6rem 1rem', borderRadius: 'var(--radius)' }}>Apply</button>
           </div>
-          
+
           {activePromos.length > 0 && (
             <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              <div 
+              <div
                 onClick={() => setShowPromos(!showPromos)}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '0.2rem 0', userSelect: 'none' }}
               >
@@ -676,8 +676,8 @@ const Cart = () => {
                 const isEligible = !promo.minOrderAmount || totalAmount >= promo.minOrderAmount;
                 const shortFall = promo.minOrderAmount ? Math.max(0, promo.minOrderAmount - totalAmount) : 0;
                 return (
-                  <div 
-                    key={promo._id} 
+                  <div
+                    key={promo._id}
                     onClick={() => {
                       setPromoCode(promo.code);
                       setShowPromos(false);
@@ -687,13 +687,13 @@ const Cart = () => {
                         toast.success(`Code ${promo.code} selected! Click Apply to calculate discount.`);
                       }
                     }}
-                    style={{ 
+                    style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      background: isEligible ? '#fafafa' : '#fff7ed', 
-                      border: `1px solid ${isEligible ? '#eaeaea' : '#fed7aa'}`, 
-                      padding: '0.8rem 1rem', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer', 
+                      background: isEligible ? '#fafafa' : '#fff7ed',
+                      border: `1px solid ${isEligible ? '#eaeaea' : '#fed7aa'}`,
+                      padding: '0.8rem 1rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
                       transition: 'all 0.2s ease',
                     }}
                     onMouseOver={e => {
@@ -723,7 +723,7 @@ const Cart = () => {
                         )}
                       </div>
                     </div>
-                    
+
                     <div style={{ color: isEligible ? '#4f46e5' : '#ea580c', fontSize: '0.85rem', fontWeight: 700 }}>
                       {isEligible ? 'Apply' : 'Unlock'}
                     </div>
@@ -738,7 +738,7 @@ const Cart = () => {
             <span>Subtotal ({cart.length} items)</span>
             <span style={{ color: 'var(--text-dark)', fontWeight: 600 }}>₹{subTotal}</span>
           </div>
-          
+
           {discount > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', color: '#10b981' }}>
               <span>Discount ({appliedPromo?.code})</span>
@@ -753,10 +753,10 @@ const Cart = () => {
 
           {walletBalance > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <input 
-                type="checkbox" 
-                id="useWallet" 
-                checked={useWallet} 
+              <input
+                type="checkbox"
+                id="useWallet"
+                checked={useWallet}
                 onChange={(e) => setUseWallet(e.target.checked)}
                 style={{ width: '16px', height: '16px', cursor: 'pointer' }}
               />
@@ -777,13 +777,13 @@ const Cart = () => {
             <span>To Pay</span>
             <span style={{ color: 'var(--primary)' }}>₹{amountToPay.toFixed(2)}</span>
           </div>
-          
+
           <button onClick={handleCheckout} className="btn-primary" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', padding: '1rem', fontSize: '1.1rem', borderRadius: 'var(--radius-pill)', marginBottom: '0.5rem' }}>
             {amountToPay === 0 ? 'Place Order' : 'Pay & Place Order'}
           </button>
         </div>
       </div>
-      
+
       {/* Quick responsive css just for this page so it doesn't break */}
       <style>{`
         @media (max-width: 900px) {
