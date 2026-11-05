@@ -90,7 +90,7 @@ const Terms = () => {
             <span className="meta-dot">•</span>
             <span><strong>Applicable To:</strong> All Registered & Guest Users</span>
             <span className="meta-dot">•</span>
-            <span><strong>Platform:</strong> LG Enterprises</span>
+            <span><strong>Platform:</strong> SVR Mart</span>
           </div>
         </header>
 
@@ -199,7 +199,7 @@ const Terms = () => {
               If you have any questions, concerns, or requests regarding these Terms and Conditions, please feel free to reach out to our dedicated legal and customer support team.
             </p>
             <div className="terms-contact-meta">
-              <span><strong>Support Email:</strong> support@lgenterprises.com</span>
+              <span><strong>Support Email:</strong> support@svrmart.com</span>
               <span className="meta-dot">•</span>
               <span><strong>Business Hours:</strong> Monday – Saturday (9:00 AM – 6:00 PM IST)</span>
             </div>

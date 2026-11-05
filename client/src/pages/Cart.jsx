@@ -119,10 +119,10 @@ const Cart = () => {
       script.onerror = () => toast.error('Razorpay SDK failed to load. Are you online?');
       script.onload = async () => {
         const options = {
-          key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TfwrOlkqXf2RIf',
+          key: order.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_TwSiFXPfioWrAO',
           amount: order.amount,
           currency: order.currency,
-          name: 'LG Enterprises',
+          name: 'SVR Mart',
           description: 'Order Payment',
           order_id: order.id,
           handler: async function (response) {

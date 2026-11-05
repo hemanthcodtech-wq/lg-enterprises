@@ -14,7 +14,7 @@ const sendEmail = async (options) => {
     });
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || `LG Enterprise <${process.env.SMTP_USER}>`,
+      from: process.env.SMTP_FROM || `SVR Mart <${process.env.SMTP_USER}>`,
       to: options.email,
       subject: options.subject,
       text: options.message,

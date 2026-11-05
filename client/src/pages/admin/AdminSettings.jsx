@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { 
-  FiSettings, FiSave, FiShield, FiGlobe, 
+import {
+  FiSettings, FiSave, FiShield, FiGlobe,
   FiMail, FiPhone, FiLock, FiCheckCircle, FiRefreshCw, FiAlertCircle,
   FiMapPin, FiShare2, FiExternalLink, FiClock
 } from 'react-icons/fi';
@@ -21,16 +21,16 @@ const AdminSettings = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // Store General Information & Contact
-  const [storeName, setStoreName] = useState('LG Enterprises Store');
-  const [supportEmail, setSupportEmail] = useState('support@lg-enterprises.com');
+  const [storeName, setStoreName] = useState('SVR Mart');
+  const [supportEmail, setSupportEmail] = useState('support@svrmart.com');
   const [supportPhone, setSupportPhone] = useState('+91 98765 43210');
   const [whatsappNumber, setWhatsappNumber] = useState('+91 98765 43210');
   const [supportTiming, setSupportTiming] = useState('Mon – Sat: 9:00 AM – 8:30 PM');
 
   // Location & Pinpoint
-  const [locationCity, setLocationCity] = useState('Bhimavaram, Andhra Pradesh');
-  const [storeAddress, setStoreAddress] = useState('LG Complex, Main Road, Bhimavaram, AP – 534201');
-  const [mapPinUrl, setMapPinUrl] = useState('https://maps.google.com/?q=Bhimavaram,+Andhra+Pradesh');
+  const [locationCity, setLocationCity] = useState('');
+  const [storeAddress, setStoreAddress] = useState('SVR Mart Online Megastore');
+  const [mapPinUrl, setMapPinUrl] = useState('');
   const [mapEmbedIframe, setMapEmbedIframe] = useState('');
 
   // Social Media Links
@@ -422,9 +422,9 @@ const AdminSettings = () => {
             <p>Update storefront contact info, physical location & pinpoint, social media links, and admin security.</p>
           </div>
           <div className="header-actions-group">
-            <button 
-              className="refresh-btn" 
-              onClick={() => fetchSettings(true)} 
+            <button
+              className="refresh-btn"
+              onClick={() => fetchSettings(true)}
               disabled={refreshing}
               title="Refresh settings"
             >
@@ -439,25 +439,25 @@ const AdminSettings = () => {
         {/* Left Navigation Card */}
         <div className="table-enterprise-card">
           <div className="nav-tabs-wrapper">
-            <button 
+            <button
               className={`settings-tab-button ${activeTab === 'general' ? 'active' : ''}`}
               onClick={() => setActiveTab('general')}
             >
               <FiGlobe style={{ fontSize: '1rem' }} /> Store Identity & Contact
             </button>
-            <button 
+            <button
               className={`settings-tab-button ${activeTab === 'location' ? 'active' : ''}`}
               onClick={() => setActiveTab('location')}
             >
               <FiMapPin style={{ fontSize: '1rem' }} /> Location & Pinpoint
             </button>
-            <button 
+            <button
               className={`settings-tab-button ${activeTab === 'social' ? 'active' : ''}`}
               onClick={() => setActiveTab('social')}
             >
               <FiShare2 style={{ fontSize: '1rem' }} /> Social Media Links
             </button>
-            <button 
+            <button
               className={`settings-tab-button ${activeTab === 'security' ? 'active' : ''}`}
               onClick={() => setActiveTab('security')}
             >
@@ -505,13 +505,13 @@ const AdminSettings = () => {
               <>
                 <div className="field-group">
                   <label className="field-label">Storefront Brand Name *</label>
-                  <input 
-                    type="text" 
-                    className="official-input" 
-                    value={storeName} 
-                    onChange={e => setStoreName(e.target.value)} 
-                    required 
-                    placeholder="e.g. LG Enterprises"
+                  <input
+                    type="text"
+                    className="official-input"
+                    value={storeName}
+                    onChange={e => setStoreName(e.target.value)}
+                    required
+                    placeholder="e.g. SVR Mart"
                   />
                   <span className="field-hint">Displayed in page headers, copyright, and brand labels.</span>
                 </div>
@@ -519,25 +519,25 @@ const AdminSettings = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                   <div className="field-group">
                     <label className="field-label">Official Support Email *</label>
-                    <input 
-                      type="email" 
-                      className="official-input" 
-                      value={supportEmail} 
-                      onChange={e => setSupportEmail(e.target.value)} 
-                      required 
-                      placeholder="support@lgenterprises.com"
+                    <input
+                      type="email"
+                      className="official-input"
+                      value={supportEmail}
+                      onChange={e => setSupportEmail(e.target.value)}
+                      required
+                      placeholder="support@svrmart.com"
                     />
                     <span className="field-hint">Auto-updates the mailto link in the footer and contact page.</span>
                   </div>
 
                   <div className="field-group">
                     <label className="field-label">Customer Care Helpline *</label>
-                    <input 
-                      type="text" 
-                      className="official-input" 
-                      value={supportPhone} 
-                      onChange={e => setSupportPhone(e.target.value)} 
-                      required 
+                    <input
+                      type="text"
+                      className="official-input"
+                      value={supportPhone}
+                      onChange={e => setSupportPhone(e.target.value)}
+                      required
                       placeholder="+91 98765 43210"
                     />
                     <span className="field-hint">Shown in footer and click-to-call buttons.</span>
@@ -547,12 +547,12 @@ const AdminSettings = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                   <div className="field-group">
                     <label className="field-label">WhatsApp Helpline Number *</label>
-                    <input 
-                      type="text" 
-                      className="official-input" 
-                      value={whatsappNumber} 
-                      onChange={e => setWhatsappNumber(e.target.value)} 
-                      required 
+                    <input
+                      type="text"
+                      className="official-input"
+                      value={whatsappNumber}
+                      onChange={e => setWhatsappNumber(e.target.value)}
+                      required
                       placeholder="+91 98765 43210"
                     />
                     <span className="field-hint">Direct number for WhatsApp chat prompts.</span>
@@ -560,12 +560,12 @@ const AdminSettings = () => {
 
                   <div className="field-group">
                     <label className="field-label">Working Hours / Support Timing *</label>
-                    <input 
-                      type="text" 
-                      className="official-input" 
-                      value={supportTiming} 
-                      onChange={e => setSupportTiming(e.target.value)} 
-                      required 
+                    <input
+                      type="text"
+                      className="official-input"
+                      value={supportTiming}
+                      onChange={e => setSupportTiming(e.target.value)}
+                      required
                       placeholder="Mon – Sat: 9:00 AM – 8:30 PM"
                     />
                     <span className="field-hint">Displayed in contact cards and about page store schedule.</span>
@@ -580,34 +580,33 @@ const AdminSettings = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                   <div className="field-group">
                     <label className="field-label">City / Region Name *</label>
-                    <input 
-                      type="text" 
-                      className="official-input" 
-                      value={locationCity} 
-                      onChange={e => setLocationCity(e.target.value)} 
-                      required 
-                      placeholder="e.g. Bhimavaram, Andhra Pradesh"
+                    <input
+                      type="text"
+                      className="official-input"
+                      value={locationCity}
+                      onChange={e => setLocationCity(e.target.value)}
+                      required
+                      placeholder="e.g. India (Optional)"
                     />
-                    <span className="field-hint">Short city identifier used in headline badges.</span>
+                    <span className="field-hint">Region or location identifier.</span>
                   </div>
 
                   <div className="field-group">
-                    <label className="field-label">Google Maps Pinpoint URL *</label>
+                    <label className="field-label">Google Maps Pinpoint URL (Optional)</label>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input 
-                        type="url" 
-                        className="official-input" 
-                        value={mapPinUrl} 
-                        onChange={e => setMapPinUrl(e.target.value)} 
-                        required 
+                      <input
+                        type="url"
+                        className="official-input"
+                        value={mapPinUrl}
+                        onChange={e => setMapPinUrl(e.target.value)}
                         placeholder="https://maps.google.com/?q=..."
                       />
                       {mapPinUrl && (
-                        <a 
-                          href={mapPinUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="refresh-btn" 
+                        <a
+                          href={mapPinUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="refresh-btn"
                           style={{ textDecoration: 'none', whiteSpace: 'nowrap' }}
                         >
                           <FiExternalLink /> Open
@@ -619,25 +618,25 @@ const AdminSettings = () => {
                 </div>
 
                 <div className="field-group">
-                  <label className="field-label">Full Physical Address *</label>
-                  <textarea 
-                    className="official-input" 
-                    rows="3" 
-                    value={storeAddress} 
-                    onChange={e => setStoreAddress(e.target.value)} 
-                    required 
-                    placeholder="LG Complex, Main Road, Bhimavaram, AP – 534201"
+                  <label className="field-label">Store Address / Details *</label>
+                  <textarea
+                    className="official-input"
+                    rows="3"
+                    value={storeAddress}
+                    onChange={e => setStoreAddress(e.target.value)}
+                    required
+                    placeholder="SVR Mart Online Megastore"
                   />
                   <span className="field-hint">Displayed verbatim across the website footer, contact cards, and about us section.</span>
                 </div>
 
                 <div className="field-group">
                   <label className="field-label">Google Maps Embed HTML / Iframe Source (Optional)</label>
-                  <input 
-                    type="text" 
-                    className="official-input" 
-                    value={mapEmbedIframe} 
-                    onChange={e => setMapEmbedIframe(e.target.value)} 
+                  <input
+                    type="text"
+                    className="official-input"
+                    value={mapEmbedIframe}
+                    onChange={e => setMapEmbedIframe(e.target.value)}
                     placeholder="https://www.google.com/maps/embed?pb=... OR full <iframe> code"
                   />
                   <span className="field-hint">Paste either a Google Maps embed URL or the full &lt;iframe&gt; code to display an interactive live map on the Contact & About pages.</span>
@@ -651,12 +650,12 @@ const AdminSettings = () => {
                     {mapEmbedIframe.includes('<iframe') ? (
                       <div dangerouslySetInnerHTML={{ __html: mapEmbedIframe }} style={{ width: '100%', minHeight: '220px' }} />
                     ) : (
-                      <iframe 
-                        title="Store Location Preview" 
-                        src={mapEmbedIframe} 
-                        width="100%" 
-                        height="220" 
-                        style={{ border: 0 }} 
+                      <iframe
+                        title="Store Location Preview"
+                        src={mapEmbedIframe}
+                        width="100%"
+                        height="220"
+                        style={{ border: 0 }}
                         loading="lazy"
                       />
                     )}
@@ -675,12 +674,12 @@ const AdminSettings = () => {
                         <FaFacebook style={{ color: '#1877f2' }} /> Facebook Page URL
                       </span>
                     </label>
-                    <input 
-                      type="url" 
-                      className="official-input" 
-                      value={socialFacebook} 
-                      onChange={e => setSocialFacebook(e.target.value)} 
-                      placeholder="https://facebook.com/lgenterprises"
+                    <input
+                      type="url"
+                      className="official-input"
+                      value={socialFacebook}
+                      onChange={e => setSocialFacebook(e.target.value)}
+                      placeholder="https://facebook.com/svrmart"
                     />
                   </div>
 
@@ -690,12 +689,12 @@ const AdminSettings = () => {
                         <FaInstagram style={{ color: '#e1306c' }} /> Instagram Profile URL
                       </span>
                     </label>
-                    <input 
-                      type="url" 
-                      className="official-input" 
-                      value={socialInstagram} 
-                      onChange={e => setSocialInstagram(e.target.value)} 
-                      placeholder="https://instagram.com/lgenterprises"
+                    <input
+                      type="url"
+                      className="official-input"
+                      value={socialInstagram}
+                      onChange={e => setSocialInstagram(e.target.value)}
+                      placeholder="https://instagram.com/svrmart"
                     />
                   </div>
                 </div>
@@ -707,12 +706,12 @@ const AdminSettings = () => {
                         <FaTwitter style={{ color: '#1da1f2' }} /> Twitter / X Profile URL
                       </span>
                     </label>
-                    <input 
-                      type="url" 
-                      className="official-input" 
-                      value={socialTwitter} 
-                      onChange={e => setSocialTwitter(e.target.value)} 
-                      placeholder="https://twitter.com/lgenterprises"
+                    <input
+                      type="url"
+                      className="official-input"
+                      value={socialTwitter}
+                      onChange={e => setSocialTwitter(e.target.value)}
+                      placeholder="https://twitter.com/svrmart"
                     />
                   </div>
 
@@ -722,12 +721,12 @@ const AdminSettings = () => {
                         <FaYoutube style={{ color: '#ff0000' }} /> YouTube Channel URL
                       </span>
                     </label>
-                    <input 
-                      type="url" 
-                      className="official-input" 
-                      value={socialYoutube} 
-                      onChange={e => setSocialYoutube(e.target.value)} 
-                      placeholder="https://youtube.com/@lgenterprises"
+                    <input
+                      type="url"
+                      className="official-input"
+                      value={socialYoutube}
+                      onChange={e => setSocialYoutube(e.target.value)}
+                      placeholder="https://youtube.com/@svrmart"
                     />
                   </div>
                 </div>
@@ -739,11 +738,11 @@ const AdminSettings = () => {
                         <FaWhatsapp style={{ color: '#25d366' }} /> WhatsApp Chat Direct Link
                       </span>
                     </label>
-                    <input 
-                      type="url" 
-                      className="official-input" 
-                      value={socialWhatsapp} 
-                      onChange={e => setSocialWhatsapp(e.target.value)} 
+                    <input
+                      type="url"
+                      className="official-input"
+                      value={socialWhatsapp}
+                      onChange={e => setSocialWhatsapp(e.target.value)}
                       placeholder="https://wa.me/919876543210"
                     />
                   </div>
@@ -754,12 +753,12 @@ const AdminSettings = () => {
                         <FaLinkedin style={{ color: '#0a66c2' }} /> LinkedIn Page URL (Optional)
                       </span>
                     </label>
-                    <input 
-                      type="url" 
-                      className="official-input" 
-                      value={socialLinkedin} 
-                      onChange={e => setSocialLinkedin(e.target.value)} 
-                      placeholder="https://linkedin.com/company/lgenterprises"
+                    <input
+                      type="url"
+                      className="official-input"
+                      value={socialLinkedin}
+                      onChange={e => setSocialLinkedin(e.target.value)}
+                      placeholder="https://linkedin.com/company/svrmart"
                     />
                   </div>
                 </div>
@@ -772,23 +771,23 @@ const AdminSettings = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                   <div className="field-group">
                     <label className="field-label">Administrator Name *</label>
-                    <input 
-                      type="text" 
-                      className="official-input" 
-                      value={adminName} 
-                      onChange={e => setAdminName(e.target.value)} 
-                      required 
+                    <input
+                      type="text"
+                      className="official-input"
+                      value={adminName}
+                      onChange={e => setAdminName(e.target.value)}
+                      required
                     />
                   </div>
 
                   <div className="field-group">
                     <label className="field-label">Admin Login Email *</label>
-                    <input 
-                      type="email" 
-                      className="official-input" 
-                      value={adminEmail} 
-                      onChange={e => setAdminEmail(e.target.value)} 
-                      required 
+                    <input
+                      type="email"
+                      className="official-input"
+                      value={adminEmail}
+                      onChange={e => setAdminEmail(e.target.value)}
+                      required
                     />
                   </div>
                 </div>
@@ -796,23 +795,23 @@ const AdminSettings = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                   <div className="field-group">
                     <label className="field-label">Current Password</label>
-                    <input 
-                      type="password" 
-                      className="official-input" 
-                      placeholder="Required only if changing password" 
-                      value={currentPassword} 
-                      onChange={e => setCurrentPassword(e.target.value)} 
+                    <input
+                      type="password"
+                      className="official-input"
+                      placeholder="Required only if changing password"
+                      value={currentPassword}
+                      onChange={e => setCurrentPassword(e.target.value)}
                     />
                   </div>
 
                   <div className="field-group">
                     <label className="field-label">New Password</label>
-                    <input 
-                      type="password" 
-                      className="official-input" 
-                      placeholder="Leave blank to keep current" 
-                      value={newPassword} 
-                      onChange={e => setNewPassword(e.target.value)} 
+                    <input
+                      type="password"
+                      className="official-input"
+                      placeholder="Leave blank to keep current"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
                     />
                   </div>
                 </div>
@@ -822,10 +821,10 @@ const AdminSettings = () => {
                     <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.82rem' }}>Two-Factor Authentication (2FA)</div>
                     <div style={{ color: '#64748b', fontSize: '0.72rem' }}>Require OTP confirmation on every super-admin login</div>
                   </div>
-                  <input 
-                    type="checkbox" 
-                    checked={twoFactorAuth} 
-                    onChange={e => setTwoFactorAuth(e.target.checked)} 
+                  <input
+                    type="checkbox"
+                    checked={twoFactorAuth}
+                    onChange={e => setTwoFactorAuth(e.target.checked)}
                     style={{ width: '16px', height: '16px', accentColor: '#4f46e5', cursor: 'pointer' }}
                   />
                 </div>

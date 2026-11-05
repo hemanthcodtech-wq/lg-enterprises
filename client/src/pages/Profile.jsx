@@ -203,8 +203,8 @@ const Profile = () => {
   const handleShare = (textToShare) => {
     if (navigator.share) {
       navigator.share({
-        title: 'Shop on LG Enterprises & Earn Rewards!',
-        text: `Use my referral code ${user.referralCode} to join LG Enterprises and unlock exclusive shopping benefits!`,
+        title: 'Shop on SVR Mart & Earn Rewards!',
+        text: `Use my referral code ${user.referralCode} to join SVR Mart and unlock exclusive shopping benefits!`,
         url: textToShare
       }).catch(console.error);
     } else {

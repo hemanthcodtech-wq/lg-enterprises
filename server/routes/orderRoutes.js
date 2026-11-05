@@ -27,10 +27,13 @@ router.post('/create-razorpay-order', authUser, async (req, res) => {
     };
     
     const order = await razorpayInstance.orders.create(options);
-    res.json(order);
+    res.json({
+      ...order,
+      key_id: process.env.RAZORPAY_KEY_ID
+    });
   } catch (err) {
     console.error('Razorpay Error:', err);
-    res.status(500).json({ error: 'Failed to create Razorpay order' });
+    res.status(500).json({ error: err.message || 'Failed to create Razorpay order' });
   }
 });
 
@@ -214,7 +217,7 @@ router.post('/', authUser, async (req, res) => {
     // Send Invoice Email
     const invoiceHtml = `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2 style="color: #2563eb;">LG Enterprises - Order Confirmation</h2>
+        <h2 style="color: #2563eb;">SVR Mart - Order Confirmation</h2>
         <p>Dear ${userObj.name},</p>
         <p>Thank you for your purchase! Your order <strong>#${order._id.toString().slice(-8).toUpperCase()}</strong> has been successfully placed.</p>
         <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -225,7 +228,7 @@ router.post('/', authUser, async (req, res) => {
         </div>
         <p>You can track your order or download the full invoice PDF from your dashboard.</p>
         <br/>
-        <p>Best regards,<br/>LG Enterprises Team</p>
+        <p>Best regards,<br/>SVR Mart Team</p>
       </div>
     `;
     

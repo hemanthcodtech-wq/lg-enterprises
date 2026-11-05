@@ -98,7 +98,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.VERCEL && fs.existsSyn
   });
 } else {
   app.get('/', (req, res) => {
-    res.json({ message: 'LG Enterprises API is running smoothly.' });
+    res.json({ message: 'SVR Mart API is running smoothly.' });
   });
 }
 

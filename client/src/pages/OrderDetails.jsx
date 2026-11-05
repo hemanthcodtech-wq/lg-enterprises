@@ -73,7 +73,7 @@ const OrderDetails = () => {
     try {
       const token = localStorage.getItem('lg_token');
       const refundInfo = refundMethod === 'wallet' 
-        ? 'Instant Refund to LG Wallet' 
+        ? 'Instant Refund to SVR Wallet' 
         : customRefundDetails.trim();
       
       const fullReason = returnNotes.trim() 
@@ -179,10 +179,10 @@ const OrderDetails = () => {
           <div class="invoice-box">
             <div class="header">
               <div class="header-left">
-                <img src="${window.location.origin}/logo.png" alt="LG Enterprises Logo" class="logo-img" onerror="this.style.display='none'" />
+                <img src="${window.location.origin}/logo.png" alt="SVR Mart Logo" class="logo-img" onerror="this.style.display='none'" />
                 <div class="company-info">
-                  <h2 class="company-name">LG Enterprises</h2>
-                  <p class="company-tagline">Pan-India E-commerce Delivery</p>
+                  <h2 class="company-name">SVR Mart</h2>
+                  <p class="company-tagline">Online Shopping Megastore · svrmart.com</p>
                 </div>
               </div>
               <div class="header-right">
@@ -246,7 +246,7 @@ const OrderDetails = () => {
             <div class="footer">
               <p class="thank-you">Thank you for your business!</p>
               <p>This is a computer-generated document and does not require a physical signature.</p>
-              <p>For support, contact support@lgenerprises.com | +91 98765 43210</p>
+              <p>For support, contact support@svrmart.com | svrmart.com</p>
             </div>
           </div>
         </body>
@@ -357,7 +357,7 @@ const OrderDetails = () => {
           </p>
           <div style={{ background: 'white', padding: '1rem', borderRadius: '10px', border: '1px solid #fef3c7', fontSize: '0.85rem', color: '#78350f', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
             <div><strong>Reason for Return:</strong> {order.returnReason || 'Product return'}</div>
-            <div><strong>Refund Destination:</strong> {order.refundDetails || 'LG Wallet Balance'}</div>
+            <div><strong>Refund Destination:</strong> {order.refundDetails || 'SVR Wallet Balance'}</div>
             <div><strong>Requested On:</strong> {new Date(order.returnRequestedAt || order.updatedAt).toLocaleDateString()} at {new Date(order.returnRequestedAt || order.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
         </div>
@@ -551,7 +551,7 @@ const OrderDetails = () => {
                       style={{ marginTop: '3px' }}
                     />
                     <div>
-                      <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem' }}>Instant LG Wallet Credit (Recommended)</div>
+                      <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem' }}>Instant SVR Wallet Credit (Recommended)</div>
                       <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
                         ₹{order.totalAmount?.toLocaleString('en-IN')} added immediately to your wallet once return is received. 100% usable on orders or withdrawable to bank anytime.
                       </div>
@@ -707,7 +707,7 @@ const OrderDetails = () => {
             <p style={{ color: '#64748b', marginBottom: '1.5rem', fontSize: '0.95rem' }}>If you have any issues with delivery, missing items, or defective products, please contact our support team immediately.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               <a href="tel:+919876543210" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontWeight: '600' }}><FiPhoneCall /> +91 98765 43210</a>
-              <a href="mailto:support@lgenerprises.com" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontWeight: '600' }}><FiMail /> support@lgenerprises.com</a>
+              <a href="mailto:support@svrmart.com" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontWeight: '600' }}><FiMail /> support@svrmart.com</a>
             </div>
           </div>
         </div>

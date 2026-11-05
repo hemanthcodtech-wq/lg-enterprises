@@ -41,7 +41,7 @@ const Privacy = () => {
       </section>
 
       <p style={{ color: 'var(--text-light)', marginTop: '3rem', fontSize: '0.9rem' }}>
-        If you have any questions regarding this Privacy Policy, please contact us at privacy@lgenterprises.com.
+        If you have any questions regarding this Privacy Policy, please contact us at privacy@svrmart.com.
       </p>
     </div>
   );

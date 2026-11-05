@@ -85,12 +85,12 @@ const AdminLogin = () => {
         {/* Left Branding Side */}
         <div className="admin-login-left">
           <div className="admin-brand">
-            <img src="/logo.png" alt="LG Enterprises" className="admin-logo-img" />
+            <img src="/logo.png" alt="SVR Mart" className="admin-logo-img" />
             <h1>Admin Control Panel</h1>
-            <p>Secure access to the LG Enterprise dashboard. Manage products, view analytics, and control user access from one centralized location.</p>
+            <p>Secure access to the SVR Mart dashboard. Manage products, view analytics, and control store operations from one centralized location.</p>
           </div>
           <div className="admin-left-footer">
-            <p>&copy; {new Date().getFullYear()} LG Enterprises. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} SVR Mart. All rights reserved.</p>
           </div>
         </div>
 

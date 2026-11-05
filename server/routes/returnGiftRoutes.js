@@ -602,7 +602,7 @@ router.post('/admin/claims/:claimId/dispatch', authAdmin, async (req, res) => {
         const giftName = claim.campaign?.giftTitle || 'Special Return Gift';
         await sendEmail({
           email: claim.user.email,
-          subject: `🎁 Your Return Gift Has Been Dispatched! - LG Enterprises`,
+          subject: `🎁 Your Return Gift Has Been Dispatched! - SVR Mart`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; borderRadius: 8px;">
               <h2 style="color: #2563eb; margin-top: 0;">Congratulations, ${claim.user.name}! 🎉</h2>
@@ -623,7 +623,7 @@ router.post('/admin/claims/:claimId/dispatch', authAdmin, async (req, res) => {
                 ${claim.shippingAddress?.address || 'Your verified store address'}
               </p>
 
-              <p style="color: #64748b; font-size: 0.9rem; margin-top: 25px;">Thank you for shopping with LG Enterprises. We value your partnership!</p>
+              <p style="color: #64748b; font-size: 0.9rem; margin-top: 25px;">Thank you for shopping with SVR Mart. We value your partnership!</p>
             </div>
           `
         });

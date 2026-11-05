@@ -253,8 +253,8 @@ const AdminDashboard = () => {
       <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <img src="/logo.png" alt="LG" className="brand-logo-img" />
-            {!isCollapsed && <h2>LG Admin</h2>}
+            <img src="/logo.png" alt="SVR Mart" className="brand-logo-img" />
+            {!isCollapsed && <h2>SVR Mart</h2>}
           </div>
           <button className="collapse-btn" onClick={() => setIsCollapsed(!isCollapsed)}>
             {isCollapsed ? '»' : '«'}

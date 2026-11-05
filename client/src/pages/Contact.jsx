@@ -17,7 +17,7 @@ const typewriterPhrases = [
   "Electronics · Furniture · Groceries · Wholesale Inquiries",
   "Order Tracking · 7-Day Returns · Warranty Assistance",
   "5-Tier Referral Rewards & Wallet Questions",
-  "Visit Our Bhimavaram Flagship Supercenter"
+  "Fast Doorstep Delivery Across India"
 ];
 
 // Department support channels
@@ -25,28 +25,28 @@ const departments = [
   {
     icon: <FiPackage />,
     title: "Orders & Delivery Support",
-    email: "orders@lgenterprises.com",
+    email: "orders@svrmart.com",
     desc: "Tracking live shipments, dispatch timelines, and doorstep courier status.",
     badge: "Fast Dispatch"
   },
   {
     icon: <FaHandshakeAngle />,
     title: "Wholesale & Bulk Orders",
-    email: "wholesale@lgenterprises.com",
+    email: "wholesale@svrmart.com",
     desc: "B2B institutional discounts, hotels, interior contractors, and commercial supply.",
     badge: "Volume Pricing"
   },
   {
     icon: <FiGift />,
     title: "5-Tier Referral & Wallet Help",
-    email: "referrals@lgenterprises.com",
+    email: "referrals@svrmart.com",
     desc: "Assistance with your unique referral code, invite links, and commission wallet credits.",
     badge: "Instant Credit"
   },
   {
     icon: <FiShield />,
     title: "Warranty & After-Sales",
-    email: "support@lgenterprises.com",
+    email: "support@svrmart.com",
     desc: "Manufacturer warranties, on-site installation, and 7-day hassle-free returns.",
     badge: "Brand Certified"
   }
@@ -55,8 +55,8 @@ const departments = [
 // Contact FAQs
 const contactFaqs = [
   {
-    q: "Where is LG Enterprises physically located?",
-    a: "Our flagship showroom is situated at LG Complex, Main Road, Bhimavaram, Andhra Pradesh - 534201. Customers are always welcome for in-person product demos and furniture inspections!"
+    q: "How can I contact SVR Mart customer support?",
+    a: "You can reach SVR Mart anytime via our online support form, email at support@svrmart.com, direct phone helpline, or WhatsApp support desk. Our team is available 6 days a week to assist you."
   },
   {
     q: "How fast do you respond to online inquiries?",
@@ -68,11 +68,11 @@ const contactFaqs = [
   },
   {
     q: "Can I request wholesale quotes for commercial or bulk furniture?",
-    a: "Yes! Use the form on this page and select 'Wholesale & Bulk Pricing' as the topic, or reach out to our dedicated wholesale team at wholesale@lgenterprises.com."
+    a: "Yes! Use the form on this page and select 'Wholesale & Bulk Pricing' as the topic, or reach out to our dedicated wholesale team at wholesale@svrmart.com."
   },
   {
     q: "What are your delivery timelines across India?",
-    a: "Local orders in Bhimavaram and nearby districts arrive within 24 to 48 hours. Orders across Andhra Pradesh and metro cities arrive within 2–4 business days with live tracking."
+    a: "Orders are dispatched promptly with express courier partners. Most deliveries arrive within 2 to 4 business days nationwide with complete live tracking updates sent via email and SMS."
   }
 ];
 
@@ -178,7 +178,7 @@ const Contact = () => {
 
               <p className="contact-hero-subtitle">
                 Have questions about ongoing deliveries, warranty claims, bulk wholesale quotes, 
-                or your <strong>5-tier referral wallet earnings</strong>? Connect directly with our <strong>{settings.locationCity || 'Bhimavaram'}</strong> support desk 
+                or your <strong>5-tier referral wallet earnings</strong>? Connect directly with our <strong>dedicated customer support desk</strong> 
                 via WhatsApp, phone, or send an inquiry below for guaranteed fast turnaround.
               </p>
 
@@ -288,20 +288,14 @@ const Contact = () => {
                   </button>
                 </div>
 
-                {/* Physical Store Mini Banner */}
+                {/* Pan-India Delivery Mini Banner */}
                 <div className="launcher-store-banner">
-                  <div className="store-banner-pin"><FiMapPin /></div>
+                  <div className="store-banner-pin"><FiPackage /></div>
                   <div className="store-banner-details">
-                    <strong>{settings.locationCity || 'Bhimavaram'} Flagship Showroom</strong>
-                    <p>{settings.storeAddress}</p>
+                    <strong>Pan-India Express Delivery</strong>
+                    <p>Fast doorstep shipping to all major pin codes across India.</p>
                   </div>
-                  {settings.mapPinUrl ? (
-                    <a href={settings.mapPinUrl} target="_blank" rel="noopener noreferrer" className="store-banner-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                      Pinpoint <FiExternalLink />
-                    </a>
-                  ) : (
-                    <a href="#store-map" className="store-banner-link">View Details</a>
-                  )}
+                  <a href="#contact-form" className="store-banner-link">Helpdesk</a>
                 </div>
 
               </div>
@@ -313,7 +307,7 @@ const Contact = () => {
           <div className="contact-stats-ribbon">
             {[
               { value: "< 2 Hours", label: "Average Response Time", icon: <FiClock /> },
-              { value: "Mon - Sat", label: `${settings.supportTiming || '9:00 AM - 8:30 PM'} Showroom`, icon: <FaStore /> },
+              { value: "Mon - Sat", label: `${settings.supportTiming || '9:00 AM - 8:30 PM'} Support`, icon: <FiClock /> },
               { value: "10,000+", label: "Products Under Warranty", icon: <FiPackage /> },
               { value: "5 Tiers", label: "Referral Program Support", icon: <FiGift /> }
             ].map((stat, i) => (
@@ -343,29 +337,19 @@ const Contact = () => {
                 We're Always <span>Ready to Connect</span>
               </h2>
               <p className="story-paragraph">
-                Reach out to us via any of our official channels or step right into our {settings.locationCity || 'Bhimavaram'} retail megastore.
+                Reach out to us via any of our official support channels. We are always ready to assist you.
               </p>
 
               <div className="info-cards-stack" id="store-map">
                 
-                {/* Store Address Card */}
+                {/* Orders & Delivery Info Card */}
                 <div className="info-item-card">
                   <div className="info-icon-box">
-                    <FiMapPin />
+                    <FiPackage />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h4>Physical Showroom Address</h4>
-                    <p style={{ whiteSpace: 'pre-line' }}>{settings.storeAddress}</p>
-                    {settings.mapPinUrl && (
-                      <a 
-                        href={settings.mapPinUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.45rem', fontSize: '0.8rem', color: '#4f46e5', fontWeight: 600, textDecoration: 'none' }}
-                      >
-                        <FiExternalLink /> Open Location Pinpoint on Google Maps
-                      </a>
-                    )}
+                    <h4>Pan-India Express Orders</h4>
+                    <p>Fast doorstep delivery across all pin codes in India with real-time tracking and protective packaging.</p>
                   </div>
                 </div>
 
@@ -462,7 +446,7 @@ const Contact = () => {
                     </div>
                     <h3>Message Successfully Sent!</h3>
                     <p>
-                      Thank you for contacting <strong>LG Enterprises</strong>. A customer support representative has received your ticket and will follow up shortly at <strong>{form.email}</strong>.
+                      Thank you for contacting <strong>SVR Mart</strong>. A customer support representative has received your ticket and will follow up shortly at <strong>{form.email}</strong>.
                     </p>
                     <div className="success-details-pill">
                       <span>Topic: <strong>{form.subject}</strong></span>
@@ -532,8 +516,8 @@ const Contact = () => {
                           <option value="5-Tier Referral System">🎁 5-Tier Referral Code & Wallet Earnings</option>
                           <option value="Product Specification">📺 Product Details, Electronics & Furniture</option>
                           <option value="Returns & Warranty">🛡️ 7-Day Returns & Brand Warranty</option>
-                          <option value="Store Visit">🏪 Bhimavaram Physical Store Inquiries</option>
-                          <option value="Other Query">💬 Other Inquiries</option>
+                          <option value="General Inquiry">💬 General Customer Inquiry</option>
+                          <option value="Other Query">❓ Other Questions</option>
                         </select>
                       </div>
 
@@ -562,7 +546,7 @@ const Contact = () => {
                           <span>Sending Message...</span>
                         ) : (
                           <>
-                            <FiSend /> Send Message to LG Enterprises
+                            <FiSend /> Send Message to SVR Mart
                           </>
                         )}
                       </button>

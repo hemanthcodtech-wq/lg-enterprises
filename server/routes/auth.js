@@ -51,9 +51,9 @@ router.post('/register', async (req, res) => {
     try {
       await sendEmail({
         email: user.email,
-        subject: 'Verify your LG Enterprise account',
+        subject: 'Verify your SVR Mart account',
         message: `Your OTP for registration is ${otp}. It expires in 10 minutes.`,
-        html: generateOtpTemplate('Welcome to LG Enterprises!', 'Please use the following OTP to complete your registration and verify your email address.', otp)
+        html: generateOtpTemplate('Welcome to SVR Mart!', 'Please use the following OTP to complete your registration and verify your email address.', otp)
       });
     } catch(err) {
       console.log('Error sending OTP', err);
@@ -90,7 +90,7 @@ router.post('/login', async (req, res) => {
       try {
         await sendEmail({
           email: user.email,
-          subject: 'Verify your LG Enterprise account',
+          subject: 'Verify your SVR Mart account',
           message: `Your OTP for login verification is ${otp}. It expires in 10 minutes.`,
           html: generateOtpTemplate('Login Verification', 'We noticed you are trying to log in but your email is not verified. Please use the following OTP to verify your account.', otp)
         });

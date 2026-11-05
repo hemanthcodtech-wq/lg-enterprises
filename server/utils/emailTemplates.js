@@ -2,7 +2,7 @@ const generateOtpTemplate = (title, message, otp) => {
   return `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #2563eb; margin: 0; font-size: 28px;">LG Enterprises</h1>
+        <h1 style="color: #2563eb; margin: 0; font-size: 28px;">SVR Mart</h1>
       </div>
       
       <div style="padding: 20px; background-color: #f8fafc; border-radius: 8px; margin-bottom: 30px;">
@@ -29,7 +29,7 @@ const generateOtpTemplate = (title, message, otp) => {
         </p>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
         <p style="color: #cbd5e1; font-size: 12px;">
-          &copy; ${new Date().getFullYear()} LG Enterprises. All rights reserved.
+          &copy; ${new Date().getFullYear()} SVR Mart. All rights reserved.
         </p>
       </div>
     </div>

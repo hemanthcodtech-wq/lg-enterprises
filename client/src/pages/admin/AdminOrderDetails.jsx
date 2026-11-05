@@ -144,10 +144,10 @@ const AdminOrderDetails = () => {
           <div class="invoice-box">
             <div class="header">
               <div class="header-left">
-                <img src="${window.location.origin}/logo.png" alt="LG Enterprises Logo" class="logo-img" onerror="this.style.display='none'" />
+                <img src="${window.location.origin}/logo.png" alt="SVR Mart Logo" class="logo-img" onerror="this.style.display='none'" />
                 <div class="company-info">
-                  <h2 class="company-name">LG Enterprises</h2>
-                  <p class="company-tagline">Pan-India E-commerce Delivery</p>
+                  <h2 class="company-name">SVR Mart</h2>
+                  <p class="company-tagline">Online Shopping Megastore · svrmart.com</p>
                 </div>
               </div>
               <div class="header-right">
@@ -211,7 +211,7 @@ const AdminOrderDetails = () => {
             <div class="footer">
               <p class="thank-you">Thank you for your business!</p>
               <p>This is a computer-generated document and does not require a physical signature.</p>
-              <p>For support, contact support@lgenerprises.com | +91 98765 43210</p>
+              <p>For support, contact support@svrmart.com | svrmart.com</p>
             </div>
           </div>
         </body>
@@ -284,7 +284,7 @@ const AdminOrderDetails = () => {
                 <strong>Reason:</strong> {order.returnReason || 'Not specified'} | <strong>Requested:</strong> {new Date(order.returnRequestedAt || order.updatedAt).toLocaleString()}
               </p>
               <div style={{ marginTop: '0.4rem', fontSize: '0.85rem', color: '#78350f' }}>
-                <strong>Customer Refund Destination:</strong> {order.refundDetails || 'LG Wallet'}
+                <strong>Customer Refund Destination:</strong> {order.refundDetails || 'SVR Wallet'}
               </div>
             </div>
 

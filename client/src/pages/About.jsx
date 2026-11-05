@@ -19,7 +19,7 @@ const typewriterPhrases = [
   "All-in-One E-Commerce Megastore",
   "Electronics · Furniture · Groceries · Fashion",
   "Earn Passive Income with 5-Tier Referral Rewards",
-  "Bhimavaram's #1 Retail & Online Supercenter",
+  "India's Trusted Online Megastore",
   "Wholesale & Retail Products at Guaranteed Best Rates"
 ];
 
@@ -69,7 +69,7 @@ const categoriesShowcase = [
     icon: <FaHandshakeAngle />,
     title: "Wholesale & Bulk Supply",
     badge: "B2B Volume Rates",
-    description: "Special institutional pricing for contractors, retail resellers, hospitality, and bulk corporate gifts across Andhra Pradesh.",
+    description: "Special institutional pricing for contractors, retail resellers, hospitality, and bulk corporate gifts nationwide.",
     color: "#4f46e5",
     bg: "#eef2ff"
   }
@@ -206,8 +206,8 @@ const scenarioSteps = [
 // FAQs
 const faqsList = [
   {
-    q: "What products are available on LG Enterprises?",
-    a: "LG Enterprises is a comprehensive e-commerce megastore with over 10,000+ products spanning Electronics (TVs, Laptops, Phones), Solid Wood Furniture, Daily Grocery Essentials, Apparel & Clothing, Home & Kitchen Appliances, and B2B Wholesale supplies."
+    q: "What products are available on SVR Mart?",
+    a: "SVR Mart is a comprehensive e-commerce megastore with over 10,000+ products spanning Electronics (TVs, Laptops, Phones), Solid Wood Furniture, Daily Grocery Essentials, Apparel & Clothing, Home & Kitchen Appliances, and B2B Wholesale supplies."
   },
   {
     q: "How does the 5-Tier Referral System work?",
@@ -219,15 +219,15 @@ const faqsList = [
   },
   {
     q: "Do I get commission on every order or only the first one?",
-    a: "You receive commissions on multiple repeat orders placed by referred customers! Whenever any customer in your 5 tiers shops on LG Enterprises, commissions are calculated and credited automatically."
+    a: "You receive commissions on multiple repeat orders placed by referred customers! Whenever any customer in your 5 tiers shops on SVR Mart, commissions are calculated and credited automatically."
   },
   {
     q: "How can I spend my referral wallet balance?",
     a: "Your wallet balance can be used directly during checkout to pay for 100% of any product order (electronics, groceries, furniture, etc.) without restrictions or minimum order thresholds."
   },
   {
-    q: "Where is LG Enterprises physically located?",
-    a: "Our flagship retail supercenter is located at LG Complex, Main Road, Bhimavaram, Andhra Pradesh - 534201. We welcome walk-in shoppers and deliver across all pin codes in India."
+    q: "How does shipping and delivery work on SVR Mart?",
+    a: "SVR Mart delivers across all major pin codes in India with express doorstep delivery, real-time tracking updates, and safe protective packaging on every order."
   }
 ];
 
@@ -257,7 +257,7 @@ const About = () => {
       color: '#4f46e5',
       bg: '#eef2ff',
       badge: 'Immediate Inviter',
-      desc: 'The direct friend whose link/code introduced the buyer to LG Enterprises'
+      desc: 'The direct friend whose link/code introduced the buyer to SVR Mart'
     },
     {
       level: 2,
@@ -386,7 +386,7 @@ const About = () => {
                   <FiStar style={{ color: '#f59e0b' }} /> <strong>4.9 / 5</strong> (50K+ Shoppers)
                 </div>
                 <div className="trust-pill">
-                  <FiMapPin style={{ color: '#818cf8' }} /> <strong>Bhimavaram Showroom</strong> + Pan-India
+                  <FiTruck style={{ color: '#818cf8' }} /> <strong>Express Shipping</strong> Pan-India
                 </div>
                 <div className="trust-pill">
                   <FiShield style={{ color: '#10b981' }} /> <strong>100% Genuine</strong> Warranties
@@ -401,7 +401,7 @@ const About = () => {
                 
                 <div className="showcase-card-header">
                   <div className="card-brand-badge">
-                    <span className="brand-dot"></span> LG Megastore & Rewards
+                    <span className="brand-dot"></span> SVR Mart Megastore & Rewards
                   </div>
                   <span className="active-tier-pill">5-Stage Live Engine</span>
                 </div>
@@ -523,18 +523,18 @@ const About = () => {
             <div className="story-text-col">
               <div className="section-pill">Our Heritage & Mission</div>
               <h2 className="section-heading">
-                {settings.locationCity || 'Bhimavaram'}'s Most Trusted <span>All-in-One Megastore</span>
+                India's Most Trusted <span>All-in-One Megastore</span>
               </h2>
               <p className="story-paragraph">
-                Established in <strong>2009 in {settings.locationCity || 'Bhimavaram, Andhra Pradesh'}</strong>, {settings.storeName || 'LG Enterprises'} was founded 
+                Established with a vision for excellence, <strong>{settings.storeName || 'SVR Mart'}</strong> was founded 
                 on an uncompromising promise: delivering top-grade products with genuine manufacturer warranties 
                 and wholesale-friendly pricing under one grand umbrella.
               </p>
               <p className="story-paragraph">
-                What began as a renowned local electronics and appliance store has transformed into a dynamic 
-                omnichannel e-commerce platform. Today, whether you need 4K OLED Smart TVs, handcrafted teak dining tables, 
-                everyday staples for your kitchen, or wholesale orders for corporate setups — {settings.storeName || 'LG Enterprises'} brings it 
-                to your doorstep with fast, reliable courier delivery.
+                What began as a passion for quality electronics and home appliances has transformed into a dynamic 
+                e-commerce platform. Today, whether you need 4K OLED Smart TVs, handcrafted teak dining tables, 
+                everyday staples for your kitchen, or wholesale orders for corporate setups — {settings.storeName || 'SVR Mart'} brings it 
+                to your doorstep with fast, reliable courier delivery across India.
               </p>
 
               <div className="story-features-list">
@@ -555,8 +555,8 @@ const About = () => {
                 <div className="story-feature-item">
                   <FiCheckCircle className="check-icon" />
                   <div>
-                    <strong>Physical Showroom + Pan-India Shipping</strong>
-                    <p>Touch, feel, and inspect furniture and appliances at our {settings.locationCity || 'Bhimavaram'} store, or order seamlessly online.</p>
+                    <strong>Pan-India Express Doorstep Shipping</strong>
+                    <p>Shop with confidence from the comfort of your home with fast delivery, secure payment gateways, and hassle-free returns.</p>
                   </div>
                 </div>
               </div>
@@ -569,10 +569,10 @@ const About = () => {
                 </div>
                 <div className="store-info-box">
                   <div className="store-icon-circle">
-                    <FiMapPin />
+                    <FiPhoneCall />
                   </div>
-                  <h3>Visit Our Flagship Store</h3>
-                  <p style={{ whiteSpace: 'pre-line' }}>{settings.storeAddress}</p>
+                  <h3>Dedicated Customer Support</h3>
+                  <p>Our dedicated customer care team is available to assist you with orders, tracking, product consultations, and bulk wholesale inquiries.</p>
                   <div className="store-meta-grid">
                     <div>
                       <span>Schedule</span>
@@ -587,17 +587,6 @@ const About = () => {
                     <Link to="/contact" className="store-link-btn" style={{ flex: 1, minWidth: '160px', textAlign: 'center' }}>
                       Contact & Support <FiArrowRight />
                     </Link>
-                    {settings.mapPinUrl && (
-                      <a 
-                        href={settings.mapPinUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="store-link-btn" 
-                        style={{ background: '#ffffff', color: '#4f46e5', border: '1px solid #4f46e5', flex: 1, minWidth: '160px', textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
-                      >
-                        <FiExternalLink /> View on Map
-                      </a>
-                    )}
                   </div>
                 </div>
               </div>
@@ -654,7 +643,7 @@ const About = () => {
               Turn Your Word-of-Mouth into <span>5-Level Passive Income</span>
             </h2>
             <p className="section-subtext">
-              Invite friends to shop on LG Enterprises. Whenever they purchase products — whether it's an LED TV, 
+              Invite friends to shop on SVR Mart. Whenever they purchase products — whether it's an LED TV, 
               furniture, or groceries — you and your upline earn cash commissions deposited directly into your digital wallet!
             </p>
           </div>
@@ -913,7 +902,7 @@ const About = () => {
               <div className="how-step-card">
                 <div className="how-step-num">1</div>
                 <h4>Get Your Code</h4>
-                <p>Register a free LG Enterprises account and find your unique referral code & link in your profile.</p>
+                <p>Register a free SVR Mart account and find your unique referral code & link in your profile.</p>
               </div>
               <div className="how-step-card">
                 <div className="how-step-num">2</div>
@@ -939,7 +928,7 @@ const About = () => {
             <h2 className="section-heading">
               Built on 15+ Years of <span>Uncompromising Trust</span>
             </h2>
-            <p className="section-subtext">The LG Enterprises standard that keeps thousands of families coming back.</p>
+            <p className="section-subtext">The SVR Mart standard that keeps thousands of families coming back.</p>
           </div>
 
           <div className="trust-grid">
@@ -952,7 +941,7 @@ const About = () => {
               {
                 icon: <FiTruck />,
                 title: "Safe & Timely Delivery",
-                desc: "Careful packaging and doorstep delivery across Bhimavaram and all major pin codes in India."
+                desc: "Careful packaging and fast doorstep delivery across all major pin codes in India."
               },
               {
                 icon: <FiRefreshCw />,
@@ -1013,7 +1002,7 @@ const About = () => {
       {/* Bottom CTA Banner (Navbar Indigo Theme) */}
       <section className="about-cta-banner">
         <div className="about-container text-center">
-          <h2>Ready to Experience LG Enterprises?</h2>
+          <h2>Ready to Experience SVR Mart?</h2>
           <p>
             Shop electronics, furniture, clothing & groceries today, or start building your 5-tier passive income stream now!
           </p>
