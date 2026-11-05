@@ -1,0 +1,12 @@
+# Robots.txt for svrmart.com
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /checkout
+Disallow: /cart
+Disallow: /profile
+Disallow: /referrals
+
+Sitemap: https://svrmart.com/sitemap.xml
+
