@@ -348,14 +348,11 @@ const Cart = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'start' }} className="cart-layout">
         <div className="cart-left-col">
           {/* Collapsible Shipping Address Section Above Ordered Items */}
-          <div style={{ background: 'white', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '1.5rem', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+          <div className="cart-shipping-card">
             <div 
               onClick={() => setIsAddressOpen(!isAddressOpen)}
+              className="cart-addr-header"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '1.1rem 1.4rem',
                 cursor: 'pointer',
                 background: isAddressOpen ? '#ffffff' : '#f8fafc',
                 borderBottom: isAddressOpen ? '1px solid var(--border)' : 'none',
@@ -363,31 +360,29 @@ const Cart = () => {
                 transition: 'background 0.2s'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-alpha)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem' }}>
+              <div className="cart-addr-left">
+                <div className="cart-addr-pin">
                   <FiMapPin />
                 </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 700, color: '#0f172a' }}>Shipping &amp; Delivery Address</h3>
-                    <span style={{ fontSize: '0.7rem', background: '#eff6ff', color: 'var(--primary)', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
-                      Step 1
-                    </span>
+                <div className="cart-addr-text">
+                  <div className="cart-addr-title-row">
+                    <h3 className="cart-addr-title">Delivery Address</h3>
+                    <span className="cart-addr-badge">Step 1</span>
                   </div>
                   {!isAddressOpen && (
-                    <p style={{ margin: '3px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                    <p className="cart-addr-preview">
                       {addressForm.fullName ? (
-                        <span>Deliver to: <strong>{addressForm.fullName}</strong> ({addressForm.phone || 'No phone'}) - {addressForm.city || 'City'}, {addressForm.pincode || 'PIN'}</span>
+                        <span>Deliver to: <strong>{addressForm.fullName}</strong> {addressForm.phone ? `(${addressForm.phone})` : ''} — {[addressForm.flat, addressForm.city, addressForm.pincode].filter(Boolean).join(', ')}</span>
                       ) : (
-                        <span>Click to enter or review delivery address</span>
+                        <span>Add delivery address to continue</span>
                       )}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}>
-                <span>{isAddressOpen ? 'Collapse' : 'Change / Edit'}</span>
+              <div className="cart-addr-toggle">
+                <span>{isAddressOpen ? 'Close' : 'Change'}</span>
                 {isAddressOpen ? <FiChevronUp /> : <FiChevronDown />}
               </div>
             </div>
