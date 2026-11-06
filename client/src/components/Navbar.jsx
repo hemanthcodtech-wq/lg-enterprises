@@ -212,10 +212,49 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile toggle */}
-        <button className="mobile-toggle" onClick={() => setMenuOpen(!menuOpen)}>
-          {menuOpen ? <FiX /> : <FiMenu />}
-        </button>
+        {/* Mobile Header Actions (Cart + Toggle) */}
+        <div className="mobile-header-actions" style={{ display: 'none', alignItems: 'center', gap: '0.6rem' }}>
+          <Link to="/cart" className="mobile-cart-btn" aria-label="Cart" style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'var(--primary)',
+            color: 'white',
+            textDecoration: 'none',
+            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
+          }}>
+            <FiShoppingCart style={{ fontSize: '1.25rem' }} />
+            {cartCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: '#ef4444',
+                color: 'white',
+                fontSize: '11px',
+                fontWeight: 800,
+                minWidth: '18px',
+                height: '18px',
+                borderRadius: '999px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 4px',
+                border: '2px solid white'
+              }}>
+                {cartCount}
+              </span>
+            )}
+          </Link>
+
+          <button className="mobile-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle Navigation">
+            {menuOpen ? <FiX /> : <FiMenu />}
+          </button>
+        </div>
       </nav>
 
       {/* Mobile Search */}

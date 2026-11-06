@@ -396,80 +396,82 @@ const Cart = () => {
           ))}
         </div>
 
-        <div className="cart-summary" style={{ background: 'white', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+        <div className="cart-summary" style={{ background: 'white', padding: '1.25rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
 
           {/* Shipping Address Section */}
-          <div style={{ marginBottom: '1.5rem', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-              <h3 style={{ fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#1e293b' }}>
+          <div style={{ marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#1e293b' }}>
                 <FiMapPin style={{ color: 'var(--primary)' }} />
                 Shipping Address
               </h3>
-              <span style={{ fontSize: '0.72rem', background: '#eff6ff', color: 'var(--primary)', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.7rem', background: '#eff6ff', color: 'var(--primary)', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
                 Delivery
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-              {/* Full Name */}
-              <div>
-                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  <span>Full Name <span style={{ color: '#ef4444' }}>*</span></span>
-                  {addressErrors.fullName && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
-                </label>
-                <input
-                  type="text"
-                  placeholder="Recipient full name"
-                  value={addressForm.fullName}
-                  onChange={e => handleAddressChange('fullName', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.8rem',
-                    borderRadius: '8px',
-                    border: addressErrors.fullName ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                    fontSize: '0.85rem',
-                    background: addressErrors.fullName ? '#fef2f2' : '#f8fafc',
-                    color: '#0f172a',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              {/* Mobile Phone Number */}
-              <div>
-                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  <span>Mobile Number <span style={{ color: '#ef4444' }}>*</span></span>
-                  {addressErrors.phone && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>10 digits</span>}
-                </label>
-                <div style={{ display: 'flex' }}>
-                  <span style={{ padding: '0.6rem 0.65rem', background: '#f1f5f9', border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRight: 'none', borderRadius: '8px 0 0 8px', fontSize: '0.82rem', color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center' }}>+91</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+              {/* Row 1: Full Name & Mobile Number (2 Columns) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }} className="addr-2col">
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                    <span>Full Name <span style={{ color: '#ef4444' }}>*</span></span>
+                    {addressErrors.fullName && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Required</span>}
+                  </label>
                   <input
-                    type="tel"
-                    placeholder="10-digit mobile number"
-                    maxLength="10"
-                    value={addressForm.phone}
-                    onChange={e => handleAddressChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    type="text"
+                    placeholder="Recipient name"
+                    value={addressForm.fullName}
+                    onChange={e => handleAddressChange('fullName', e.target.value)}
                     style={{
-                      flex: 1,
-                      padding: '0.6rem 0.8rem',
-                      borderRadius: '0 8px 8px 0',
-                      border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                      fontSize: '0.85rem',
-                      background: addressErrors.phone ? '#fef2f2' : '#f8fafc',
+                      width: '100%',
+                      padding: '0.5rem 0.65rem',
+                      borderRadius: '6px',
+                      border: addressErrors.fullName ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                      fontSize: '0.82rem',
+                      background: addressErrors.fullName ? '#fef2f2' : '#f8fafc',
                       color: '#0f172a',
                       outline: 'none',
                       boxSizing: 'border-box'
                     }}
                   />
                 </div>
+
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                    <span>Mobile No. <span style={{ color: '#ef4444' }}>*</span></span>
+                    {addressErrors.phone && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>10 digits</span>}
+                  </label>
+                  <div style={{ display: 'flex' }}>
+                    <span style={{ padding: '0.5rem 0.5rem', background: '#f1f5f9', border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRight: 'none', borderRadius: '6px 0 0 6px', fontSize: '0.78rem', color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center' }}>+91</span>
+                    <input
+                      type="tel"
+                      placeholder="10 digits"
+                      maxLength="10"
+                      value={addressForm.phone}
+                      onChange={e => handleAddressChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        padding: '0.5rem 0.65rem',
+                        borderRadius: '0 6px 6px 0',
+                        border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                        fontSize: '0.82rem',
+                        background: addressErrors.phone ? '#fef2f2' : '#f8fafc',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Flat / House No / Building */}
+              {/* Row 2: Flat / House No / Building */}
               <div>
-                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
                   <span>Flat, House No., Building <span style={{ color: '#ef4444' }}>*</span></span>
-                  {addressErrors.houseNo && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
+                  {addressErrors.houseNo && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Required</span>}
                 </label>
                 <input
                   type="text"
@@ -478,10 +480,10 @@ const Cart = () => {
                   onChange={e => handleAddressChange('houseNo', e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.6rem 0.8rem',
-                    borderRadius: '8px',
+                    padding: '0.5rem 0.65rem',
+                    borderRadius: '6px',
                     border: addressErrors.houseNo ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                    fontSize: '0.85rem',
+                    fontSize: '0.82rem',
                     background: addressErrors.houseNo ? '#fef2f2' : '#f8fafc',
                     color: '#0f172a',
                     outline: 'none',
@@ -490,61 +492,62 @@ const Cart = () => {
                 />
               </div>
 
-              {/* Street / Area / Locality */}
-              <div>
-                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  <span>Area, Street, Locality <span style={{ color: '#ef4444' }}>*</span></span>
-                  {addressErrors.street && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Main Road, Gandhi Nagar"
-                  value={addressForm.street}
-                  onChange={e => handleAddressChange('street', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.8rem',
-                    borderRadius: '8px',
-                    border: addressErrors.street ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                    fontSize: '0.85rem',
-                    background: addressErrors.street ? '#fef2f2' : '#f8fafc',
-                    color: '#0f172a',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              {/* Landmark (Optional) */}
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block' }}>
-                  Landmark <span style={{ fontSize: '0.72rem', fontWeight: 400 }}>(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Near Water Tank, Beside Bank"
-                  value={addressForm.landmark}
-                  onChange={e => handleAddressChange('landmark', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.8rem',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '0.85rem',
-                    background: '#f8fafc',
-                    color: '#0f172a',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              {/* City & PIN Code (2-column side by side) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              {/* Row 3: Street / Area & Landmark (2 Columns) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }} className="addr-2col">
                 <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    <span>City / Town <span style={{ color: '#ef4444' }}>*</span></span>
-                    {addressErrors.city && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>Req.</span>}
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                    <span>Area, Street <span style={{ color: '#ef4444' }}>*</span></span>
+                    {addressErrors.street && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Required</span>}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Gandhi Nagar"
+                    value={addressForm.street}
+                    onChange={e => handleAddressChange('street', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.65rem',
+                      borderRadius: '6px',
+                      border: addressErrors.street ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                      fontSize: '0.82rem',
+                      background: addressErrors.street ? '#fef2f2' : '#f8fafc',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '3px', display: 'block' }}>
+                    Landmark <span style={{ fontSize: '0.7rem', fontWeight: 400 }}>(Opt)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Near Bank"
+                    value={addressForm.landmark}
+                    onChange={e => handleAddressChange('landmark', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.65rem',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.82rem',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: City, State & PIN (3 Columns for compact height) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.1fr 0.9fr', gap: '0.5rem' }} className="addr-3col">
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                    <span>City <span style={{ color: '#ef4444' }}>*</span></span>
+                    {addressErrors.city && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Req.</span>}
                   </label>
                   <input
                     type="text"
@@ -553,10 +556,10 @@ const Cart = () => {
                     onChange={e => handleAddressChange('city', e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '0.6rem 0.8rem',
-                      borderRadius: '8px',
+                      padding: '0.5rem 0.55rem',
+                      borderRadius: '6px',
                       border: addressErrors.city ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       background: addressErrors.city ? '#fef2f2' : '#f8fafc',
                       color: '#0f172a',
                       outline: 'none',
@@ -564,10 +567,39 @@ const Cart = () => {
                     }}
                   />
                 </div>
+
                 <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    <span>PIN Code <span style={{ color: '#ef4444' }}>*</span></span>
-                    {addressErrors.pincode && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>6 digits</span>}
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                    <span>State <span style={{ color: '#ef4444' }}>*</span></span>
+                    {addressErrors.state && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Req.</span>}
+                  </label>
+                  <select
+                    value={addressForm.state}
+                    onChange={e => handleAddressChange('state', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.4rem',
+                      borderRadius: '6px',
+                      border: addressErrors.state ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                      fontSize: '0.8rem',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="">State</option>
+                    {INDIAN_STATES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                    <span>PIN <span style={{ color: '#ef4444' }}>*</span></span>
+                    {addressErrors.pincode && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>6 digits</span>}
                   </label>
                   <input
                     type="text"
@@ -577,10 +609,10 @@ const Cart = () => {
                     onChange={e => handleAddressChange('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
                     style={{
                       width: '100%',
-                      padding: '0.6rem 0.8rem',
-                      borderRadius: '8px',
+                      padding: '0.5rem 0.55rem',
+                      borderRadius: '6px',
                       border: addressErrors.pincode ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       background: addressErrors.pincode ? '#fef2f2' : '#f8fafc',
                       color: '#0f172a',
                       outline: 'none',
@@ -589,43 +621,14 @@ const Cart = () => {
                   />
                 </div>
               </div>
-
-              {/* State */}
-              <div>
-                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  <span>State <span style={{ color: '#ef4444' }}>*</span></span>
-                  {addressErrors.state && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>Required</span>}
-                </label>
-                <select
-                  value={addressForm.state}
-                  onChange={e => handleAddressChange('state', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.8rem',
-                    borderRadius: '8px',
-                    border: addressErrors.state ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                    fontSize: '0.85rem',
-                    background: '#f8fafc',
-                    color: '#0f172a',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <option value="">Select State</option>
-                  {INDIAN_STATES.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.85rem', fontSize: '0.78rem', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.75rem', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
               <input
                 type="checkbox"
                 checked={saveToProfile}
                 onChange={e => setSaveToProfile(e.target.checked)}
-                style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                style={{ width: '14px', height: '14px', accentColor: 'var(--primary)', cursor: 'pointer' }}
               />
               <span>Save this address to your profile for future orders</span>
             </label>
@@ -787,7 +790,15 @@ const Cart = () => {
       {/* Quick responsive css just for this page so it doesn't break */}
       <style>{`
         @media (max-width: 900px) {
-          .cart-layout { grid-template-columns: 1fr !important; }
+          .cart-layout { grid-template-columns: 1fr !important; gap: 1.25rem !important; }
+        }
+        @media (max-width: 540px) {
+          .cart-layout .cart-summary { padding: 1rem !important; }
+          .cart-layout .addr-2col { grid-template-columns: 1fr !important; }
+          .cart-layout .addr-3col { grid-template-columns: 1fr 1fr !important; }
+          .cart-layout .addr-3col > div:last-child { grid-column: span 2; }
+          .cart-items > div { padding: 1rem !important; gap: 1rem !important; }
+          .cart-items img { width: 75px !important; height: 75px !important; }
         }
       `}</style>
     </div>
