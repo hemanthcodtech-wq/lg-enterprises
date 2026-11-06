@@ -100,6 +100,7 @@ const Cart = () => {
 
   const [addressErrors, setAddressErrors] = React.useState({});
   const [saveToProfile, setSaveToProfile] = React.useState(true);
+  const [isAddressOpen, setIsAddressOpen] = React.useState(true);
 
   // Sync with user profile once loaded
   React.useEffect(() => {
@@ -344,294 +345,388 @@ const Cart = () => {
         Your Shopping Cart
       </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 390px', gap: '2rem', alignItems: 'start' }} className="cart-layout">
-        <div className="cart-items">
-          {cart.map(item => (
-            <div key={item.id} style={{ display: 'flex', gap: '1.5rem', padding: '1.5rem', background: 'white', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '1rem' }}>
-              <img src={item.image} alt={item.title} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{item.title}</h3>
-                    <p style={{ color: 'var(--text-gray)', fontSize: '0.85rem', marginBottom: '1rem' }}>Category: <span style={{ textTransform: 'capitalize' }}>{item.category}</span></p>
-                  </div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>₹{item.price}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'start' }} className="cart-layout">
+        <div className="cart-left-col">
+          {/* Collapsible Shipping Address Section Above Ordered Items */}
+          <div style={{ background: 'white', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '1.5rem', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+            <div 
+              onClick={() => setIsAddressOpen(!isAddressOpen)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1.1rem 1.4rem',
+                cursor: 'pointer',
+                background: isAddressOpen ? '#ffffff' : '#f8fafc',
+                borderBottom: isAddressOpen ? '1px solid var(--border)' : 'none',
+                userSelect: 'none',
+                transition: 'background 0.2s'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-alpha)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem' }}>
+                  <FiMapPin />
                 </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-                      <button
-                        onClick={() => updateQty(item.id, item.qty - 1)}
-                        style={{ padding: '0.3rem 0.7rem', background: 'var(--bg-page)', fontWeight: 700, border: 'none', cursor: 'pointer' }}
-                        title="Decrease quantity"
-                      >-</button>
-                      <span style={{ padding: '0.3rem 0.8rem', fontWeight: 600, fontSize: '0.9rem', minWidth: '32px', textAlign: 'center' }}>{item.qty}</span>
-                      <button
-                        onClick={() => updateQty(item.id, item.qty + 1)}
-                        disabled={item.stock !== undefined && item.qty >= item.stock}
-                        style={{
-                          padding: '0.3rem 0.7rem',
-                          background: 'var(--bg-page)',
-                          fontWeight: 700,
-                          border: 'none',
-                          cursor: (item.stock !== undefined && item.qty >= item.stock) ? 'not-allowed' : 'pointer',
-                          opacity: (item.stock !== undefined && item.qty >= item.stock) ? 0.4 : 1
-                        }}
-                        title={item.stock !== undefined && item.qty >= item.stock ? `Only ${item.stock} in stock` : "Increase quantity"}
-                      >+</button>
-                    </div>
-                    {item.stock !== undefined && item.stock <= 5 && (
-                      <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
-                        (Max {item.stock})
-                      </span>
-                    )}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 700, color: '#0f172a' }}>Shipping &amp; Delivery Address</h3>
+                    <span style={{ fontSize: '0.7rem', background: '#eff6ff', color: 'var(--primary)', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                      Step 1
+                    </span>
                   </div>
-                  <button onClick={() => removeFromCart(item.id)} style={{ color: '#d32f2f', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.9rem', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-                    <FiTrash2 /> Remove
-                  </button>
+                  {!isAddressOpen && (
+                    <p style={{ margin: '3px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                      {addressForm.fullName ? (
+                        <span>Deliver to: <strong>{addressForm.fullName}</strong> ({addressForm.phone || 'No phone'}) - {addressForm.city || 'City'}, {addressForm.pincode || 'PIN'}</span>
+                      ) : (
+                        <span>Click to enter or review delivery address</span>
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
 
-        <div className="cart-summary" style={{ background: 'white', padding: '1.25rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-
-          {/* Shipping Address Section */}
-          <div style={{ marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#1e293b' }}>
-                <FiMapPin style={{ color: 'var(--primary)' }} />
-                Shipping Address
-              </h3>
-              <span style={{ fontSize: '0.7rem', background: '#eff6ff', color: 'var(--primary)', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
-                Delivery
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}>
+                <span>{isAddressOpen ? 'Collapse' : 'Change / Edit'}</span>
+                {isAddressOpen ? <FiChevronUp /> : <FiChevronDown />}
+              </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-              {/* Row 1: Full Name & Mobile Number (2 Columns) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }} className="addr-2col">
-                <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
-                    <span>Full Name <span style={{ color: '#ef4444' }}>*</span></span>
-                    {addressErrors.fullName && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Required</span>}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Recipient name"
-                    value={addressForm.fullName}
-                    onChange={e => handleAddressChange('fullName', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.65rem',
-                      borderRadius: '6px',
-                      border: addressErrors.fullName ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      background: addressErrors.fullName ? '#fef2f2' : '#f8fafc',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
+            {isAddressOpen && (
+              <div style={{ padding: '1.25rem 1.4rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {/* Row 1: Full Name & Mobile Number (2 Columns) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }} className="addr-2col">
+                    <div>
+                      <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                        <span>Full Name <span style={{ color: '#ef4444' }}>*</span></span>
+                        {addressErrors.fullName && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>Required</span>}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Recipient full name"
+                        value={addressForm.fullName}
+                        onChange={e => handleAddressChange('fullName', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          border: addressErrors.fullName ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                          fontSize: '0.85rem',
+                          background: addressErrors.fullName ? '#fef2f2' : '#f8fafc',
+                          color: '#0f172a',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
 
-                <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
-                    <span>Mobile No. <span style={{ color: '#ef4444' }}>*</span></span>
-                    {addressErrors.phone && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>10 digits</span>}
-                  </label>
-                  <div style={{ display: 'flex' }}>
-                    <span style={{ padding: '0.5rem 0.5rem', background: '#f1f5f9', border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRight: 'none', borderRadius: '6px 0 0 6px', fontSize: '0.78rem', color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center' }}>+91</span>
+                    <div>
+                      <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                        <span>Mobile Number <span style={{ color: '#ef4444' }}>*</span></span>
+                        {addressErrors.phone && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>10 digits</span>}
+                      </label>
+                      <div style={{ display: 'flex' }}>
+                        <span style={{ padding: '0.6rem 0.65rem', background: '#f1f5f9', border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRight: 'none', borderRadius: '8px 0 0 8px', fontSize: '0.82rem', color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center' }}>+91</span>
+                        <input
+                          type="tel"
+                          placeholder="10-digit mobile"
+                          maxLength="10"
+                          value={addressForm.phone}
+                          onChange={e => handleAddressChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            padding: '0.6rem 0.8rem',
+                            borderRadius: '0 8px 8px 0',
+                            border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                            fontSize: '0.85rem',
+                            background: addressErrors.phone ? '#fef2f2' : '#f8fafc',
+                            color: '#0f172a',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Flat / House No / Building */}
+                  <div>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                      <span>Flat, House No., Building Name <span style={{ color: '#ef4444' }}>*</span></span>
+                      {addressErrors.houseNo && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>Required</span>}
+                    </label>
                     <input
-                      type="tel"
-                      placeholder="10 digits"
-                      maxLength="10"
-                      value={addressForm.phone}
-                      onChange={e => handleAddressChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      type="text"
+                      placeholder="e.g. Flat 301, Sri Sai Residency"
+                      value={addressForm.houseNo}
+                      onChange={e => handleAddressChange('houseNo', e.target.value)}
                       style={{
-                        flex: 1,
-                        minWidth: 0,
-                        padding: '0.5rem 0.65rem',
-                        borderRadius: '0 6px 6px 0',
-                        border: addressErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                        fontSize: '0.82rem',
-                        background: addressErrors.phone ? '#fef2f2' : '#f8fafc',
+                        width: '100%',
+                        padding: '0.6rem 0.8rem',
+                        borderRadius: '8px',
+                        border: addressErrors.houseNo ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                        fontSize: '0.85rem',
+                        background: addressErrors.houseNo ? '#fef2f2' : '#f8fafc',
                         color: '#0f172a',
                         outline: 'none',
                         boxSizing: 'border-box'
                       }}
                     />
                   </div>
+
+                  {/* Row 3: Street / Area & Landmark */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.8rem' }} className="addr-2col">
+                    <div>
+                      <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                        <span>Area, Street, Locality <span style={{ color: '#ef4444' }}>*</span></span>
+                        {addressErrors.street && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>Required</span>}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Gandhi Nagar, Main Road"
+                        value={addressForm.street}
+                        onChange={e => handleAddressChange('street', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          border: addressErrors.street ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                          fontSize: '0.85rem',
+                          background: addressErrors.street ? '#fef2f2' : '#f8fafc',
+                          color: '#0f172a',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '3px', display: 'block' }}>
+                        Landmark <span style={{ fontSize: '0.72rem', fontWeight: 400 }}>(Optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Near SBI Bank"
+                        value={addressForm.landmark}
+                        onChange={e => handleAddressChange('landmark', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '0.85rem',
+                          background: '#f8fafc',
+                          color: '#0f172a',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 4: City, State & PIN (3 Columns) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.2fr 0.9fr', gap: '0.8rem' }} className="addr-3col">
+                    <div>
+                      <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                        <span>City / Town <span style={{ color: '#ef4444' }}>*</span></span>
+                        {addressErrors.city && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>Req.</span>}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="City"
+                        value={addressForm.city}
+                        onChange={e => handleAddressChange('city', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          border: addressErrors.city ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                          fontSize: '0.85rem',
+                          background: addressErrors.city ? '#fef2f2' : '#f8fafc',
+                          color: '#0f172a',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                        <span>State <span style={{ color: '#ef4444' }}>*</span></span>
+                        {addressErrors.state && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>Req.</span>}
+                      </label>
+                      <select
+                        value={addressForm.state}
+                        onChange={e => handleAddressChange('state', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.7rem',
+                          borderRadius: '8px',
+                          border: addressErrors.state ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                          fontSize: '0.85rem',
+                          background: '#f8fafc',
+                          color: '#0f172a',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <option value="">Select State</option>
+                        {INDIAN_STATES.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
+                        <span>PIN Code <span style={{ color: '#ef4444' }}>*</span></span>
+                        {addressErrors.pincode && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>6 digits</span>}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="6 digits"
+                        maxLength="6"
+                        value={addressForm.pincode}
+                        onChange={e => handleAddressChange('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          border: addressErrors.pincode ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                          fontSize: '0.85rem',
+                          background: addressErrors.pincode ? '#fef2f2' : '#f8fafc',
+                          color: '#0f172a',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Row 2: Flat / House No / Building */}
-              <div>
-                <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
-                  <span>Flat, House No., Building <span style={{ color: '#ef4444' }}>*</span></span>
-                  {addressErrors.houseNo && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Required</span>}
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Flat 301, Sri Sai Residency"
-                  value={addressForm.houseNo}
-                  onChange={e => handleAddressChange('houseNo', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem 0.65rem',
-                    borderRadius: '6px',
-                    border: addressErrors.houseNo ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                    fontSize: '0.82rem',
-                    background: addressErrors.houseNo ? '#fef2f2' : '#f8fafc',
-                    color: '#0f172a',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              {/* Row 3: Street / Area & Landmark (2 Columns) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }} className="addr-2col">
-                <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
-                    <span>Area, Street <span style={{ color: '#ef4444' }}>*</span></span>
-                    {addressErrors.street && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Required</span>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid #f1f5f9', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={saveToProfile}
+                      onChange={e => setSaveToProfile(e.target.checked)}
+                      style={{ width: '15px', height: '15px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                    />
+                    <span>Save this address to your profile for future orders</span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Gandhi Nagar"
-                    value={addressForm.street}
-                    onChange={e => handleAddressChange('street', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.65rem',
-                      borderRadius: '6px',
-                      border: addressErrors.street ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      background: addressErrors.street ? '#fef2f2' : '#f8fafc',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box'
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (validateAddress()) {
+                        setIsAddressOpen(false);
+                        toast.success('Shipping address confirmed!');
+                      }
                     }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '3px', display: 'block' }}>
-                    Landmark <span style={{ fontSize: '0.7rem', fontWeight: 400 }}>(Opt)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Near Bank"
-                    value={addressForm.landmark}
-                    onChange={e => handleAddressChange('landmark', e.target.value)}
                     style={{
-                      width: '100%',
-                      padding: '0.5rem 0.65rem',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
+                      background: 'var(--primary)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0.45rem 1rem',
                       fontSize: '0.82rem',
-                      background: '#f8fafc',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Row 4: City, State & PIN (3 Columns for compact height) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.1fr 0.9fr', gap: '0.5rem' }} className="addr-3col">
-                <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
-                    <span>City <span style={{ color: '#ef4444' }}>*</span></span>
-                    {addressErrors.city && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Req.</span>}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="City / Town"
-                    value={addressForm.city}
-                    onChange={e => handleAddressChange('city', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.55rem',
-                      borderRadius: '6px',
-                      border: addressErrors.city ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      background: addressErrors.city ? '#fef2f2' : '#f8fafc',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
-                    <span>State <span style={{ color: '#ef4444' }}>*</span></span>
-                    {addressErrors.state && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>Req.</span>}
-                  </label>
-                  <select
-                    value={addressForm.state}
-                    onChange={e => handleAddressChange('state', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.4rem',
-                      borderRadius: '6px',
-                      border: addressErrors.state ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                      fontSize: '0.8rem',
-                      background: '#f8fafc',
-                      color: '#0f172a',
-                      outline: 'none',
-                      cursor: 'pointer',
-                      boxSizing: 'border-box'
+                      fontWeight: 700,
+                      cursor: 'pointer'
                     }}
                   >
-                    <option value="">State</option>
-                    {INDIAN_STATES.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '3px' }}>
-                    <span>PIN <span style={{ color: '#ef4444' }}>*</span></span>
-                    {addressErrors.pincode && <span style={{ color: '#ef4444', fontSize: '0.65rem' }}>6 digits</span>}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="6 digits"
-                    maxLength="6"
-                    value={addressForm.pincode}
-                    onChange={e => handleAddressChange('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.55rem',
-                      borderRadius: '6px',
-                      border: addressErrors.pincode ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                      fontSize: '0.82rem',
-                      background: addressErrors.pincode ? '#fef2f2' : '#f8fafc',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+                    Save &amp; Continue &rarr;
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
+          </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.75rem', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
-              <input
-                type="checkbox"
-                checked={saveToProfile}
-                onChange={e => setSaveToProfile(e.target.checked)}
-                style={{ width: '14px', height: '14px', accentColor: 'var(--primary)', cursor: 'pointer' }}
-              />
-              <span>Save this address to your profile for future orders</span>
-            </label>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+              Ordered Items ({cart.length})
+            </h2>
+            <Link to="/" style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)' }}>+ Add More Products</Link>
+          </div>
+
+          <div className="cart-items">
+            {cart.map(item => (
+              <div key={item.id} style={{ display: 'flex', gap: '1.5rem', padding: '1.25rem', background: 'white', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '1rem' }}>
+                <img src={item.image} alt={item.title} style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.05rem', marginBottom: '0.4rem', color: '#0f172a' }}>{item.title}</h3>
+                      <p style={{ color: 'var(--text-gray)', fontSize: '0.82rem', marginBottom: '0.8rem' }}>Category: <span style={{ textTransform: 'capitalize' }}>{item.category}</span></p>
+                    </div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>₹{item.price}</div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                        <button
+                          onClick={() => updateQty(item.id, item.qty - 1)}
+                          style={{ padding: '0.3rem 0.7rem', background: 'var(--bg-page)', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                          title="Decrease quantity"
+                        >-</button>
+                        <span style={{ padding: '0.3rem 0.8rem', fontWeight: 600, fontSize: '0.9rem', minWidth: '32px', textAlign: 'center' }}>{item.qty}</span>
+                        <button
+                          onClick={() => updateQty(item.id, item.qty + 1)}
+                          disabled={item.stock !== undefined && item.qty >= item.stock}
+                          style={{
+                            padding: '0.3rem 0.7rem',
+                            background: 'var(--bg-page)',
+                            fontWeight: 700,
+                            border: 'none',
+                            cursor: (item.stock !== undefined && item.qty >= item.stock) ? 'not-allowed' : 'pointer',
+                            opacity: (item.stock !== undefined && item.qty >= item.stock) ? 0.4 : 1
+                          }}
+                          title={item.stock !== undefined && item.qty >= item.stock ? `Only ${item.stock} in stock` : "Increase quantity"}
+                        >+</button>
+                      </div>
+                      {item.stock !== undefined && item.stock <= 5 && (
+                        <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
+                          (Max {item.stock})
+                        </span>
+                      )}
+                    </div>
+                    <button onClick={() => removeFromCart(item.id)} style={{ color: '#d32f2f', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.85rem', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+                      <FiTrash2 /> Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="cart-summary" style={{ background: 'white', padding: '1.4rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', position: 'sticky', top: '90px' }}>
+          {/* Quick Deliver To Box in Summary */}
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <FiMapPin style={{ color: 'var(--primary)' }} /> Deliver To
+              </span>
+              <button 
+                type="button"
+                onClick={() => {
+                  setIsAddressOpen(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+              >
+                Change
+              </button>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#0f172a', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {addressForm.fullName || 'Address not entered'} {addressForm.phone ? `(${addressForm.phone})` : ''}
+            </p>
+            <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {[addressForm.houseNo, addressForm.street, addressForm.city, addressForm.state, addressForm.pincode].filter(Boolean).join(', ') || 'Click Change to add address'}
+            </p>
           </div>
 
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>Order Summary</h3>

@@ -25,7 +25,7 @@ const Navbar = () => {
   // Check if current user has qualified for any return gifts
   useEffect(() => {
     const fetchUserGifts = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('lg_token') || localStorage.getItem('token');
       if (!token || !user) {
         setQualifiedGiftsCount(0);
         return;
@@ -75,9 +75,11 @@ const Navbar = () => {
       <nav className="navbar">
         {/* Brand */}
         <Link to="/" className="nav-brand">
-          <img src="/logo.png" alt={settings?.storeName || "SVR Mart"} className="brand-logo" />
+          <img src="/logo.png" alt="SVR Mart" className="brand-logo" />
           <div className="brand-info">
-            <span className="brand-name">{settings?.storeName?.toUpperCase() || "SVR MART"}</span>
+            <span className="brand-name">
+              {settings?.storeName && !settings.storeName.toLowerCase().includes('lg') ? settings.storeName.toUpperCase() : "SVR MART"}
+            </span>
             <span className="brand-sub">Electronic · Furniture · Cloth · Grocery</span>
             <span className="brand-tag">All Your Needs Under One Roof</span>
           </div>
