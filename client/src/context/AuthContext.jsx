@@ -13,7 +13,18 @@ export const AuthProvider = ({ children }) => {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
         headers: { 'x-auth-token': token }
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.isBlocked) {
+          localStorage.removeItem('lg_token');
+          localStorage.removeItem('lg_user');
+          setUser(null);
+          const blockMsg = errData.message || errData.error || 'Your account has been blocked by the admin.';
+          window.alert(blockMsg);
+          window.location.href = '/login';
+        }
+        return null;
+      }
       const freshUser = await res.json();
       localStorage.setItem('lg_user', JSON.stringify(freshUser));
       setUser(freshUser);

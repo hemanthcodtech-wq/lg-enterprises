@@ -50,8 +50,9 @@ const AdminUsers = () => {
     const totalUsers = users.length;
     const adminCount = users.filter(u => u.role === 'admin').length;
     const customerCount = users.filter(u => u.role !== 'admin').length;
+    const blockedCount = users.filter(u => u.isBlocked).length;
     const totalWallet = users.reduce((sum, u) => sum + (u.walletBalance || 0), 0);
-    return { totalUsers, adminCount, customerCount, totalWallet };
+    return { totalUsers, adminCount, customerCount, blockedCount, totalWallet };
   }, [users]);
 
   // Filtering Logic
@@ -62,10 +63,32 @@ const AdminUsers = () => {
         (u.name || '').toLowerCase().includes(term) ||
         (u.email || '').toLowerCase().includes(term) ||
         (u.referralCode || '').toLowerCase().includes(term);
-      const matchesRole = roleFilter === 'All' || u.role === roleFilter;
+      const matchesRole = 
+        roleFilter === 'All' || 
+        (roleFilter === 'blocked' ? u.isBlocked : (roleFilter === 'active' ? !u.isBlocked : u.role === roleFilter));
       return matchesSearch && matchesRole;
     });
   }, [users, searchTerm, roleFilter]);
+
+  // Handle Block / Unblock User
+  const handleToggleBlock = async (targetUser) => {
+    const willBlock = !targetUser.isBlocked;
+    const actionText = willBlock ? 'BLOCK' : 'UNBLOCK';
+    if (!window.confirm(`Are you sure you want to ${actionText} user "${targetUser.name || targetUser.email}"?\n\n${willBlock ? 'When blocked, this user will NOT be able to log in or access their account.' : 'When unblocked, this user will regain full access to their account.'}`)) {
+      return;
+    }
+
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/admin/users/${targetUser._id}/toggle-block`, {}, {
+        headers: { 'x-auth-token': token }
+      });
+      toast.success(res.data.message || `User account ${willBlock ? 'blocked' : 'unblocked'} successfully.`);
+      setUsers(prev => prev.map(u => u._id === targetUser._id ? { ...u, isBlocked: willBlock } : u));
+    } catch (err) {
+      console.error('Error updating block status:', err);
+      toast.error(err.response?.data?.error || `Failed to ${actionText.toLowerCase()} user.`);
+    }
+  };
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
@@ -667,15 +690,19 @@ const AdminUsers = () => {
             {[
               { id: 'All', label: 'All Accounts', count: metrics.totalUsers },
               { id: 'user', label: 'Customers', count: metrics.customerCount },
-              { id: 'admin', label: 'Admins', count: metrics.adminCount }
+              { id: 'admin', label: 'Admins', count: metrics.adminCount },
+              { id: 'blocked', label: 'Blocked', count: metrics.blockedCount }
             ].map(f => (
               <button
                 key={f.id}
                 className={`filter-pill ${roleFilter === f.id ? 'active' : ''}`}
                 onClick={() => { setRoleFilter(f.id); setCurrentPage(1); }}
+                style={f.id === 'blocked' && f.count > 0 ? { borderColor: '#fca5a5' } : undefined}
               >
                 <span>{f.label}</span>
-                <span className="filter-pill-badge">{f.count}</span>
+                <span className="filter-pill-badge" style={f.id === 'blocked' && f.count > 0 ? { background: '#ef4444', color: 'white' } : undefined}>
+                  {f.count}
+                </span>
               </button>
             ))}
           </div>
@@ -716,6 +743,7 @@ const AdminUsers = () => {
               <tr>
                 <th>Customer</th>
                 <th>Role</th>
+                <th>Status</th>
                 <th>Referral Code</th>
                 <th style={{ textAlign: 'right' }}>Wallet Balance</th>
                 <th>Referred By</th>
@@ -726,13 +754,13 @@ const AdminUsers = () => {
             <tbody>
               {loading && users.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan="8" style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
                     Loading user accounts...
                   </td>
                 </tr>
               ) : paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ padding: '3.5rem 2rem', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan="8" style={{ padding: '3.5rem 2rem', textAlign: 'center', color: '#64748b' }}>
                     <FiUsers size={36} style={{ color: '#cbd5e1', marginBottom: '0.75rem' }} />
                     <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>No accounts match your criteria</div>
                     <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
@@ -742,14 +770,16 @@ const AdminUsers = () => {
                 </tr>
               ) : (
                 paginatedUsers.map(u => (
-                  <tr key={u._id}>
+                  <tr key={u._id} style={u.isBlocked ? { background: '#fef2f2' } : undefined}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                        <div className="customer-avatar">
+                        <div className="customer-avatar" style={u.isBlocked ? { background: '#ef4444' } : undefined}>
                           {(u.name || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.8rem' }}>{u.name}</div>
+                          <div style={{ fontWeight: 600, color: u.isBlocked ? '#991b1b' : '#0f172a', fontSize: '0.8rem' }}>
+                            {u.name} {u.isBlocked && <span style={{ color: '#dc2626', fontSize: '0.7rem' }}>(Blocked)</span>}
+                          </div>
                           <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{u.email}</div>
                         </div>
                       </div>
@@ -759,6 +789,18 @@ const AdminUsers = () => {
                       <span className={`role-badge ${u.role === 'admin' ? 'admin' : 'user'}`}>
                         {u.role || 'user'}
                       </span>
+                    </td>
+
+                    <td>
+                      {u.isBlocked ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>
+                          Blocked
+                        </span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>
+                          Active
+                        </span>
+                      )}
                     </td>
 
                     <td>
@@ -787,14 +829,35 @@ const AdminUsers = () => {
                       </span>
                     </td>
 
-                    <td style={{ textAlign: 'right' }}>
-                      <button 
-                        className="view-details-action-btn"
-                        onClick={() => navigate(`/admin/dashboard/users/${u._id}`)}
-                      >
-                        <span>Details</span>
-                        <FiArrowUpRight size={13} />
-                      </button>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {u.role !== 'admin' && (
+                          <button 
+                            onClick={() => handleToggleBlock(u)}
+                            style={{
+                              padding: '0.25rem 0.55rem',
+                              borderRadius: '6px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              border: u.isBlocked ? '1px solid #16a34a' : '1px solid #dc2626',
+                              background: u.isBlocked ? '#f0fdf4' : '#fef2f2',
+                              color: u.isBlocked ? '#15803d' : '#b91c1c',
+                              transition: 'all 0.15s ease'
+                            }}
+                            title={u.isBlocked ? 'Click to unblock user' : 'Click to block user'}
+                          >
+                            {u.isBlocked ? 'Unblock' : 'Block'}
+                          </button>
+                        )}
+                        <button 
+                          className="view-details-action-btn"
+                          onClick={() => navigate(`/admin/dashboard/users/${u._id}`)}
+                        >
+                          <span>Details</span>
+                          <FiArrowUpRight size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

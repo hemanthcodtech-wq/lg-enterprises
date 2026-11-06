@@ -17,7 +17,7 @@ const authAdmin = (req, res, next) => {
   }
 };
 
-const authUser = (req, res, next) => {
+const authUser = async (req, res, next) => {
   const token = req.header('x-auth-token');
   if (!token) return res.status(401).json({ error: 'No token, authorization denied' });
 
@@ -27,6 +27,26 @@ const authUser = (req, res, next) => {
     if (!req.user.id && req.user.userId) {
       req.user.id = req.user.userId;
     }
+
+    // Verify user is not blocked by admin
+    const User = require('../models/User');
+    const dbUser = await User.findById(req.user.id).select('isBlocked');
+    if (dbUser && dbUser.isBlocked) {
+      let contactNumber = '+91 98765 43210';
+      try {
+        const Setting = require('../models/Setting');
+        const settings = await Setting.findOne();
+        if (settings?.supportPhone) {
+          contactNumber = settings.supportPhone;
+        }
+      } catch (e) {}
+      return res.status(403).json({ 
+        error: `Admin blocked your account. Please contact this number: ${contactNumber}`, 
+        message: `Admin blocked your account. Please contact this number: ${contactNumber}`,
+        isBlocked: true 
+      });
+    }
+
     next();
   } catch (err) {
     res.status(401).json({ error: 'Token is not valid' });

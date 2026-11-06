@@ -31,7 +31,11 @@ const GoogleAuthButton = ({ usedReferralCode = '', text = 'continue_with', onSuc
       }
     } catch (err) {
       console.error('Google login error:', err);
-      toast.error(err.message || 'Google Sign-In failed. Please try again.');
+      const errorMsg = err.message || 'Google Sign-In failed. Please try again.';
+      toast.error(errorMsg);
+      if (errorMsg.toLowerCase().includes('admin blocked') || errorMsg.toLowerCase().includes('blocked your account')) {
+        window.alert(errorMsg);
+      }
     }
   };
 

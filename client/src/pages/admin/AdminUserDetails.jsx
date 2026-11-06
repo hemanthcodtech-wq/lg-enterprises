@@ -39,6 +39,29 @@ const AdminUserDetails = () => {
     setExpandedOrders(prev => ({ ...prev, [orderId]: !prev[orderId] }));
   };
 
+  const handleToggleBlock = async () => {
+    if (!user) return;
+    const willBlock = !user.isBlocked;
+    const actionText = willBlock ? 'BLOCK' : 'UNBLOCK';
+    if (!window.confirm(`Are you sure you want to ${actionText} user "${user.name || user.email}"?\n\n${willBlock ? 'When blocked, this user will NOT be able to log in or access the website.' : 'When unblocked, this user will regain full access to their account.'}`)) {
+      return;
+    }
+
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/admin/users/${user._id}/toggle-block`, {}, {
+        headers: { 'x-auth-token': token }
+      });
+      toast.success(res.data.message || `User ${willBlock ? 'blocked' : 'unblocked'} successfully.`);
+      setData(prev => ({
+        ...prev,
+        user: { ...prev.user, isBlocked: willBlock }
+      }));
+    } catch (err) {
+      console.error('Error toggling block status:', err);
+      toast.error(err.response?.data?.error || `Failed to ${actionText.toLowerCase()} user.`);
+    }
+  };
+
   if (loading) return <div style={{ padding: '4rem', textAlign: 'center', color: '#64748b' }}>Loading user details...</div>;
   if (error) return <div style={{ padding: '4rem', textAlign: 'center', color: 'red' }}>{error}</div>;
 
@@ -204,9 +227,45 @@ const AdminUserDetails = () => {
               </div>
               <h3 style={{ margin: '0 0 0.3rem 0', color: '#0f172a' }}>{user?.name}</h3>
               <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem', wordBreak: 'break-all' }}>{user?.email}</p>
-              <span style={{ display: 'inline-block', marginTop: '0.8rem', background: 'rgba(241, 245, 249, 0.8)', color: '#475569', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', border: '1px solid rgba(0,0,0,0.05)' }}>
-                {user?.role}
-              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.8rem', flexWrap: 'wrap' }}>
+                <span style={{ display: 'inline-block', background: 'rgba(241, 245, 249, 0.8)', color: '#475569', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  {user?.role}
+                </span>
+                {user?.isBlocked ? (
+                  <span style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
+                    🚫 BLOCKED
+                  </span>
+                ) : (
+                  <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
+                    ✓ ACTIVE
+                  </span>
+                )}
+              </div>
+
+              {user?.role !== 'admin' && (
+                <button
+                  onClick={handleToggleBlock}
+                  style={{
+                    marginTop: '1rem',
+                    width: '100%',
+                    padding: '0.65rem 1rem',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    border: user?.isBlocked ? '1px solid #16a34a' : '1px solid #dc2626',
+                    background: user?.isBlocked ? '#f0fdf4' : '#fef2f2',
+                    color: user?.isBlocked ? '#15803d' : '#b91c1c',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  <FiShield /> {user?.isBlocked ? 'Unblock User Account' : 'Block User Account'}
+                </button>
+              )}
             </div>
             
             <div style={{ borderTop: '1px dashed rgba(203, 213, 225, 0.6)', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>

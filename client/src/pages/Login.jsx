@@ -38,7 +38,11 @@ const Login = () => {
         navigate('/');
       }
     } catch (err) {
-      setError(err.message || 'Invalid email or password');
+      const errorMsg = err.message || 'Invalid email or password';
+      setError(errorMsg);
+      if (errorMsg.toLowerCase().includes('admin blocked') || errorMsg.toLowerCase().includes('blocked your account')) {
+        window.alert(errorMsg);
+      }
     } finally {
       setLoading(false);
     }

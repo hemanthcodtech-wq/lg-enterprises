@@ -259,6 +259,28 @@ router.get('/users/:id/details', authAdmin, async (req, res) => {
   }
 });
 
+// Toggle Block / Unblock User (Admin Only)
+router.put('/users/:id/toggle-block', authAdmin, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.role === 'admin') return res.status(400).json({ error: 'Cannot block an admin account' });
+
+    user.isBlocked = !user.isBlocked;
+    user.blockedAt = user.isBlocked ? new Date() : null;
+    await user.save();
+
+    res.json({
+      message: `User account has been ${user.isBlocked ? 'blocked' : 'unblocked'} successfully.`,
+      isBlocked: user.isBlocked,
+      user
+    });
+  } catch (err) {
+    console.error('Toggle block error:', err);
+    res.status(500).json({ error: 'Server error while updating block status' });
+  }
+});
+
 // Get all Orders (Admin Only)
 router.get('/orders', authAdmin, async (req, res) => {
   try {

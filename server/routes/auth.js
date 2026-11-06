@@ -82,6 +82,22 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid email or password' });
 
+    // Check if user is blocked by admin
+    if (user.isBlocked) {
+      let contactNumber = '+91 98765 43210';
+      try {
+        const Setting = require('../models/Setting');
+        const settings = await Setting.findOne();
+        if (settings?.supportPhone) {
+          contactNumber = settings.supportPhone;
+        }
+      } catch (e) {}
+      return res.status(403).json({
+        isBlocked: true,
+        message: `Admin blocked your account. Please contact this number: ${contactNumber}`
+      });
+    }
+
     if (!user.isEmailVerified) {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       user.otp = otp;
@@ -234,6 +250,22 @@ router.post('/google', async (req, res) => {
       if (changed) {
         await user.save();
       }
+    }
+
+    // Check if user is blocked by admin
+    if (user.isBlocked) {
+      let contactNumber = '+91 98765 43210';
+      try {
+        const Setting = require('../models/Setting');
+        const settings = await Setting.findOne();
+        if (settings?.supportPhone) {
+          contactNumber = settings.supportPhone;
+        }
+      } catch (e) {}
+      return res.status(403).json({
+        isBlocked: true,
+        message: `Admin blocked your account. Please contact this number: ${contactNumber}`
+      });
     }
 
     // Generate JWT
