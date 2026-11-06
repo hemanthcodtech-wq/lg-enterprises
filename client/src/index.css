@@ -1002,7 +1002,7 @@ textarea.form-input { resize: vertical; min-height: 130px; }
   .hero-content p { font-size: 0.85rem; margin-bottom: 1rem; }
   .hero-tag { font-size: 0.65rem; padding: 0.2rem 0.6rem; margin-bottom: 0.6rem; }
   .hero-cta { gap: 0.6rem; flex-direction: row; flex-wrap: wrap; align-items: center; }
-  .btn-primary, .btn-outline-primary { padding: 0.6rem 1rem; font-size: 0.85rem; flex: 1; min-width: 120px; text-align: center; justify-content: center; }
+  .hero-cta .btn-primary, .hero-cta .btn-outline-primary { padding: 0.6rem 1rem; font-size: 0.85rem; flex: 1; min-width: 120px; text-align: center; justify-content: center; }
   .about-stats { grid-template-columns: 1fr; gap: 1rem; }
   .stat-card { padding: 1.5rem 1rem; }
   .stat-number { font-size: 2rem; }

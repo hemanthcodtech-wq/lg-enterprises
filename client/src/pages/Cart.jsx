@@ -318,22 +318,72 @@ const Cart = () => {
 
   if (!user) {
     return (
-      <div className="section-pad" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontSize: '4rem', color: 'var(--border)', marginBottom: '1rem' }}><FiLock /></div>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Login Required</h2>
-        <p style={{ color: 'var(--text-gray)', marginBottom: '2rem' }}>Please log in to view and manage your cart.</p>
-        <Link to="/login" className="btn-primary" style={{ padding: '0.8rem 2rem' }}>Sign In</Link>
+      <div className="section-pad" style={{ minHeight: '65vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+        <div style={{ maxWidth: '420px', width: '100%', background: 'white', borderRadius: '20px', padding: '2.5rem 1.5rem', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#eff6ff', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: '1.25rem' }}>
+            <FiLock />
+          </div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem' }}>Login Required</h2>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.75rem', maxWidth: '320px' }}>
+            Please log in to your account to view saved items and proceed with your order.
+          </p>
+          <Link 
+            to="/login" 
+            className="btn-primary" 
+            style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              padding: '0.75rem 2.5rem', 
+              borderRadius: '999px', 
+              fontWeight: 700, 
+              fontSize: '0.95rem',
+              width: 'auto',
+              minWidth: '160px',
+              textDecoration: 'none',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+              flex: 'none'
+            }}
+          >
+            Sign In
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (cart.length === 0) {
     return (
-      <div className="section-pad" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontSize: '4rem', color: 'var(--border)', marginBottom: '1rem' }}><FiShoppingBag /></div>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Your Cart is Empty</h2>
-        <p style={{ color: 'var(--text-gray)', marginBottom: '2rem' }}>Looks like you haven't added anything to your cart yet.</p>
-        <Link to="/" className="btn-primary" style={{ padding: '0.8rem 2rem' }}>Start Shopping</Link>
+      <div className="section-pad" style={{ minHeight: '65vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+        <div style={{ maxWidth: '420px', width: '100%', background: 'white', borderRadius: '20px', padding: '2.5rem 1.5rem', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#f8fafc', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: '1.25rem' }}>
+            <FiShoppingBag />
+          </div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem' }}>Your Cart is Empty</h2>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.75rem', maxWidth: '320px' }}>
+            Looks like you haven't added anything to your cart yet. Explore our latest arrivals and great deals!
+          </p>
+          <Link 
+            to="/" 
+            className="btn-primary" 
+            style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              padding: '0.75rem 2.5rem', 
+              borderRadius: '999px', 
+              fontWeight: 700, 
+              fontSize: '0.95rem',
+              width: 'auto',
+              minWidth: '160px',
+              textDecoration: 'none',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+              flex: 'none'
+            }}
+          >
+            Start Shopping
+          </Link>
+        </div>
       </div>
     );
   }
