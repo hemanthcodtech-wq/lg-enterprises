@@ -129,9 +129,6 @@ router.post('/:id/reviews', authUser, async (req, res) => {
       return res.status(400).json({ error: 'You can only review products you have purchased and received.' });
     }
 
-    const product = await Product.findById(productId);
-    if (!product) return res.status(404).json({ error: 'Product not found' });
-
     // Check if already reviewed
     const alreadyReviewed = product.reviews.find(r => r.user.toString() === userId.toString());
     if (alreadyReviewed) {
