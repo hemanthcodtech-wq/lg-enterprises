@@ -37,6 +37,7 @@ const ProductDetail = () => {
 
         setProduct({
           id: p._id,
+          slug: p.slug,
           title: p.name,
           description: p.description,
           price: p.price,
@@ -52,12 +53,17 @@ const ProductDetail = () => {
         });
         setSelectedImgIndex(0);
         setLoading(false);
+
+        // Seamlessly update route URL to slug if accessed by ID
+        if (p.slug && id !== p.slug) {
+          navigate(`/product/${p.slug}`, { replace: true });
+        }
       })
       .catch(err => {
         console.error(err);
         setLoading(false);
       });
-  }, [id]);
+  }, [id, navigate]);
 
   // Keyboard navigation for lightbox
   useEffect(() => {

@@ -28,6 +28,7 @@ const Products = () => {
       .then(res => {
         const formatted = res.data.map(p => ({
           id: p._id,
+          slug: p.slug,
           title: p.name,
           price: p.price,
           originalPrice: p.originalPrice || Math.round(p.price * 1.2),

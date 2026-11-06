@@ -201,6 +201,7 @@ const Profile = () => {
   };
 
   const handleShare = (textToShare) => {
+    const shareMessage = `Use my referral code ${user.referralCode} to join SVR Mart and unlock exclusive shopping benefits! ${textToShare}`;
     if (navigator.share) {
       navigator.share({
         title: 'Shop on SVR Mart & Earn Rewards!',
@@ -208,7 +209,7 @@ const Profile = () => {
         url: textToShare
       }).catch(console.error);
     } else {
-      copyToClipboard(textToShare, 'link');
+      copyToClipboard(shareMessage, 'link');
     }
   };
 
@@ -722,10 +723,18 @@ const Profile = () => {
                     />
                     <button 
                       onClick={() => handleShare(referralLink)}
-                      style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: '100px' }}
+                      style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: '90px' }}
                     >
                       <FiShare2 /> Share
                     </button>
+                    <a
+                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Use my referral code ${user.referralCode} to join SVR Mart and unlock exclusive shopping benefits! ${referralLink}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ background: '#25d366', color: 'white', textDecoration: 'none', border: 'none', borderRadius: '10px', padding: '10px 14px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', whiteSpace: 'nowrap', flex: '1 1 auto', minWidth: '100px' }}
+                    >
+                      <span>💬</span> WhatsApp
+                    </a>
                   </div>
                 </div>
               </div>

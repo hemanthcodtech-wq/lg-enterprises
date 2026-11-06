@@ -49,7 +49,7 @@ const ProductCard = ({ product, isLoading }) => {
   const inWishlist = wishlist?.some(item => item.id === product.id);
 
   return (
-    <div className="product-card" onClick={() => navigate(`/product/${product.id}`)}>
+    <div className="product-card" onClick={() => navigate(`/product/${product.slug || product.id}`)}>
       <div className="pcard-img">
         {isOutOfStock ? (
           <span className="pcard-badge" style={{ background: '#ef4444', color: 'white' }}>OUT OF STOCK</span>

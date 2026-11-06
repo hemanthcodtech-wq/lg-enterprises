@@ -64,18 +64,41 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get Product by ID
+// Get Product by ID or Slug
 router.get('/:id', async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { views: 1 } },
-      { new: true }
-    ).populate('category', 'name slug');
+    const mongoose = require('mongoose');
+    const param = req.params.id;
+    const isObjectId = mongoose.Types.ObjectId.isValid(param);
+
+    let product;
+    if (isObjectId) {
+      product = await Product.findOneAndUpdate(
+        { $or: [{ _id: param }, { slug: param }] },
+        { $inc: { views: 1 } },
+        { new: true }
+      ).populate('category', 'name slug');
+    } else {
+      product = await Product.findOneAndUpdate(
+        { slug: param },
+        { $inc: { views: 1 } },
+        { new: true }
+      ).populate('category', 'name slug');
+
+      if (!product) {
+        // Fallback: Case-insensitive search on slug
+        product = await Product.findOneAndUpdate(
+          { slug: { $regex: new RegExp(`^${param}$`, 'i') } },
+          { $inc: { views: 1 } },
+          { new: true }
+        ).populate('category', 'name slug');
+      }
+    }
+
     if (!product) return res.status(404).json({ error: 'Product not found' });
     res.json(product);
   } catch (err) {
-    console.error(err);
+    console.error('Error fetching product by id/slug:', err);
     res.status(500).json({ error: 'Server Error' });
   }
 });
@@ -83,9 +106,17 @@ router.get('/:id', async (req, res) => {
 // Submit a Review
 router.post('/:id/reviews', authUser, async (req, res) => {
   try {
+    const mongoose = require('mongoose');
     const { rating, comment, name } = req.body;
-    const productId = req.params.id;
+    const param = req.params.id;
+    const isObjectId = mongoose.Types.ObjectId.isValid(param);
     const userId = req.user.id || req.user.userId;
+
+    const product = isObjectId 
+      ? await Product.findById(param) 
+      : await Product.findOne({ slug: param });
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    const productId = product._id;
 
     // Check if user has bought and it is delivered
     const hasBought = await Order.findOne({
