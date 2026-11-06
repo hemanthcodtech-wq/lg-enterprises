@@ -38,7 +38,6 @@ const heroSlides = [
     heading: <>Everything You Need<br/><span>Under One Roof</span></>,
     sub: 'Electronics · Furniture · Grocery · Clothing & much more — delivered to your door.',
     cta: 'Shop Now',
-    cta2: 'View Deals',
   },
   {
     bg: IMAGES.hero2,
@@ -46,7 +45,6 @@ const heroSlides = [
     heading: <>Freshness You Can<br/><span>Trust Every Day</span></>,
     sub: 'Farm-fresh produce, staples & daily essentials at the best prices.',
     cta: 'Shop Grocery',
-    cta2: 'View Offers',
   },
 ];
 
@@ -112,8 +110,7 @@ const Home = () => {
     tag: s.badgeText,
     heading: <span>{s.title}</span>,
     sub: s.subtitle,
-    cta: s.buttonText,
-    cta2: 'View Deals'
+    cta: s.buttonText
   })) : heroSlides;
 
   // Auto-advance hero carousel
@@ -175,9 +172,6 @@ const Home = () => {
                 <div className="hero-cta">
                   <button className="btn-primary" onClick={() => navigate('/?category=electronics')}>
                     {slide.cta} <FiChevronRight />
-                  </button>
-                  <button className="btn-outline-primary" onClick={() => navigate('/?deals=true')}>
-                    {slide.cta2}
                   </button>
                 </div>
               </div>
@@ -244,9 +238,16 @@ const Home = () => {
                 <div className="home-rg-badge">
                   <FiGift /> SPECIAL LIVE RETURN GIFT CAMPAIGN
                 </div>
-                <h3 className="home-rg-title">
-                  Shop for ₹{activeReturnGift.targetAmount?.toLocaleString('en-IN')} &amp; Unlock a Free {activeReturnGift.giftTitle}!
-                </h3>
+                
+                <div className="home-rg-header-row">
+                  <h3 className="home-rg-title">
+                    Shop for ₹{activeReturnGift.targetAmount?.toLocaleString('en-IN')} &amp; Unlock a Free {activeReturnGift.giftTitle}!
+                  </h3>
+                  <div className="home-rg-img-wrap mobile-thumb">
+                    <img src={activeReturnGift.giftImage} alt={activeReturnGift.giftTitle} />
+                  </div>
+                </div>
+
                 <p className="home-rg-desc">
                   {activeReturnGift.description || `Reach the qualifying purchase milestone and our admin team will dispatch your complimentary ${activeReturnGift.giftTitle} right to your doorstep.`}
                 </p>
@@ -255,7 +256,7 @@ const Home = () => {
                 </div>
               </div>
 
-              <div className="home-rg-img-wrap">
+              <div className="home-rg-img-wrap desktop-thumb">
                 <img src={activeReturnGift.giftImage} alt={activeReturnGift.giftTitle} />
               </div>
             </div>

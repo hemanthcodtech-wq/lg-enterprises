@@ -1188,7 +1188,10 @@ textarea.form-input { resize: vertical; min-height: 130px; }
   overflow: hidden;
   border: 1px solid rgba(251, 191, 36, 0.35);
 }
-.home-rg-content { position: relative; z-index: 2; max-width: 650px; }
+.home-rg-content { position: relative; z-index: 2; max-width: 650px; flex: 1; }
+.home-rg-header-row { display: flex; align-items: flex-start; gap: 1rem; }
+.mobile-thumb { display: none !important; }
+.desktop-thumb { display: block !important; }
 .home-rg-badge {
   display: inline-flex;
   align-items: center;
@@ -1242,35 +1245,48 @@ textarea.form-input { resize: vertical; min-height: 130px; }
 .home-rg-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
 
 @media (max-width: 768px) {
+  .mobile-thumb { display: block !important; }
+  .desktop-thumb { display: none !important; }
   .home-rg-campaign-card {
     padding: 1.1rem 1rem !important;
     margin: 1.25rem 0 !important;
     border-radius: 14px !important;
     flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+  .home-rg-header-row {
+    display: flex !important;
     align-items: flex-start !important;
-    gap: 0.85rem !important;
+    justify-content: space-between !important;
+    gap: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
   }
   .home-rg-title {
-    font-size: 1.15rem !important;
+    font-size: 1.12rem !important;
     line-height: 1.3 !important;
-    margin-bottom: 0.35rem !important;
+    margin-bottom: 0 !important;
+    flex: 1 !important;
   }
   .home-rg-desc {
     font-size: 0.8rem !important;
     line-height: 1.4 !important;
-    margin-bottom: 0.75rem !important;
+    margin-bottom: 0.85rem !important;
   }
   .home-rg-btn {
-    padding: 0.5rem 1rem !important;
-    font-size: 0.8rem !important;
+    padding: 0.55rem 1rem !important;
+    font-size: 0.82rem !important;
+    width: 100% !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
   }
   .home-rg-img-wrap {
-    width: 75px !important;
-    height: 75px !important;
+    width: 70px !important;
+    height: 70px !important;
     border-radius: 10px !important;
-    position: absolute !important;
-    right: 12px !important;
-    top: 12px !important;
+    position: static !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
   }
 }
 

@@ -83,8 +83,14 @@ const LiveReturnGiftBanner = () => {
           color: white;
           text-decoration: none;
           flex: 1;
-          justify-content: center;
+          justify-content: flex-start;
+        }
+        .live-rg-main-info {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
           flex-wrap: wrap;
+          flex: 1;
         }
         .live-rg-badge {
           background: #eab308;
@@ -107,12 +113,15 @@ const LiveReturnGiftBanner = () => {
           align-items: center;
           gap: 3px;
           background: rgba(255, 255, 255, 0.15);
-          padding: 2px 10px;
+          padding: 3px 10px;
           border-radius: 12px;
           font-size: 0.75rem;
           font-weight: 700;
           color: white;
           transition: background 0.2s;
+          margin-left: auto;
+          flex-shrink: 0;
+          white-space: nowrap;
         }
         .live-rg-link:hover .live-rg-cta {
           background: #eab308;
@@ -128,6 +137,7 @@ const LiveReturnGiftBanner = () => {
           padding: 4px;
           border-radius: 4px;
           transition: color 0.2s;
+          flex-shrink: 0;
         }
         .live-rg-close-btn:hover {
           color: white;
@@ -135,26 +145,34 @@ const LiveReturnGiftBanner = () => {
         @media (max-width: 768px) {
           .live-rg-banner-container {
             padding: 5px 8px;
-            font-size: 0.73rem;
+            font-size: 0.72rem;
             line-height: 1.25;
           }
           .live-rg-banner-inner {
-            gap: 0.35rem;
+            gap: 0.4rem;
           }
           .live-rg-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.4rem;
+          }
+          .live-rg-main-info {
             gap: 0.35rem;
-            justify-content: flex-start;
-            flex-wrap: wrap;
-            text-align: left;
+            flex: 1;
+            min-width: 0;
           }
           .live-rg-badge {
             font-size: 0.62rem;
             padding: 1px 6px;
+            white-space: nowrap;
           }
           .live-rg-cta {
             font-size: 0.68rem;
             padding: 2px 7px;
-            margin-left: 0;
+            margin-left: auto !important;
+            flex-shrink: 0;
+            white-space: nowrap;
           }
           .live-rg-mobile-hide {
             display: none !important;
@@ -164,30 +182,32 @@ const LiveReturnGiftBanner = () => {
 
       <div className="live-rg-banner-inner">
         <Link to="/gift-offers" className="live-rg-link">
-          <span className="live-rg-badge">
-            <FiGift /> LIVE GIFT OFFER
-          </span>
+          <div className="live-rg-main-info">
+            <span className="live-rg-badge">
+              <FiGift /> LIVE GIFT OFFER
+            </span>
 
-          {userProgress ? (
-            <span className="live-rg-text">
-              {isQualified ? (
-                <>
-                  <FiCheckCircle style={{ color: '#4ade80', verticalAlign: 'middle', marginRight: '4px' }} />
-                  <strong>Milestone reached!</strong> Claim free <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!
-                </>
-              ) : (
-                <>
-                  <span>₹{userProgress.totalPurchased?.toLocaleString('en-IN')} / ₹{userProgress.targetAmount?.toLocaleString('en-IN')} ({userProgress.progressPercentage}%)</span>
-                  <span className="live-rg-mobile-hide"> &bull; Only <strong>₹{userProgress.remainingAmount?.toLocaleString('en-IN')}</strong> left</span>
-                  <span> to unlock <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!</span>
-                </>
-              )}
-            </span>
-          ) : (
-            <span className="live-rg-text">
-              Shop ₹{activeCampaign.targetAmount?.toLocaleString('en-IN')} & get free <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!
-            </span>
-          )}
+            {userProgress ? (
+              <span className="live-rg-text">
+                {isQualified ? (
+                  <>
+                    <FiCheckCircle style={{ color: '#4ade80', verticalAlign: 'middle', marginRight: '4px' }} />
+                    <strong>Milestone reached!</strong> Claim free <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!
+                  </>
+                ) : (
+                  <>
+                    <span>₹{userProgress.totalPurchased?.toLocaleString('en-IN')} / ₹{userProgress.targetAmount?.toLocaleString('en-IN')} ({userProgress.progressPercentage}%)</span>
+                    <span className="live-rg-mobile-hide"> &bull; Only <strong>₹{userProgress.remainingAmount?.toLocaleString('en-IN')}</strong> left</span>
+                    <span> to unlock <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!</span>
+                  </>
+                )}
+              </span>
+            ) : (
+              <span className="live-rg-text">
+                Shop ₹{activeCampaign.targetAmount?.toLocaleString('en-IN')} & get free <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!
+              </span>
+            )}
+          </div>
 
           <span className="live-rg-cta">
             {isQualified ? 'View Offer' : 'Explore'} <FiArrowRight style={{ fontSize: '0.8rem' }} />
