@@ -132,6 +132,34 @@ const LiveReturnGiftBanner = () => {
         .live-rg-close-btn:hover {
           color: white;
         }
+        @media (max-width: 768px) {
+          .live-rg-banner-container {
+            padding: 5px 8px;
+            font-size: 0.73rem;
+            line-height: 1.25;
+          }
+          .live-rg-banner-inner {
+            gap: 0.35rem;
+          }
+          .live-rg-link {
+            gap: 0.35rem;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            text-align: left;
+          }
+          .live-rg-badge {
+            font-size: 0.62rem;
+            padding: 1px 6px;
+          }
+          .live-rg-cta {
+            font-size: 0.68rem;
+            padding: 2px 7px;
+            margin-left: 0;
+          }
+          .live-rg-mobile-hide {
+            display: none !important;
+          }
+        }
       `}</style>
 
       <div className="live-rg-banner-inner">
@@ -141,26 +169,28 @@ const LiveReturnGiftBanner = () => {
           </span>
 
           {userProgress ? (
-            <span>
+            <span className="live-rg-text">
               {isQualified ? (
                 <>
                   <FiCheckCircle style={{ color: '#4ade80', verticalAlign: 'middle', marginRight: '4px' }} />
-                  <strong>You reached the milestone!</strong> Your <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span> gift offer is unlocked!
+                  <strong>Milestone reached!</strong> Claim free <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!
                 </>
               ) : (
                 <>
-                  Your progress: <strong>₹{userProgress.totalPurchased?.toLocaleString('en-IN')}</strong> / ₹{userProgress.targetAmount?.toLocaleString('en-IN')} ({userProgress.progressPercentage}%) &bull; Only <strong>₹{userProgress.remainingAmount?.toLocaleString('en-IN')}</strong> left to earn <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!
+                  <span>₹{userProgress.totalPurchased?.toLocaleString('en-IN')} / ₹{userProgress.targetAmount?.toLocaleString('en-IN')} ({userProgress.progressPercentage}%)</span>
+                  <span className="live-rg-mobile-hide"> &bull; Only <strong>₹{userProgress.remainingAmount?.toLocaleString('en-IN')}</strong> left</span>
+                  <span> to unlock <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!</span>
                 </>
               )}
             </span>
           ) : (
-            <span>
-              Spend ₹{activeCampaign.targetAmount?.toLocaleString('en-IN')} & get a free <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span> gift offer delivered to your home!
+            <span className="live-rg-text">
+              Shop ₹{activeCampaign.targetAmount?.toLocaleString('en-IN')} & get free <span className="live-rg-gift-tag">{activeCampaign.giftTitle}</span>!
             </span>
           )}
 
           <span className="live-rg-cta">
-            {isQualified ? 'View Gift Offer' : 'Explore Offer'} <FiArrowRight style={{ fontSize: '0.8rem' }} />
+            {isQualified ? 'View Offer' : 'Explore'} <FiArrowRight style={{ fontSize: '0.8rem' }} />
           </span>
         </Link>
 

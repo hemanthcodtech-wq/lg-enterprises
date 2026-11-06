@@ -11,8 +11,8 @@ const sendEmail = require('../utils/mailer');
 const { processMaturedCommissions } = require('../utils/commissionHelper');
 
 const razorpayInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_TfwrOlkqXf2RIf',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'QIJa5lCuJC87EJdLDrgKnLDF',
+  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_TwSiFXPfioWrAO',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'ku96j7GVYCNRKLb4iT9O12aX',
 });
 
 // Create Razorpay Order
@@ -29,7 +29,7 @@ router.post('/create-razorpay-order', authUser, async (req, res) => {
     const order = await razorpayInstance.orders.create(options);
     res.json({
       ...order,
-      key_id: process.env.RAZORPAY_KEY_ID
+      key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_TwSiFXPfioWrAO'
     });
   } catch (err) {
     console.error('Razorpay Error:', err);

@@ -278,58 +278,54 @@ const ProductDetail = () => {
             )}
           </div>
           
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-dark)', lineHeight: 1.2 }}>{product.title}</h1>
+          <h1 className="product-detail-title">{product.title}</h1>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', color: 'var(--text-gray)' }}>
-            <span style={{ color: '#f59e0b', fontSize: '1.2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem', color: 'var(--text-gray)' }}>
+            <span style={{ color: '#f59e0b', fontSize: '1.1rem' }}>
               {'★'.repeat(Math.round(product.rating))}<span style={{ color: '#e2e8f0' }}>{'★'.repeat(5 - Math.round(product.rating))}</span>
             </span>
             <span>({product.reviews?.length || 0} reviews)</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', marginBottom: '2rem' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>₹{product.price}</span>
-            {product.oldPrice && <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)', textDecoration: 'line-through', marginBottom: '0.3rem' }}>₹{product.oldPrice}</span>}
+          <div className="product-detail-price-row">
+            <span className="product-detail-price">₹{product.price}</span>
+            {product.oldPrice && <span className="product-detail-old-price">₹{product.oldPrice}</span>}
           </div>
 
-          <p style={{ color: 'var(--text-gray)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+          <p style={{ color: 'var(--text-gray)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '2rem' }}>
             {product.description || `This premium quality ${product.title.toLowerCase()} is exactly what you need. It features top-tier durability, excellent design, and comes with a full guarantee from SVR Mart. Grab it while stocks last!`}
           </p>
 
-          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '3rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', border: '2px solid var(--border)', borderRadius: 'var(--radius-pill)', overflow: 'hidden', opacity: isOutOfStock ? 0.4 : 1 }}>
+          <div className="product-detail-actions-row">
+            <div className="product-detail-qty-stepper" style={{ opacity: isOutOfStock ? 0.4 : 1 }}>
               <button 
                 onClick={() => setQty(Math.max(1, qty - 1))} 
                 disabled={isOutOfStock}
-                style={{ padding: '0.8rem 1.2rem', background: 'var(--bg-page)', fontSize: '1.2rem', fontWeight: 600, border: 'none', cursor: isOutOfStock ? 'not-allowed' : 'pointer' }}>-</button>
-              <span style={{ padding: '0 1.5rem', fontWeight: 700, fontSize: '1.2rem', minWidth: '40px', textAlign: 'center' }}>{qty}</span>
+                aria-label="Decrease quantity">-</button>
+              <span>{qty}</span>
               <button 
                 onClick={() => setQty(Math.min(product.stock, qty + 1))} 
                 disabled={isOutOfStock || qty >= product.stock}
-                style={{ padding: '0.8rem 1.2rem', background: 'var(--bg-page)', fontSize: '1.2rem', fontWeight: 600, border: 'none', cursor: (isOutOfStock || qty >= product.stock) ? 'not-allowed' : 'pointer' }}>+</button>
+                aria-label="Increase quantity">+</button>
             </div>
             
             <button 
               onClick={handleAddToCart} 
               disabled={isOutOfStock}
-              className="btn-primary" 
+              className="btn-primary product-detail-add-btn" 
               style={{ 
-                flex: 1, 
-                padding: '0 2rem', 
-                minHeight: '52px',
-                fontSize: '1.1rem', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                gap: '0.5rem', 
-                borderRadius: 'var(--radius-pill)',
                 opacity: isOutOfStock ? 0.5 : 1,
                 cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                 background: isOutOfStock ? '#94a3b8' : undefined
               }}>
-              <FiShoppingCart /> {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+              <FiShoppingCart /> <span>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</span>
             </button>
-            <button onClick={handleWishlist} style={{ padding: '0 1.5rem', borderRadius: 'var(--radius-pill)', border: `2px solid ${inWishlist ? '#ef4444' : 'var(--border)'}`, background: inWishlist ? '#fee2e2' : 'white', color: inWishlist ? '#ef4444' : 'var(--text-gray)', fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)', cursor: 'pointer' }}>
+            <button 
+              onClick={handleWishlist} 
+              className="product-detail-wishlist-btn" 
+              style={{ border: `2px solid ${inWishlist ? '#ef4444' : 'var(--border)'}`, background: inWishlist ? '#fee2e2' : 'white', color: inWishlist ? '#ef4444' : 'var(--text-gray)' }}
+              aria-label="Add to wishlist"
+            >
               <FiHeart style={{ fill: inWishlist ? '#ef4444' : 'none' }} />
             </button>
           </div>

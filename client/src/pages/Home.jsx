@@ -238,43 +238,25 @@ const Home = () => {
           {activeReturnGift && (
             <div 
               onClick={() => navigate('/return-gifts')}
-              style={{
-                margin: '2.5rem 0',
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
-                borderRadius: '20px',
-                padding: '2.2rem 2.5rem',
-                color: 'white',
-                cursor: 'pointer',
-                boxShadow: '0 12px 30px rgba(30, 27, 75, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '1.5rem',
-                position: 'relative',
-                overflow: 'hidden',
-                border: '1px solid rgba(251, 191, 36, 0.35)'
-              }}
+              className="home-rg-campaign-card"
             >
-              <div style={{ position: 'relative', zIndex: 2, maxWidth: '650px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(251, 191, 36, 0.18)', color: '#fbbf24', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 800, marginBottom: '0.75rem', letterSpacing: '0.5px' }}>
+              <div className="home-rg-content">
+                <div className="home-rg-badge">
                   <FiGift /> SPECIAL LIVE RETURN GIFT CAMPAIGN
                 </div>
-                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.8rem', fontWeight: 800, letterSpacing: '-0.5px' }}>
+                <h3 className="home-rg-title">
                   Shop for ₹{activeReturnGift.targetAmount?.toLocaleString('en-IN')} &amp; Unlock a Free {activeReturnGift.giftTitle}!
                 </h3>
-                <p style={{ margin: '0 0 1.25rem 0', color: '#cbd5e1', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                <p className="home-rg-desc">
                   {activeReturnGift.description || `Reach the qualifying purchase milestone and our admin team will dispatch your complimentary ${activeReturnGift.giftTitle} right to your doorstep.`}
                 </p>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#fbbf24', color: '#0f172a', padding: '0.7rem 1.5rem', borderRadius: '30px', fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 4px 15px rgba(251, 191, 36, 0.4)' }}>
+                <div className="home-rg-btn">
                   View Live Progress &amp; Details <FiChevronRight />
                 </div>
               </div>
 
-              <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                <div style={{ width: '140px', height: '140px', borderRadius: '16px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.25)', boxShadow: '0 8px 25px rgba(0,0,0,0.4)', background: 'white' }}>
-                  <img src={activeReturnGift.giftImage} alt={activeReturnGift.giftTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
+              <div className="home-rg-img-wrap">
+                <img src={activeReturnGift.giftImage} alt={activeReturnGift.giftTitle} />
               </div>
             </div>
           )}

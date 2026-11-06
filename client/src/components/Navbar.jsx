@@ -78,7 +78,7 @@ const Navbar = () => {
           <img src="/logo.png" alt="SVR Mart" className="brand-logo" />
           <div className="brand-info">
             <span className="brand-name">
-              {settings?.storeName && !settings.storeName.toLowerCase().includes('lg') ? settings.storeName.toUpperCase() : "SVR MART"}
+              SVR MART
             </span>
             <span className="brand-sub">Electronic · Furniture · Cloth · Grocery</span>
             <span className="brand-tag">All Your Needs Under One Roof</span>
@@ -279,7 +279,10 @@ const Navbar = () => {
         <div className="mobile-menu-overlay" onClick={() => setMenuOpen(false)}>
           <div className="mobile-menu" onClick={e => e.stopPropagation()} style={{ width: '300px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
-              <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0f172a' }}>Navigation</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <img src="/logo.png" alt="SVR Mart" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+                <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>SVR Mart</span>
+              </div>
               <button 
                 onClick={() => setMenuOpen(false)} 
                 style={{ background: 'none', border: 'none', fontSize: '1.35rem', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: '4px' }}
