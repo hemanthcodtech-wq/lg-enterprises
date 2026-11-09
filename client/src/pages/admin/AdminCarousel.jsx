@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { 
   FiSliders, FiImage, FiPlus, FiTrash2, FiExternalLink, 
   FiLayers, FiRefreshCw, FiInfo, FiSearch, FiX, 
-  FiChevronLeft, FiChevronRight 
+  FiChevronLeft, FiChevronRight, FiEdit2, FiCheck 
 } from 'react-icons/fi';
 
 const AdminCarousel = () => {
@@ -19,6 +19,8 @@ const AdminCarousel = () => {
   const [badgeFilter, setBadgeFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [editingId, setEditingId] = useState(null);
+  const [editingImageUrl, setEditingImageUrl] = useState(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -67,16 +69,35 @@ const AdminCarousel = () => {
       data.append('badgeText', formData.badgeText);
       data.append('buttonText', formData.buttonText);
       data.append('buttonLink', formData.buttonLink);
-      data.append('image', formData.image);
+      if (formData.image) {
+        data.append('image', formData.image);
+      }
 
-      await axios.post(`${import.meta.env.VITE_API_URL}/carousel`, data, {
-        headers: { 
-          'x-auth-token': token,
-          'Content-Type': 'multipart/form-data'
+      if (editingId) {
+        await axios.put(`${import.meta.env.VITE_API_URL}/carousel/${editingId}`, data, {
+          headers: { 
+            'x-auth-token': token,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        toast.success('Hero slide updated successfully');
+      } else {
+        if (!formData.image) {
+          toast.error('Please select an image for the slide');
+          setLoading(false);
+          return;
         }
-      });
+        await axios.post(`${import.meta.env.VITE_API_URL}/carousel`, data, {
+          headers: { 
+            'x-auth-token': token,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        toast.success('Hero slide published successfully');
+      }
       
-      toast.success('Hero slide published successfully');
+      setEditingId(null);
+      setEditingImageUrl(null);
       setFormData({
         title: '', subtitle: '', badgeText: 'Trending', buttonText: 'Shop Now', buttonLink: '/#products', image: null
       });
@@ -84,10 +105,36 @@ const AdminCarousel = () => {
       if (fileInput) fileInput.value = '';
       fetchSlides();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Error adding slide');
+      toast.error(err.response?.data?.error || (editingId ? 'Error updating slide' : 'Error adding slide'));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = (slide) => {
+    setEditingId(slide._id);
+    setEditingImageUrl(slide.imageUrl);
+    setFormData({
+      title: slide.title || '',
+      subtitle: slide.subtitle || '',
+      badgeText: slide.badgeText || '',
+      buttonText: slide.buttonText || 'Shop Now',
+      buttonLink: slide.buttonLink || '/#products',
+      image: null
+    });
+    const fileInput = document.getElementById('slide-image-file');
+    if (fileInput) fileInput.value = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingImageUrl(null);
+    setFormData({
+      title: '', subtitle: '', badgeText: 'Trending', buttonText: 'Shop Now', buttonLink: '/#products', image: null
+    });
+    const fileInput = document.getElementById('slide-image-file');
+    if (fileInput) fileInput.value = '';
   };
 
   const handleDelete = async (id) => {
@@ -97,6 +144,9 @@ const AdminCarousel = () => {
         headers: { 'x-auth-token': token }
       });
       toast.success('Slide removed');
+      if (editingId === id) {
+        handleCancelEdit();
+      }
       fetchSlides();
     } catch (err) {
       toast.error('Error deleting slide');
@@ -504,6 +554,27 @@ const AdminCarousel = () => {
           margin-bottom: 0.2rem;
         }
 
+        .btn-table-edit {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.35rem 0.65rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          border: 1px solid #bfdbfe;
+          background: #eff6ff;
+          color: #2563eb;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          font-family: inherit;
+        }
+        .btn-table-edit:hover {
+          background: #dbeafe;
+          border-color: #93c5fd;
+          color: #1d4ed8;
+        }
+
         .btn-table-delete {
           display: inline-flex;
           align-items: center;
@@ -635,13 +706,31 @@ const AdminCarousel = () => {
 
       {/* 2-Column Split: Form & Slides List */}
       <div className="carousel-split-layout">
-        {/* Left Card: Add Slide */}
+        {/* Left Card: Add/Edit Slide */}
         <div className="table-enterprise-card">
           <div className="card-header-bar">
             <div className="card-title-group">
-              <h3>Add Hero Slide</h3>
-              <p>Configure headline, media, and CTA button</p>
+              <h3>{editingId ? 'Edit Hero Slide' : 'Add Hero Slide'}</h3>
+              <p>{editingId ? 'Update slide content, button label and target link' : 'Configure headline, media, and CTA button'}</p>
             </div>
+            {editingId && (
+              <button 
+                type="button" 
+                onClick={handleCancelEdit} 
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: '#475569',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel Edit
+              </button>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="form-body-padded">
@@ -709,14 +798,22 @@ const AdminCarousel = () => {
             </div>
 
             <div className="field-group">
-              <label className="field-label">Slide Image (AWS S3) *</label>
+              <label className="field-label">
+                Slide Image (AWS S3) {editingId ? '(Optional — leave blank to keep current)' : '*'}
+              </label>
+              {editingId && editingImageUrl && !formData.image && (
+                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <img src={editingImageUrl} alt="Current" style={{ width: '60px', height: '36px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e2e8f0' }} />
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Current image will be kept if none uploaded.</span>
+                </div>
+              )}
               <input 
                 type="file" 
                 name="image" 
                 id="slide-image-file"
                 className="official-input file-upload-input" 
                 onChange={handleChange} 
-                required 
+                required={!editingId} 
                 accept="image/*" 
               />
               <div className="aspect-ratio-notice">
@@ -725,10 +822,22 @@ const AdminCarousel = () => {
               </div>
             </div>
 
-            <button type="submit" className="submit-btn-official" disabled={loading}>
-              <FiPlus />
-              <span>{loading ? 'Uploading Slide...' : 'Publish Hero Slide'}</span>
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button type="submit" className="submit-btn-official" disabled={loading} style={{ flex: 1 }}>
+                {editingId ? <FiCheck /> : <FiPlus />}
+                <span>{loading ? (editingId ? 'Updating Slide...' : 'Uploading Slide...') : (editingId ? 'Save & Update Slide' : 'Publish Hero Slide')}</span>
+              </button>
+              {editingId && (
+                <button 
+                  type="button" 
+                  onClick={handleCancelEdit} 
+                  className="submit-btn-official" 
+                  style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', width: 'auto', padding: '0 1rem' }}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </form>
         </div>
 
@@ -774,7 +883,7 @@ const AdminCarousel = () => {
                   <th style={{ width: '130px' }}>Preview</th>
                   <th>Slide Details</th>
                   <th>Button Action</th>
-                  <th style={{ textAlign: 'right', width: '90px' }}>Actions</th>
+                  <th style={{ textAlign: 'right', width: '150px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -804,12 +913,18 @@ const AdminCarousel = () => {
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.25rem 0.55rem', background: '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#334155', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.25rem 0.55rem', background: '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#334155', border: '1px solid #e2e8f0', marginBottom: '0.2rem' }}>
                           <span>{slide.buttonText || 'Shop Now'}</span>
                           <FiExternalLink style={{ fontSize: '0.7rem', color: '#64748b' }} />
                         </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748b', wordBreak: 'break-all', maxWidth: '180px' }} title={slide.buttonLink}>
+                          {slide.buttonLink || '/#products'}
+                        </div>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button className="btn-table-edit" onClick={() => handleEdit(slide)} style={{ marginRight: '6px' }}>
+                          <FiEdit2 /> Edit
+                        </button>
                         <button className="btn-table-delete" onClick={() => handleDelete(slide._id)}>
                           <FiTrash2 /> Delete
                         </button>

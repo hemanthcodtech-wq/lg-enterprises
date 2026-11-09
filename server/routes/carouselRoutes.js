@@ -49,6 +49,29 @@ router.post('/', authAdmin, upload.single('image'), async (req, res) => {
   }
 });
 
+// Admin: Update slide
+router.put('/:id', authAdmin, upload.single('image'), async (req, res) => {
+  try {
+    const { title, subtitle, badgeText, buttonText, buttonLink, isActive } = req.body;
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (subtitle !== undefined) updateData.subtitle = subtitle;
+    if (badgeText !== undefined) updateData.badgeText = badgeText;
+    if (buttonText !== undefined) updateData.buttonText = buttonText;
+    if (buttonLink !== undefined) updateData.buttonLink = buttonLink;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (req.file) {
+      updateData.imageUrl = req.file.location || req.file.path;
+    }
+
+    const slide = await Carousel.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!slide) return res.status(404).json({ error: 'Slide not found' });
+    res.json(slide);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Admin: Delete slide
 router.delete('/:id', authAdmin, async (req, res) => {
   try {

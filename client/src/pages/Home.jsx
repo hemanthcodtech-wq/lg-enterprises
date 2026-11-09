@@ -111,8 +111,44 @@ const Home = () => {
     tag: s.badgeText,
     heading: <span>{s.title}</span>,
     sub: s.subtitle,
-    cta: s.buttonText
+    cta: s.buttonText || 'Shop Now',
+    link: s.buttonLink || '/#products'
   })) : heroSlides;
+
+  const handleHeroCtaClick = (targetLink) => {
+    const link = (targetLink || '').trim();
+    if (!link || link === '#' || link === '/#') {
+      const el = document.getElementById('products');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    // External URL
+    if (link.startsWith('http://') || link.startsWith('https://')) {
+      try {
+        const url = new URL(link);
+        if (url.origin === window.location.origin) {
+          navigate(url.pathname + url.search + url.hash);
+          return;
+        }
+      } catch (e) {}
+      window.location.href = link;
+      return;
+    }
+
+    // Hash anchor on home page
+    if (link.startsWith('#') || link.startsWith('/#')) {
+      const hashId = link.replace(/^\/?#/, '');
+      const el = document.getElementById(hashId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+
+    const route = link.startsWith('/') ? link : `/${link}`;
+    navigate(route);
+  };
 
   // Auto-advance hero carousel
   useEffect(() => {
@@ -171,13 +207,13 @@ const Home = () => {
                 <h1>{slide.heading}</h1>
                 <p>{slide.sub}</p>
                 <div className="hero-cta">
-                  <button className="btn-primary" onClick={() => navigate('/?category=electronics')}>
-                    {slide.cta} <FiChevronRight />
+                  <button className="btn-primary" onClick={() => handleHeroCtaClick(slide.link)}>
+                    {slide.cta || 'Shop Now'} <FiChevronRight />
                   </button>
                 </div>
               </div>
               <div className="carousel-dots-hero">
-                {heroSlides.map((_, i) => (
+                {activeCarousel.map((_, i) => (
                   <span key={i} className={`dot ${i === slideIdx ? 'active' : ''}`} onClick={() => setSlideIdx(i)} />
                 ))}
               </div>
@@ -352,7 +388,7 @@ const Home = () => {
       )}
 
       {/* ─── Products (filterable) ─── */}
-      <div className="section-pad">
+      <div className="section-pad" id="products">
         {!categoryFilter && !searchFilter && (
           <div className="section-title-row" style={{ flexWrap:'wrap', gap:'0.5rem', marginBottom:'1rem' }}>
             <h2 className="section-title">👑 Featured Products</h2>
