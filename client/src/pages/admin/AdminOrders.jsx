@@ -32,6 +32,49 @@ const AdminOrders = () => {
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [razorpaySyncData, setRazorpaySyncData] = useState(null);
+  const [syncingRazorpay, setSyncingRazorpay] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [reconcilingId, setReconcilingId] = useState(null);
+
+  const checkRazorpaySync = useCallback(async (showNotification = false) => {
+    setSyncingRazorpay(true);
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/razorpay-sync`, {
+        headers: { 'x-auth-token': token }
+      });
+      setRazorpaySyncData(res.data);
+      if (showNotification) {
+        if (res.data.unlinkedCount > 0) {
+          toast(`${res.data.unlinkedCount} unlinked payment(s) found!`, { icon: '⚠️' });
+          setShowSyncModal(true);
+        } else {
+          toast.success('All captured Razorpay payments are in sync with Orders!');
+        }
+      }
+    } catch (err) {
+      console.error('Razorpay sync error:', err);
+      if (showNotification) toast.error('Failed to sync Razorpay payments');
+    } finally {
+      setSyncingRazorpay(false);
+    }
+  }, [token]);
+
+  const handleReconcile = async (paymentId) => {
+    setReconcilingId(paymentId);
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/admin/razorpay-reconcile/${paymentId}`, {}, {
+        headers: { 'x-auth-token': token }
+      });
+      toast.success('Order reconciled successfully from Razorpay payment!');
+      await fetchOrders();
+      await checkRazorpaySync();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to reconcile payment');
+    } finally {
+      setReconcilingId(null);
+    }
+  };
 
   const fetchOrders = useCallback(async (showToast = false) => {
     if (showToast) setRefreshing(true);
@@ -71,8 +114,9 @@ const AdminOrders = () => {
       }
     };
     load();
+    checkRazorpaySync();
     return () => { ignore = true; };
-  }, [token]);
+  }, [token, checkRazorpaySync]);
 
   const handleStatusChange = async (orderId, newStatus) => {
     if (newStatus === 'Returned') {
@@ -1106,7 +1150,26 @@ const AdminOrders = () => {
             </button>
             <button 
               className="refresh-btn" 
-              onClick={() => fetchOrders(true)} 
+              onClick={() => checkRazorpaySync(true)} 
+              disabled={syncingRazorpay}
+              title="Sync and verify Razorpay payments against database orders"
+              style={{
+                borderColor: razorpaySyncData?.unlinkedCount > 0 ? '#f59e0b' : '#e2e8f0',
+                color: razorpaySyncData?.unlinkedCount > 0 ? '#b45309' : '#475569',
+                background: razorpaySyncData?.unlinkedCount > 0 ? '#fffbeb' : '#ffffff'
+              }}
+            >
+              <FiCheckCircle className={syncingRazorpay ? 'spin' : ''} style={{ color: razorpaySyncData?.unlinkedCount > 0 ? '#f59e0b' : '#10b981' }} />
+              <span>{syncingRazorpay ? 'Syncing...' : 'Sync Razorpay'}</span>
+              {razorpaySyncData?.unlinkedCount > 0 && (
+                <span style={{ background: '#ef4444', color: '#fff', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '10px', fontWeight: 700 }}>
+                  {razorpaySyncData.unlinkedCount}
+                </span>
+              )}
+            </button>
+            <button 
+              className="refresh-btn" 
+              onClick={() => { fetchOrders(true); checkRazorpaySync(); }} 
               disabled={refreshing}
               title="Refresh order records"
             >
@@ -1119,6 +1182,54 @@ const AdminOrders = () => {
             </button>
           </div>
         </div>
+
+        {/* Razorpay Discrepancy Banner */}
+        {razorpaySyncData?.unlinkedCount > 0 && (
+          <div style={{
+            background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+            border: '1px solid #fde68a',
+            borderRadius: '10px',
+            padding: '0.85rem 1.15rem',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap',
+            boxShadow: '0 2px 5px rgba(217, 119, 6, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.35rem' }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#92400e' }}>
+                  {razorpaySyncData.unlinkedCount} Captured Razorpay Payment(s) Need Order Linking
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#b45309', marginTop: '2px' }}>
+                  Payments were captured in Razorpay gateway, but browser lost connection before completing the database record.
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowSyncModal(true)} 
+              style={{
+                background: '#d97706',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.45rem 1rem',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}
+            >
+              Review & Reconcile Payments →
+            </button>
+          </div>
+        )}
 
         {/* Executive Metric Cards */}
         <div className="metrics-grid-official">
@@ -1713,6 +1824,189 @@ const AdminOrders = () => {
           )}
         </div>
       </div>
+
+      {/* Razorpay Gateway Reconciliation Modal */}
+      {showSyncModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '850px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.3rem' }}>💳</span> Razorpay Payment Reconciliation
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                  Live comparison between captured payments on Razorpay Gateway and recorded database orders.
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowSyncModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content Table */}
+            <div style={{ padding: '1rem 1.5rem', overflowY: 'auto', flex: 1 }}>
+              {syncingRazorpay ? (
+                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+                  <FiRefreshCw className="spin" size={24} style={{ marginBottom: '0.75rem', color: '#2563eb' }} />
+                  <div>Fetching payments from Razorpay Gateway API...</div>
+                </div>
+              ) : !razorpaySyncData?.payments || razorpaySyncData.payments.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+                  No recent captured payments found on Razorpay.
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
+                      <th style={{ padding: '0.6rem 0.5rem' }}>Payment ID</th>
+                      <th style={{ padding: '0.6rem 0.5rem' }}>Customer / Contact</th>
+                      <th style={{ padding: '0.6rem 0.5rem' }}>Amount</th>
+                      <th style={{ padding: '0.6rem 0.5rem' }}>Method / UPI</th>
+                      <th style={{ padding: '0.6rem 0.5rem' }}>Date</th>
+                      <th style={{ padding: '0.6rem 0.5rem', textAlign: 'right' }}>Status / Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {razorpaySyncData.payments.map(p => (
+                      <tr key={p.paymentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.75rem 0.5rem', fontFamily: 'monospace', fontWeight: 600, color: '#334155' }}>
+                          {p.paymentId}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{p.email || 'N/A'}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{p.contact || 'No phone'}</div>
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: 700, color: '#0f172a' }}>
+                          ₹{Number(p.amount).toLocaleString('en-IN')}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem' }}>
+                          <span style={{ textTransform: 'uppercase', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>
+                            {p.method}
+                          </span>
+                          {p.vpa && (
+                            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>{p.vpa}</div>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                          {new Date(p.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {p.isLinked ? (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: '#ecfdf5',
+                              color: '#059669',
+                              padding: '3px 8px',
+                              borderRadius: '12px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700
+                            }}>
+                              <FiCheck size={12} /> Linked to Order
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleReconcile(p.paymentId)}
+                              disabled={reconcilingId === p.paymentId}
+                              style={{
+                                background: '#2563eb',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '4px 10px',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              {reconcilingId === p.paymentId ? 'Reconciling...' : '1-Click Reconcile'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '0.85rem 1.5rem',
+              borderTop: '1px solid #f1f5f9',
+              background: '#f8fafc',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                Total Captured: {razorpaySyncData?.totalCaptured || 0} | Unlinked: {razorpaySyncData?.unlinkedCount || 0}
+              </span>
+              <button
+                onClick={() => checkRazorpaySync(true)}
+                disabled={syncingRazorpay}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '5px 12px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  color: '#334155'
+                }}
+              >
+                {syncingRazorpay ? 'Syncing...' : 'Re-check Razorpay'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

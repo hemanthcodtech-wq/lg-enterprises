@@ -1053,4 +1053,137 @@ router.get('/inventory-analysis', authAdmin, async (req, res) => {
   }
 });
 
+// Admin: Check & Sync captured Razorpay payments against database orders
+router.get('/razorpay-sync', authAdmin, async (req, res) => {
+  try {
+    const Razorpay = require('razorpay');
+    const rzp = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_TwSiFXPfioWrAO',
+      key_secret: process.env.RAZORPAY_KEY_SECRET || 'ku96j7GVYCNRKLb4iT9O12aX'
+    });
+
+    const payments = await rzp.payments.all({ count: 25 });
+    const capturedPayments = payments.items.filter(p => p.status === 'captured');
+
+    // Check which payments already exist in DB
+    const paymentIds = capturedPayments.map(p => p.id);
+    const existingOrders = await Order.find({
+      $or: [
+        { razorpayPaymentId: { $in: paymentIds } },
+        { razorpayOrderId: { $in: capturedPayments.map(p => p.order_id) } }
+      ]
+    }).select('razorpayPaymentId razorpayOrderId totalAmount status paymentStatus createdAt').lean();
+
+    const linkedPaymentMap = {};
+    existingOrders.forEach(o => {
+      if (o.razorpayPaymentId) linkedPaymentMap[o.razorpayPaymentId] = o;
+      if (o.razorpayOrderId) linkedPaymentMap[o.razorpayOrderId] = o;
+    });
+
+    const items = capturedPayments.map(p => {
+      const linked = linkedPaymentMap[p.id] || linkedPaymentMap[p.order_id];
+      return {
+        paymentId: p.id,
+        orderId: p.order_id,
+        amount: p.amount / 100,
+        email: p.email,
+        contact: p.contact,
+        method: p.method,
+        vpa: p.vpa || p.upi?.vpa,
+        createdAt: new Date(p.created_at * 1000).toISOString(),
+        isLinked: Boolean(linked),
+        linkedOrderId: linked?._id || null,
+        orderStatus: linked?.status || null
+      };
+    });
+
+    const unlinkedCount = items.filter(i => !i.isLinked).length;
+
+    res.json({
+      totalCaptured: capturedPayments.length,
+      unlinkedCount,
+      payments: items
+    });
+  } catch (err) {
+    console.error('Error syncing Razorpay payments:', err);
+    res.status(500).json({ error: err.message || 'Failed to sync with Razorpay' });
+  }
+});
+
+// Admin: One-click Reconcile an unlinked Razorpay payment into an Order
+router.post('/razorpay-reconcile/:paymentId', authAdmin, async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const Razorpay = require('razorpay');
+    const crypto = require('crypto');
+    const rzp = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_TwSiFXPfioWrAO',
+      key_secret: process.env.RAZORPAY_KEY_SECRET || 'ku96j7GVYCNRKLb4iT9O12aX'
+    });
+
+    const payment = await rzp.payments.fetch(paymentId);
+    if (!payment || payment.status !== 'captured') {
+      return res.status(400).json({ error: 'Payment is not captured in Razorpay' });
+    }
+
+    // Check if order already exists
+    let order = await Order.findOne({ razorpayPaymentId: payment.id });
+    if (order) {
+      return res.json({ message: 'Order already exists for this payment', order });
+    }
+
+    // Find or create customer
+    const email = (payment.email || `customer_${payment.contact || payment.id}@svrmart.com`).toLowerCase().trim();
+    let user = await User.findOne({
+      $or: [
+        { email },
+        ...(payment.contact ? [{ phone: payment.contact.replace(/^\+91/, '') }] : [])
+      ]
+    });
+
+    if (!user) {
+      const randomPass = crypto.randomBytes(8).toString('hex');
+      const referralCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+      user = new User({
+        name: email.split('@')[0] || 'Customer',
+        email,
+        phone: payment.contact ? payment.contact.replace(/^\+91/, '') : '',
+        password: randomPass,
+        referralCode,
+        isEmailVerified: true,
+        address: `Deliver to: ${email} (Phone: ${payment.contact || 'N/A'}) - Reconciled via Razorpay`
+      });
+      await user.save();
+    }
+
+    const prod = await Product.findOne({});
+
+    order = new Order({
+      user: user._id,
+      items: [
+        {
+          product: prod ? prod._id : undefined,
+          quantity: 1,
+          price: payment.amount / 100
+        }
+      ],
+      totalAmount: payment.amount / 100,
+      status: 'Pending',
+      paymentStatus: 'Completed',
+      paymentMethod: payment.method === 'upi' ? 'UPI / Razorpay' : 'Card / Razorpay',
+      razorpayOrderId: payment.order_id,
+      razorpayPaymentId: payment.id,
+      customerEmail: payment.email,
+      customerPhone: payment.contact,
+      shippingAddress: user.address || `Customer (${payment.email}, ${payment.contact}) - Reconciled via Razorpay (${payment.id})`
+    });
+
+    await order.save();
+    res.json({ message: 'Order reconciled successfully', order });
+  } catch (err) {
+    console.error('Error reconciling payment:', err);
+    res.status(500).json({ error: err.message || 'Failed to reconcile payment' });
+  }
+});
+
 module.exports = router;

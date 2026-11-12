@@ -272,7 +272,12 @@ const Cart = () => {
 
       // Partial or full payment with Razorpay
       const { data: order } = await axios.post(`${import.meta.env.VITE_API_URL}/orders/create-razorpay-order`, {
-        amount: amountToPay
+        amount: amountToPay,
+        items,
+        totalAmount: finalTotal,
+        promoId: appliedPromo ? appliedPromo.promoId : undefined,
+        walletUsed,
+        shippingAddress: formattedShippingAddress
       }, {
         headers: { 'x-auth-token': token }
       });
@@ -290,14 +295,27 @@ const Cart = () => {
           order_id: order.id,
           handler: async function (response) {
             try {
-              await axios.post(`${import.meta.env.VITE_API_URL}/orders`, orderData, {
+              // Verify cryptographic signature and finalize order
+              await axios.post(`${import.meta.env.VITE_API_URL}/orders/verify-payment`, {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                localOrderId: order.localOrderId,
+                orderData
+              }, {
                 headers: { 'x-auth-token': token }
               });
-              toast.success('Payment Successful & Order placed!');
+              toast.success('Payment Verified & Order Placed Successfully!');
               if (clearCart) clearCart();
-              navigate('/');
+              navigate('/profile');
             } catch (saveErr) {
-              toast.error('Payment successful but order saving failed. Please contact support.');
+              console.error('Payment verification failed:', saveErr);
+              toast.error(saveErr.response?.data?.error || 'Payment captured but order verification failed. Please contact support.');
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              toast('Payment window closed. If amount was deducted, your order will auto-sync shortly.', { icon: 'ℹ️' });
             }
           },
           prefill: {
