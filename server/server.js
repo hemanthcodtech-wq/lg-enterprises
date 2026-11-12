@@ -102,9 +102,15 @@ if (process.env.NODE_ENV === 'production' && !process.env.VERCEL && fs.existsSyn
   });
 }
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception thrown:', err);
+});
+
 const PORT = process.env.PORT || 5000;
-if (require.main === module) {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 module.exports = app;
