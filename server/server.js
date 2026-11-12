@@ -93,9 +93,12 @@ const clientDistPath = path.join(__dirname, '../client/dist');
 if (process.env.NODE_ENV === 'production' && !process.env.VERCEL && fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
 
-  // Express 5 compatible wildcard using RegExp
-  app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(clientDistPath, 'index.html'));
+  // Catch-all SPA handler without path-to-regexp reliance (100% immune to Express 5 PathErrors)
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api')) {
+      return res.sendFile(path.join(clientDistPath, 'index.html'));
+    }
+    next();
   });
 } else {
   app.get('/', (req, res) => {
