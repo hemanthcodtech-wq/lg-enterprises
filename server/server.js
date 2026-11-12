@@ -93,7 +93,8 @@ const clientDistPath = path.join(__dirname, '../client/dist');
 if (process.env.NODE_ENV === 'production' && !process.env.VERCEL && fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
 
-  app.get('*', (req, res) => {
+  // Express 5 compatible wildcard using RegExp
+  app.get(/.*/, (req, res) => {
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
 } else {
