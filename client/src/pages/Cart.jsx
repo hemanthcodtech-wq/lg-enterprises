@@ -326,6 +326,17 @@ const Cart = () => {
           theme: { color: '#2563eb' }
         };
         const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+          console.error('Payment failed response:', response.error);
+          toast.error(response.error?.description || 'Payment was declined or failed. You can retry with another method.');
+          axios.post(`${import.meta.env.VITE_API_URL}/orders/payment-failed`, {
+            localOrderId: order.localOrderId,
+            razorpay_order_id: response.error?.metadata?.order_id,
+            error: response.error
+          }, {
+            headers: { 'x-auth-token': token }
+          }).catch(() => {});
+        });
         rzp.open();
       };
       document.body.appendChild(script);

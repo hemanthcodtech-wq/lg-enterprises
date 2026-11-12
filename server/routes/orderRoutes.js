@@ -329,6 +329,25 @@ router.post('/verify-payment', authUser, async (req, res) => {
   }
 });
 
+// Record Payment Failure (Client Callback)
+router.post('/payment-failed', authUser, async (req, res) => {
+  try {
+    const { localOrderId, razorpay_order_id, error } = req.body;
+    let order = null;
+    if (localOrderId) order = await Order.findById(localOrderId);
+    if (!order && razorpay_order_id) order = await Order.findOne({ razorpayOrderId: razorpay_order_id });
+
+    if (order && order.paymentStatus !== 'Completed') {
+      order.paymentStatus = 'Failed';
+      order.status = 'Cancelled';
+      await order.save();
+    }
+    res.json({ message: 'Payment failure recorded' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to record payment failure' });
+  }
+});
+
 // Razorpay Server-to-Server Webhook (Handles background UPI Intent completions reliably)
 router.post('/razorpay-webhook', async (req, res) => {
   try {
@@ -367,6 +386,21 @@ router.post('/razorpay-webhook', async (req, res) => {
           razorpayPaymentId: rzpPaymentId,
           paymentMethod: paymentEntity?.method === 'upi' ? 'UPI / Razorpay' : 'Card / Razorpay'
         });
+      }
+    } else if (event === 'payment.failed') {
+      const paymentEntity = req.body.payload?.payment?.entity;
+      const rzpOrderId = paymentEntity?.order_id;
+      const notes = paymentEntity?.notes || {};
+
+      let order = null;
+      if (notes.localOrderId) order = await Order.findById(notes.localOrderId);
+      if (!order && rzpOrderId) order = await Order.findOne({ razorpayOrderId: rzpOrderId });
+
+      if (order && order.paymentStatus !== 'Completed') {
+        order.paymentStatus = 'Failed';
+        order.status = 'Cancelled';
+        if (paymentEntity?.id) order.razorpayPaymentId = paymentEntity.id;
+        await order.save();
       }
     }
 
